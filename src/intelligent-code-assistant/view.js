@@ -3,12 +3,9 @@ import { store, getContext, getElement } from '@wordpress/interactivity';
 const STORAGE_KEY = 'wpe_tasks';
 
 /**
- * Convert the AI explanation into an array of plain-text items.
+ * Convert an AI response into plain-text items for safe Interactivity API rendering.
  *
- * This is intentionally plain text rather than HTML because
- * data-wp-html is not an Interactivity API directive.
- *
- * @param {string} text Raw response from the AI generator.
+ * @param {string} text Raw AI response.
  * @return {string[]} Explanation items.
  */
 function formatExplanationItems(text) {
@@ -20,13 +17,7 @@ function formatExplanationItems(text) {
     .split(/\n+/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => {
-      // Remove common AI list/bullet prefixes:
-      // *, -, •, 1., 2), etc.
-      return line
-        .replace(/^(?:[•\-*]|\d+[.)])\s*/, '')
-        .trim();
-    })
+    .map((line) => line.replace(/^(?:[•\-*]|\d+[.)])\s*/, '').trim())
     .filter(Boolean);
 }
 
@@ -42,60 +33,36 @@ const { state, actions } = store('wpe', {
     },
 
     get completedTasks() {
-      return state.registeredIds.filter(
-        (id) => state.tasks[id]
-      ).length;
+      return state.registeredIds.filter((id) => state.tasks[id]).length;
     },
 
     get progressPercent() {
-      if (state.totalTasks === 0) {
+      if (!state.totalTasks) {
         return 0;
       }
-
-      return Math.round(
-        (state.completedTasks / state.totalTasks) * 100
-      );
+      return Math.round((state.completedTasks / state.totalTasks) * 100);
     },
 
     get progressBarStyle() {
-      return `width: ${state.progressPercent}%; background-color: #4caf50; transition: width 0.5s ease;`;
+      return `width: ${state.progressPercent}%; transition: width 0.5s ease;`;
     },
 
     get isAllDone() {
-      return (
-        state.totalTasks > 0 &&
-        state.completedTasks === state.totalTasks
-      );
+      return state.totalTasks > 0 && state.completedTasks === state.totalTasks;
     },
   },
 
   actions: {
-    /* ==========================================================================
-       TASK OPEN/CLOSE
-       ========================================================================== */
-
     toggleOpen() {
       const context = getContext();
-
       context.isOpen = !context.isOpen;
-
-      context.toggleText = context.isOpen
-        ? context.closeText
-        : context.openText;
+      context.toggleText = context.isOpen ? context.closeText : context.openText;
     },
-
-    /* ==========================================================================
-       TASK COMPLETION
-       ========================================================================== */
 
     *toggleComplete() {
       const context = getContext();
-
       context.isComplete = !context.isComplete;
-
-      context.completeText = context.isComplete
-        ? '✓'
-        : 'Mark as complete';
+      context.completeText = context.isComplete ? '✓' : 'Mark as complete';
 
       state.tasks = {
         ...state.tasks,
@@ -103,42 +70,30 @@ const { state, actions } = store('wpe', {
       };
 
       try {
-        localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(state.tasks)
-        );
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
       } catch (err) {
-        // Ignore localStorage errors.
+        // Guest/private browsing storage may be unavailable.
       }
 
       try {
-        yield fetch(
-          '/wp-json/intelligent-code-assistant/v1/toggle-complete',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-WP-Nonce':
-                window.wpApiSettings?.nonce || '',
-            },
-            body: JSON.stringify({
-              block_id: context.id,
-              status: context.isComplete,
-            }),
-          }
-        );
+        yield fetch('/wp-json/intelligent-code-assistant/v1/toggle-complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-WP-Nonce': window.wpApiSettings?.nonce || '',
+          },
+          body: JSON.stringify({
+            block_id: context.id,
+            status: context.isComplete,
+          }),
+        });
       } catch (err) {
-        // Silent catch for guest users.
+        // Completion remains available locally for guests.
       }
     },
 
-    /* ==========================================================================
-       STEP 4: AI EXPLANATION DRAWER
-       ========================================================================== */
-
     closeExplanation() {
       const context = getContext();
-
       context.isExplaining = false;
       context.isAnalyzingExplanation = false;
       context.explanationError = '';
@@ -147,28 +102,14 @@ const { state, actions } = store('wpe', {
     *explainCode() {
       const context = getContext();
 
-      /*
-       * If the explanation drawer is already open and we have
-       * completed explanation content, close the drawer.
-       */
-      if (
-        context.isExplaining &&
-        context.explanationText &&
-        !context.isAnalyzingExplanation
-      ) {
+      if (context.isExplaining && context.explanationText && !context.isAnalyzingExplanation) {
         context.isExplaining = false;
         return;
       }
 
       context.isExplaining = true;
 
-      /*
-       * Use the existing explanation if we already have one.
-       */
-      if (
-        context.explanationText &&
-        !context.explanationError
-      ) {
+      if (context.explanationText && !context.explanationError) {
         return;
       }
 
@@ -184,50 +125,29 @@ const { state, actions } = store('wpe', {
 
       let response = null;
 
-      /*
-       * ------------------------------------------------------------------------
-       * First attempt: Direct REST endpoint
-       * ------------------------------------------------------------------------
-       */
-
+      // Direct endpoint keeps the feature usable independently of the Abilities REST route.
       try {
-        const directRes = yield fetch(
-          '/wp-json/intelligent-code-assistant/v1/explain-code',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: payload,
-          }
-        );
+        const directRes = yield fetch('/wp-json/intelligent-code-assistant/v1/explain-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+        });
 
         if (directRes.ok) {
           response = yield directRes.json();
         }
       } catch (err) {
-        // Fall through to the Abilities API.
-        console.warn(
-          '[Code Dropdown AI] Direct REST request failed:',
-          err
-        );
+        console.warn('[Intelligent Code Assistant] Direct explanation request failed.', err);
       }
 
-      /*
-       * ------------------------------------------------------------------------
-       * Second attempt: WordPress Abilities API
-       * ------------------------------------------------------------------------
-       */
-
+      // Abilities API is the canonical WordPress capability exposed by the plugin.
       if (!response) {
         try {
           const abilityRes = yield fetch(
             '/wp-json/wp/v2/abilities/intelligent-code-assistant/explain-code/run',
             {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
+              headers: { 'Content-Type': 'application/json' },
               body: payload,
             }
           );
@@ -236,300 +156,80 @@ const { state, actions } = store('wpe', {
             response = yield abilityRes.json();
           }
         } catch (err) {
-          console.warn(
-            '[Code Dropdown AI] Abilities API request failed:',
-            err
-          );
+          console.warn('[Intelligent Code Assistant] Abilities request failed.', err);
         }
       }
 
-      /*
-       * ------------------------------------------------------------------------
-       * Process response
-       * ------------------------------------------------------------------------
-       */
-
-      if (
-        response &&
-        typeof response.explanation === 'string' &&
-        response.explanation.trim()
-      ) {
-        context.explanationText =
-          response.explanation.trim();
-
-        /*
-         * Store the explanation as an array of plain-text
-         * items for data-wp-each rendering.
-         */
-        context.explanationItems =
-          formatExplanationItems(
-            response.explanation
-          );
-
+      if (response && typeof response.explanation === 'string' && response.explanation.trim()) {
+        context.explanationText = response.explanation.trim();
+        context.explanationItems = formatExplanationItems(response.explanation);
         context.explanationError = '';
       } else {
-        context.explanationError =
-          'Unable to generate code explanation right now.';
-
         context.explanationText = '';
         context.explanationItems = [];
+        context.explanationError = 'Unable to generate a code explanation right now.';
       }
 
       context.isAnalyzingExplanation = false;
     },
 
-    /* ==========================================================================
-       STEP 5: CODE PERSONALIZER
-       ========================================================================== */
-
-    handleCustomInstructionInput(e) {
-      const context = getContext();
-
-      context.userInstruction = e.target.value;
-    },
-
-    togglePersonalizeDrawer() {
-      const context = getContext();
-
-      context.isPersonalizing =
-        !context.isPersonalizing;
-    },
-
-    *customizeCode() {
-      const context = getContext();
-
-      if (
-        !context.userInstruction ||
-        !context.userInstruction.trim()
-      ) {
-        context.personalizeError =
-          'Please enter your setup variables or instructions.';
-
-        return;
-      }
-
-      context.isCustomizing = true;
-      context.personalizeError = '';
-
-      const payload = JSON.stringify({
-        code:
-          context.activeCodeText ||
-          context.rawCodeText ||
-          '',
-
-        userInstruction:
-          context.userInstruction,
-
-        language:
-          context.codeLanguage || 'PHP',
-      });
-
-      let response = null;
-
-      /*
-       * ------------------------------------------------------------------------
-       * First attempt: Direct REST endpoint
-       * ------------------------------------------------------------------------
-       */
-
-      try {
-        const directRes = yield fetch(
-          '/wp-json/intelligent-code-assistant/v1/customize-code',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: payload,
-          }
-        );
-
-        if (directRes.ok) {
-          response = yield directRes.json();
-        }
-      } catch (err) {
-        console.warn(
-          '[Code Dropdown AI] Direct customize request failed:',
-          err
-        );
-      }
-
-      /*
-       * ------------------------------------------------------------------------
-       * Second attempt: WordPress Abilities API
-       * ------------------------------------------------------------------------
-       */
-
-      if (!response) {
-        try {
-          const abilityRes = yield fetch(
-            '/wp-json/wp/v2/abilities/intelligent-code-assistant/customize-code/run',
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: payload,
-            }
-          );
-
-          if (abilityRes.ok) {
-            response = yield abilityRes.json();
-          }
-        } catch (err) {
-          console.warn(
-            '[Code Dropdown AI] Abilities customize request failed:',
-            err
-          );
-        }
-      }
-
-      /*
-       * ------------------------------------------------------------------------
-       * Process response
-       * ------------------------------------------------------------------------
-       */
-
-      if (
-        response &&
-        typeof response.personalizedCode === 'string' &&
-        response.personalizedCode.trim()
-      ) {
-        context.activeCodeText =
-          response.personalizedCode;
-
-        context.isPersonalized = true;
-        context.isPersonalizing = false;
-        context.userInstruction = '';
-        context.personalizeError = '';
-      } else {
-        context.personalizeError =
-          'Unable to adapt code to your setup right now.';
-      }
-
-      context.isCustomizing = false;
-    },
-
-    resetCode() {
-      const context = getContext();
-
-      context.activeCodeText =
-        context.rawCodeText || '';
-
-      context.isPersonalized = false;
-      context.personalizeError = '';
-    },
-
-    /* ==========================================================================
-       CLIPBOARD UTILITY
-       ========================================================================== */
-
     async copyToClipboard() {
       const context = getContext();
-
       const { ref: buttonElement } = getElement();
 
       if (!buttonElement) {
         return;
       }
 
-      const blockElement = buttonElement.closest(
-        '[data-wp-interactive="wpe"]'
-      );
-
-      const contentContainer =
-        blockElement?.querySelector(
-          '.panel-content'
-        );
+      const blockElement = buttonElement.closest('[data-wp-interactive="wpe"]');
+      const contentContainer = blockElement?.querySelector('.panel-content');
 
       if (!contentContainer) {
         return;
       }
 
       try {
-        const textToCopy =
-          contentContainer.textContent ||
-          contentContainer.innerText ||
-          '';
+        const cleanedText = (contentContainer.textContent || contentContainer.innerText || '').trim();
 
-        const cleanedText = textToCopy.trim();
-
-        /*
-         * Modern Clipboard API.
-         */
-        if (
-          navigator.clipboard &&
-          window.isSecureContext
-        ) {
-          await navigator.clipboard.writeText(
-            cleanedText
-          );
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(cleanedText);
         } else {
-          /*
-           * Fallback for older browsers / non-secure contexts.
-           */
-          const textarea =
-            document.createElement('textarea');
-
+          const textarea = document.createElement('textarea');
           textarea.value = cleanedText;
           textarea.style.position = 'fixed';
           textarea.style.opacity = '0';
-
           document.body.appendChild(textarea);
-
           textarea.focus();
           textarea.select();
-
           document.execCommand('copy');
-
           document.body.removeChild(textarea);
         }
 
         context.isCopied = true;
-
         setTimeout(() => {
           context.isCopied = false;
         }, 2000);
       } catch (err) {
-        console.error(
-          '[Code Dropdown] Failed to copy text:',
-          err
-        );
+        console.error('[Intelligent Code Assistant] Failed to copy code.', err);
       }
     },
   },
 
-  /* ============================================================================
-     CALLBACKS
-     ============================================================================ */
-
   callbacks: {
-    /* --------------------------------------------------------------------------
-       Shared initialisation
-       -------------------------------------------------------------------------- */
-
     initShared() {
       if (state._storageLoaded) {
         return;
       }
 
       try {
-        const storedTasks =
-          localStorage.getItem(STORAGE_KEY);
-
-        state.tasks = storedTasks
-          ? JSON.parse(storedTasks)
-          : {};
+        const storedTasks = localStorage.getItem(STORAGE_KEY);
+        state.tasks = storedTasks ? JSON.parse(storedTasks) : {};
       } catch (err) {
         state.tasks = {};
       }
 
       state._storageLoaded = true;
     },
-
-    /* --------------------------------------------------------------------------
-       Individual task initialisation
-       -------------------------------------------------------------------------- */
 
     initTask() {
       const context = getContext();
@@ -538,138 +238,47 @@ const { state, actions } = store('wpe', {
         return;
       }
 
-      /*
-       * Load local storage if initShared hasn't run yet.
-       */
       if (!state._storageLoaded) {
         try {
-          const storedTasks =
-            localStorage.getItem(STORAGE_KEY);
-
-          state.tasks = storedTasks
-            ? JSON.parse(storedTasks)
-            : {};
+          const storedTasks = localStorage.getItem(STORAGE_KEY);
+          state.tasks = storedTasks ? JSON.parse(storedTasks) : {};
         } catch (err) {
           state.tasks = {};
         }
-
         state._storageLoaded = true;
       }
 
-      /*
-       * Register this task.
-       */
-      if (
-        !state.registeredIds.includes(context.id)
-      ) {
-        state.registeredIds = [
-          ...state.registeredIds,
-          context.id,
-        ];
+      if (!state.registeredIds.includes(context.id)) {
+        state.registeredIds = [...state.registeredIds, context.id];
       }
 
-      /*
-       * Completion state.
-       */
-      context.isComplete =
-        state.tasks[context.id] ?? false;
-
+      context.isComplete = state.tasks[context.id] ?? false;
       context.isCopied = false;
-
-      /*
-       * ------------------------------------------------------------------------
-       * Step 4: Explanation state
-       * ------------------------------------------------------------------------
-       */
-
       context.isExplaining = false;
       context.isAnalyzingExplanation = false;
       context.explanationText = '';
       context.explanationItems = [];
       context.explanationError = '';
-
-      /*
-       * ------------------------------------------------------------------------
-       * Step 5: Personalizer state
-       * ------------------------------------------------------------------------
-       */
-
-      context.isPersonalizing = false;
-      context.isCustomizing = false;
-      context.isPersonalized = false;
-      context.userInstruction = '';
-      context.personalizeError = '';
-
-      context.activeCodeText =
-        context.rawCodeText || '';
-
-      /*
-       * Completion button text.
-       */
-      context.completeText =
-        context.isComplete
-          ? '✓'
-          : 'Mark as complete';
-
-      /*
-       * ------------------------------------------------------------------------
-       * Highlighted lines
-       * ------------------------------------------------------------------------
-       */
+      context.completeText = context.isComplete ? '✓' : 'Mark as complete';
 
       if (context.highlightLines) {
         const targetLines = new Set();
 
-        const ranges =
-          context.highlightLines.split(',');
+        context.highlightLines.split(',').forEach((range) => {
+          const parts = range.split('-').map((num) => parseInt(num.trim(), 10));
 
-        ranges.forEach((range) => {
-          const parts = range
-            .split('-')
-            .map((num) =>
-              parseInt(num.trim(), 10)
-            );
-
-          /*
-           * Range, e.g. 3-7
-           */
-          if (
-            parts.length === 2 &&
-            !isNaN(parts[0]) &&
-            !isNaN(parts[1])
-          ) {
-            const start = Math.min(
-              parts[0],
-              parts[1]
-            );
-
-            const end = Math.max(
-              parts[0],
-              parts[1]
-            );
-
-            for (
-              let i = start;
-              i <= end;
-              i++
-            ) {
+          if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
+            const start = Math.min(parts[0], parts[1]);
+            const end = Math.max(parts[0], parts[1]);
+            for (let i = start; i <= end; i += 1) {
               targetLines.add(i);
             }
-          }
-
-          /*
-           * Single line, e.g. 4
-           */
-          else if (
-            parts.length === 1 &&
-            !isNaN(parts[0])
-          ) {
+          } else if (parts.length === 1 && !Number.isNaN(parts[0])) {
             targetLines.add(parts[0]);
           }
         });
 
-        context.highlightedNumbers =
-          Array.from(targetLines);
+        context.highlightedNumbers = Array.from(targetLines);
       } else {
         context.highlightedNumbers = [];
       }

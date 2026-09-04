@@ -1,25 +1,7 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
+import { buildAIContext, formatAIItems, requestAICapability } from './ai-context';
 
 const STORAGE_KEY = 'wpe_tasks';
-
-/**
- * Convert an AI response into plain-text items for safe Interactivity API rendering.
- *
- * @param {string} text Raw AI response.
- * @return {string[]} Explanation items.
- */
-function formatExplanationItems(text) {
-  if (!text || typeof text !== 'string') {
-    return [];
-  }
-
-  return text
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => line.replace(/^(?:[•\-*]|\d+[.)])\s*/, '').trim())
-    .filter(Boolean);
-}
 
 const { state, actions } = store('wpe', {
   state: {
@@ -28,28 +10,14 @@ const { state, actions } = store('wpe', {
     tasks: {},
     _storageLoaded: false,
 
-    get totalTasks() {
-      return state.registeredIds.length;
-    },
-
-    get completedTasks() {
-      return state.registeredIds.filter((id) => state.tasks[id]).length;
-    },
-
+    get totalTasks() { return state.registeredIds.length; },
+    get completedTasks() { return state.registeredIds.filter((id) => state.tasks[id]).length; },
     get progressPercent() {
-      if (!state.totalTasks) {
-        return 0;
-      }
+      if (!state.totalTasks) return 0;
       return Math.round((state.completedTasks / state.totalTasks) * 100);
     },
-
-    get progressBarStyle() {
-      return `width: ${state.progressPercent}%; transition: width 0.5s ease;`;
-    },
-
-    get isAllDone() {
-      return state.totalTasks > 0 && state.completedTasks === state.totalTasks;
-    },
+    get progressBarStyle() { return `width: ${state.progressPercent}%; transition: width 0.5s ease;`; },
+    get isAllDone() { return state.totalTasks > 0 && state.completedTasks === state.totalTasks; },
   },
 
   actions: {
@@ -63,33 +31,17 @@ const { state, actions } = store('wpe', {
       const context = getContext();
       context.isComplete = !context.isComplete;
       context.completeText = context.isComplete ? '✓' : 'Mark as complete';
+      state.tasks = { ...state.tasks, [context.id]: context.isComplete };
 
-      state.tasks = {
-        ...state.tasks,
-        [context.id]: context.isComplete,
-      };
-
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
-      } catch (err) {
-        // Guest/private browsing storage may be unavailable.
-      }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks)); } catch (err) { /* Optional storage. */ }
 
       try {
         yield fetch('/wp-json/intelligent-code-assistant/v1/toggle-complete', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-WP-Nonce': window.wpApiSettings?.nonce || '',
-          },
-          body: JSON.stringify({
-            block_id: context.id,
-            status: context.isComplete,
-          }),
+          headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': window.wpApiSettings?.nonce || '' },
+          body: JSON.stringify({ block_id: context.id, status: context.isComplete }),
         });
-      } catch (err) {
-        // Completion remains available locally for guests.
-      }
+      } catch (err) { /* Local completion remains available. */ }
     },
 
     closeExplanation() {
@@ -108,65 +60,19 @@ const { state, actions } = store('wpe', {
       }
 
       context.isExplaining = true;
-
-      if (context.explanationText && !context.explanationError) {
-        return;
-      }
+      if (context.explanationText && !context.explanationError) return;
 
       context.isAnalyzingExplanation = true;
       context.explanationError = '';
       context.explanationText = '';
       context.explanationItems = [];
 
-      const payload = JSON.stringify({
-        code: context.rawCodeText || '',
-        language: context.codeLanguage || 'PHP',
-      });
-
-      let response = null;
-
-      // Direct endpoint keeps the feature usable independently of the Abilities REST route.
-      try {
-        const directRes = yield fetch('/wp-json/intelligent-code-assistant/v1/explain-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: payload,
-        });
-
-        if (directRes.ok) {
-          response = yield directRes.json();
-        }
-      } catch (err) {
-        console.warn('[Intelligent Code Assistant] Direct explanation request failed.', err);
-      }
-
-      // Abilities API is the canonical WordPress capability exposed by the plugin.
-      if (!response) {
-        try {
-          const abilityRes = yield fetch(
-            '/wp-json/wp/v2/abilities/intelligent-code-assistant/explain-code/run',
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: payload,
-            }
-          );
-
-          if (abilityRes.ok) {
-            response = yield abilityRes.json();
-          }
-        } catch (err) {
-          console.warn('[Intelligent Code Assistant] Abilities request failed.', err);
-        }
-      }
+      const response = yield requestAICapability('explain-code', buildAIContext(context));
 
       if (response && typeof response.explanation === 'string' && response.explanation.trim()) {
         context.explanationText = response.explanation.trim();
-        context.explanationItems = formatExplanationItems(response.explanation);
-        context.explanationError = '';
+        context.explanationItems = formatAIItems(response.explanation);
       } else {
-        context.explanationText = '';
-        context.explanationItems = [];
         context.explanationError = 'Unable to generate a code explanation right now.';
       }
 
@@ -176,21 +82,14 @@ const { state, actions } = store('wpe', {
     async copyToClipboard() {
       const context = getContext();
       const { ref: buttonElement } = getElement();
-
-      if (!buttonElement) {
-        return;
-      }
+      if (!buttonElement) return;
 
       const blockElement = buttonElement.closest('[data-wp-interactive="wpe"]');
       const contentContainer = blockElement?.querySelector('.panel-content');
-
-      if (!contentContainer) {
-        return;
-      }
+      if (!contentContainer) return;
 
       try {
         const cleanedText = (contentContainer.textContent || contentContainer.innerText || '').trim();
-
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(cleanedText);
         } else {
@@ -204,11 +103,8 @@ const { state, actions } = store('wpe', {
           document.execCommand('copy');
           document.body.removeChild(textarea);
         }
-
         context.isCopied = true;
-        setTimeout(() => {
-          context.isCopied = false;
-        }, 2000);
+        setTimeout(() => { context.isCopied = false; }, 2000);
       } catch (err) {
         console.error('[Intelligent Code Assistant] Failed to copy code.', err);
       }
@@ -217,34 +113,23 @@ const { state, actions } = store('wpe', {
 
   callbacks: {
     initShared() {
-      if (state._storageLoaded) {
-        return;
-      }
-
+      if (state._storageLoaded) return;
       try {
         const storedTasks = localStorage.getItem(STORAGE_KEY);
         state.tasks = storedTasks ? JSON.parse(storedTasks) : {};
-      } catch (err) {
-        state.tasks = {};
-      }
-
+      } catch (err) { state.tasks = {}; }
       state._storageLoaded = true;
     },
 
     initTask() {
       const context = getContext();
-
-      if (!context.id) {
-        return;
-      }
+      if (!context.id) return;
 
       if (!state._storageLoaded) {
         try {
           const storedTasks = localStorage.getItem(STORAGE_KEY);
           state.tasks = storedTasks ? JSON.parse(storedTasks) : {};
-        } catch (err) {
-          state.tasks = {};
-        }
+        } catch (err) { state.tasks = {}; }
         state._storageLoaded = true;
       }
 
@@ -263,21 +148,14 @@ const { state, actions } = store('wpe', {
 
       if (context.highlightLines) {
         const targetLines = new Set();
-
         context.highlightLines.split(',').forEach((range) => {
           const parts = range.split('-').map((num) => parseInt(num.trim(), 10));
-
           if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
-            const start = Math.min(parts[0], parts[1]);
-            const end = Math.max(parts[0], parts[1]);
-            for (let i = start; i <= end; i += 1) {
-              targetLines.add(i);
-            }
+            for (let i = Math.min(parts[0], parts[1]); i <= Math.max(parts[0], parts[1]); i += 1) targetLines.add(i);
           } else if (parts.length === 1 && !Number.isNaN(parts[0])) {
             targetLines.add(parts[0]);
           }
         });
-
         context.highlightedNumbers = Array.from(targetLines);
       } else {
         context.highlightedNumbers = [];

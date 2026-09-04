@@ -1,0 +1,53 @@
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "wpe/intelligent-code-assistant",
+    "version": "0.1.0",
+    "title": "Code Dropdown",
+    "category": "widgets",
+    "icon": "screenoptions",
+    "description": "An interactive block with the Interactivity API.",
+    "example": {},
+    "supports": {
+        "interactivity": true
+    },
+    "attributes": {
+        "id": {
+            "type": "string"
+        },
+        "showLanguageBadge": {
+            "type": "boolean",
+            "default": true
+        },
+        "codeLanguage": {
+            "type": "string",
+            "default": "PHP"
+        },
+        "isDarkMode": {
+            "type": "boolean",
+            "default": false
+        },
+        "fontSize": {
+            "type": "string",
+            "default": "14px"
+        },
+        "isCompact": {
+            "type": "boolean",
+            "default": false
+        },
+		"maxHeight": {
+			"type": "string",
+			"default": "none"
+		},
+		"showLineNumbers": {
+			"type": "boolean",
+			"default": false
+		}
+    },
+    "textdomain": "intelligent-code-assistant",
+    "editorScript": "file:./index.js",
+    "editorStyle": "file:./index.css",
+    "style": "file:./style-index.css",
+    "render": "file:./render.php",
+    "viewScriptModule": "file:./view.js"
+}

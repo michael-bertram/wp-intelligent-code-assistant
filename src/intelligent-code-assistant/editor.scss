@@ -1,0 +1,276 @@
+/* Import Prism Tomorrow Theme for Syntax Coloring */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
+
+/* ==========================================================================
+   BACKEND EDITOR PANEL EXCLUSIVE SEAMLESS LAYOUTS
+   ========================================================================== */
+.wp-block-wpe-intelligent-code-assistant-editor {
+    position: relative !important; 
+    box-sizing: border-box;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+
+    .editor-combined-container {
+        position: relative;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* UNIFIED CASCADING FONT SYSTEM */
+    pre, code, textarea, [data-placeholder], .block-editor-block-list__layout *, .line-numbers-gutter span {
+        font-size: var(--editor-code-font-size, 14px) !important;
+        line-height: 1.5 !important;
+    }
+
+    .code-badge {
+        position: absolute !important;
+        top: 14px;
+        right: 16px;
+        z-index: 99; 
+        pointer-events: none;
+    }
+
+    /* ----------------------------------------------------------------------
+       EDITOR CONTAINER TRACKS (FORCE OPEN & PREVENT COLLAPSING)
+       ---------------------------------------------------------------------- */
+    .editor-inner-blocks-wrapper {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        background: #fafafa;
+        
+        // CRITICAL: Explicitly lock the editor open regardless of frontend rules
+        height: auto !important;
+        opacity: 1 !important;
+        overflow: visible !important;
+        max-height: var(--panel-max-height, none) !important;
+
+        .block-editor-inner-blocks,
+        .block-editor-block-list__layout {
+            width: 100%;
+            display: flex !important;
+            flex-direction: column !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* Child Item Row 1: Code Header Block */
+        .block-editor-block-list__layout > *:first-child {
+            order: 1 !important;
+            background: #ffffff;
+            padding: 16px 80px 16px 20px !important; 
+            margin: 0 !important;
+            border-bottom: 1px solid #f1f5f9;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        /* Child Item Row 2: Code Content Block */
+        .block-editor-block-list__layout > *:last-child {
+            order: 2 !important;
+            padding: 20px 20px 20px 20px !important;
+            margin: 0 !important;
+            box-sizing: border-box;
+            width: 100%;
+            background: transparent;
+            z-index: 5;
+            
+            // Force horizontal scroll lock in the editor so lines don't wrap while typing
+            overflow-x: auto !important;
+
+            .block-editor-rich-text__editable, pre, code, p, div {
+                margin: 0 !important;
+                padding: 0 !important;
+                white-space: pre !important;
+                word-wrap: normal !important;
+                word-break: normal !important;
+            }
+        }
+    }
+
+    .panel-scroll-container {
+        max-height: var(--panel-max-height, none) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        width: 100%;
+        position: relative;
+    }
+
+    .panel-content-flex-wrapper {
+        display: flex;
+        align-items: stretch;
+        width: 100%;
+        position: relative;
+    }
+
+    /* Absolute Left Gutter Track Column */
+    .line-numbers-gutter {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        top: 55px; /* Sits perfectly under the title header row */
+        width: 48px;
+        background: #f1f5f9;
+        border-right: 1px solid #e2e8f0;
+        padding: 20px 10px 20px 0px !important;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        text-align: right;
+        user-select: none;
+        color: #94a3b8;
+        z-index: 10;
+        pointer-events: none;
+
+        span {
+            display: block;
+            font-family: 'Fira Code', Consolas, Monaco, monospace;
+        }
+    }
+
+    /* Apply content padding offset when line numbers are checked */
+    &.has-line-numbers {
+        .editor-inner-blocks-wrapper .block-editor-block-list__layout > *:last-child {
+            padding-left: 64px !important; 
+        }
+    }
+
+    /* ----------------------------------------------------------------------
+       DARK THEME EDITOR OVERRIDES 
+       ---------------------------------------------------------------------- */
+    &.dark-theme {
+        background: #1e1e1e !important;
+        border-color: #2e2e2e !important;
+        color: #f4f4f5 !important;
+
+        .editor-inner-blocks-wrapper {
+            background: #151515 !important;
+
+            .block-editor-block-list__layout > *:first-child {
+                background: #1e1e1e !important;
+                border-bottom-color: #2e2e2e !important;
+            }
+        }
+
+        .line-numbers-gutter {
+            background: #1a1a1a !important;
+            border-right-color: #2e2e2e !important;
+            color: #4b5563 !important;
+        }
+
+        .wp-block-wpe-code-header,
+        .wp-block-wpe-code-content,
+        .block-editor-rich-text__editable,
+        pre, code, div, p {
+            background: transparent !important;
+            color: #f4f4f5 !important;
+        }
+
+        .code-footer {
+            border-top-color: #2e2e2e !important;
+            background: #1e1e1e !important;
+        }
+
+        .code-analytics-meta {
+            color: #a1a1aa !important;
+            .meta-divider { color: #3f3f46; }
+        }
+    }
+
+    /* ----------------------------------------------------------------------
+       COMPACT LAYOUT OVERRIDES 
+       ---------------------------------------------------------------------- */
+    &.is-compact {
+        .code-badge { top: 8px; }
+
+        .editor-inner-blocks-wrapper {
+            .block-editor-block-list__layout {
+                > *:first-child { padding: 8px 80px 8px 20px !important; }
+                > *:last-child { padding: 10px 20px 10px 20px !important; }
+            }
+        }
+
+        .line-numbers-gutter {
+            top: 38px; 
+            padding-top: 10px !important;
+        }
+    }
+
+    .code-footer {
+        padding: 12px 20px;
+        border-top: 1px solid #f1f5f9;
+        background: #ffffff;
+        z-index: 95;
+    }
+}
+
+/* ==========================================================================
+   PRISM SYNTAX COLORING & LINE HIGHLIGHTING STYLES
+   ========================================================================== */
+
+
+/* Line Numbers Gutter Styling */
+.wp-block-wpe-intelligent-code-assistant-editor .line-numbers-gutter,
+.wp-block-wpe-intelligent-code-assistant .line-numbers-gutter {
+    display: flex;
+    flex-direction: column;
+    padding-right: 12px;
+    margin-right: 12px;
+    border-right: 1px solid rgba(255, 255, 255, 0.15);
+    user-select: none;
+    opacity: 0.5;
+    font-family: monospace;
+    font-size: var(--editor-code-font-size, 14px);
+}
+
+/* Active Line Highlighting Overlay */
+.wp-block-wpe-intelligent-code-assistant-editor .line-numbers-gutter span.is-highlighted,
+.wp-block-wpe-intelligent-code-assistant .panel-content pre .line-highlight {
+    background-color: rgba(255, 235, 59, 0.2); /* Soft Yellow Highlight */
+    border-left: 3px solid #ffeb3b;
+    font-weight: bold;
+    opacity: 1;
+}
+
+/* Language Badge Colors */
+.code-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 4px;
+    text-transform: uppercase;
+    background: #333;
+    color: #fff;
+}
+
+.code-badge.lang-css {
+    background-color: #264de4; /* CSS Blue */
+    color: #ffffff;
+}
+
+.code-badge.lang-php {
+    background-color: #4f5d95; /* PHP Purple */
+    color: #ffffff;
+}
+
+.code-badge.lang-js,
+.code-badge.lang-javascript {
+    background-color: #f7df1e; /* JS Yellow */
+    color: #000000;
+}
+
+.code-badge.lang-json {
+    background-color: #292929;
+    color: #00e676;
+}

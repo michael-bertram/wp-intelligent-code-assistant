@@ -1,0 +1,20 @@
+{
+  "apiVersion": 3,
+  "name": "wpe/code-content",
+  "title": "Code Content",
+  "category": "widgets",
+  "icon": "embed-generic",
+  "parent": ["wpe/intelligent-code-assistant"],
+  "supports": {
+    "html": false,
+    "reusable": false
+  },
+  "attributes": {
+    "code": {
+      "type": "string",
+      "source": "html",
+      "selector": "div.wp-block-wpe-code-content"
+    }
+  },
+  "editorScript": "file:./index.js"
+}

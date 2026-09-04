@@ -1,0 +1,21 @@
+{
+  "apiVersion": 3,
+  "name": "wpe/code-header",
+  "title": "Code Header",
+  "category": "widgets",
+  "icon": "heading",
+  "parent": ["wpe/intelligent-code-assistant"],
+  "supports": {
+    "html": false
+  },
+  "attributes": {
+  "content": {
+    "type": "string",
+    "source": "html",
+    "selector": "div.wp-block-wpe-code-header"
+  }
+},
+  "editorScript": "file:./index.js",
+  "editorStyle": "file:./editor.css",
+  "style": "file:./style.css"
+}

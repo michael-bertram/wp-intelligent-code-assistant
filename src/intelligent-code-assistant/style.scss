@@ -1,0 +1,632 @@
+/* ==========================================================================
+   1. MAIN BLOCK CONTAINERS (SHARED CONFIGURATION)
+   ========================================================================== */
+.wp-block-wpe-intelligent-code-assistant-editor,
+.wp-block-wpe-intelligent-code-assistant {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff; 
+    border: 1px solid #e2e8f0; 
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    margin: 1.5rem 0;
+
+    .editor-combined-container {
+        position: relative;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Complete State - Smooth, subtle background shift */
+    &.complete {
+        background-color: #f0fdf4 !important;
+        border-color: #bbf7d0 !important;
+        
+        .code-header h3 {
+            color: #166534 !important;
+        }
+    }
+
+    /* UNIFIED CASCADING FONT SYSTEM */
+    pre, code, textarea, .line-numbers-gutter span, [data-placeholder], .panel-content * {
+        font-size: var(--editor-code-font-size, 14px) !important;
+        line-height: 1.5 !important;
+    }
+
+    /* ----------------------------------------------------------------------
+       DYNAMIC CUSTOM CONTROLS (DARK THEME & COMPACT SPACING)
+       ---------------------------------------------------------------------- */
+    &.dark-theme {
+        background: #1e1e1e !important;
+        border-color: #2e2e2e !important;
+        color: #f4f4f5 !important;
+
+        .code-header {
+            background: transparent !important;
+            border-bottom-color: #2e2e2e !important;
+            
+            h3 {
+                color: #f4f4f5 !important;
+            }
+        }
+
+        .editor-inner-blocks-wrapper {
+            background: #151515 !important;
+        }
+
+        .panel-content {
+            background: transparent !important;
+            
+            pre, code, div {
+                color: #e4e4e7 !important;
+                background: transparent !important;
+            }
+        }
+
+        .line-numbers-gutter {
+            background: #1a1a1a !important;
+            border-right-color: #2e2e2e !important;
+            color: #4b5563 !important;
+
+            span.is-highlighted {
+                background-color: rgba(255, 235, 59, 0.15) !important;
+                color: #ffeb3b !important;
+            }
+        }
+
+        .code-footer {
+            border-top-color: #2e2e2e !important;
+            background: #1e1e1e !important;
+        }
+
+        .code-analytics-meta {
+            color: #a1a1aa !important;
+            .meta-divider { color: #3f3f46; }
+        }
+
+        .copy-button,
+        .explain-button,
+        .toggle-button {
+            color: #a1a1aa !important;
+
+            &:hover,
+            &.active {
+                background: #2a2a2a !important;
+                color: #ffffff !important;
+                border-color: #3f3f46 !important;
+            }
+            &:active {
+                background: #3a3a3a !important;
+                color: #ffffff !important;
+            }
+        }
+
+        .code-explanation-drawer {
+            background: #141414 !important;
+            border-top-color: #2e2e2e !important;
+            color: #d4d4d8 !important;
+        }
+        
+        &.complete {
+            background-color: #062e14 !important;
+            border-color: #14532d !important;
+        }
+    }
+
+    /* FRONTEND COMPACT CONFIGURATIONS */
+    &.is-compact {
+        .code-header {
+            padding: 8px 16px !important; 
+        }
+
+        .panel-content {
+            padding: 10px 16px !important;
+        }
+
+        .line-numbers-gutter {
+            padding: 10px 8px 10px 0px !important;
+        }
+
+        .code-footer {
+            padding: 6px 16px !important;
+        }
+    }
+}
+
+a:focus {
+    outline: none;
+}
+
+/* ==========================================================================
+   2. SEAMLESS HEADER LAYOUT AREA
+   ========================================================================== */
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: transparent; 
+    border-bottom: 1px solid #f1f5f9; 
+    transition: border-color 0.25s ease;
+    position: relative;
+    z-index: 90;
+
+    h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1e293b;
+        transition: color 0.2s ease;
+    }
+}
+
+.code-title-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.code-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ----------------------------------------------------------------------
+   HEADER INTERACTION BUTTONS & SVGS
+   ---------------------------------------------------------------------- */
+.copy-button, 
+.toggle-button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: #64748b;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.1s ease;
+
+    &:hover {
+        background: #f1f5f9;
+        color: #1e293b;
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+}
+
+.copy-button {
+    .icon-check { display: none; }
+    .icon-copy { display: inline-block; }
+
+    &.copied {
+        color: #10b981 !important;
+        .icon-copy { display: none; }
+        .icon-check {
+            display: inline-block;
+            animation: popIn 0.2s ease-out;
+        }
+    }
+}
+
+/* Step 4 Explain Code Button */
+.explain-button {
+    background: rgba(15, 23, 42, 0.05);
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+
+    &:hover,
+    &.active {
+        background: #0f172a;
+        border-color: #0f172a;
+        color: #ffffff;
+    }
+}
+
+/* ==========================================================================
+   3. LANGUAGE SYNTAX DISPLAY BADGES
+   ========================================================================== */
+.code-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    background: #e2e8f0;
+    color: #475569;
+    flex-shrink: 0;
+
+    &.lang-php { background: #eef2ff; color: #4f46e5; }
+    &.lang-js, &.lang-javascript { background: #fef9c3; color: #854d0e; }
+    &.lang-css { background: #ecfdf5; color: #047857; }
+    &.lang-html { background: #fff7ed; color: #c2410c; }
+    &.lang-json { background: #f1f5f9; color: #0f172a; }
+    &.lang-sql { background: #f0f9ff; color: #0284c7; }
+    &.lang-bash { background: #1e293b; color: #f8fafc; }
+}
+
+/* ==========================================================================
+   4. COLLAPSIBLE DRAWER BODY & SCROLL ENGINE
+   ========================================================================== */
+.editor-inner-blocks-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: #fafafa;
+    
+    height: auto;
+    opacity: 1;
+    overflow: visible;
+}
+
+.wp-block-wpe-intelligent-code-assistant-editor .editor-inner-blocks-wrapper,
+.wp-block-wpe-intelligent-code-assistant .editor-inner-blocks-wrapper {
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+
+    &.active {
+        height: auto;
+        opacity: 1;
+    }
+}
+
+.panel-scroll-container {
+    max-height: var(--panel-max-height, none) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important; 
+    width: 100%;
+    position: relative;
+}
+
+.panel-content-flex-wrapper {
+    display: flex;
+    align-items: stretch;
+    position: relative;
+    width: 100%;
+}
+
+.line-numbers-gutter {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    top: 0; 
+    width: 48px;
+    background: #f1f5f9;
+    border-right: 1px solid #e2e8f0;
+    padding: 20px 10px 20px 0px !important;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+    user-select: none;
+    color: #94a3b8;
+    z-index: 10;
+    pointer-events: none;
+
+    span {
+        display: block;
+        font-family: 'Fira Code', Consolas, Monaco, monospace;
+
+        &.is-highlighted {
+            background-color: rgba(255, 235, 59, 0.35);
+            color: #000000;
+            font-weight: 700;
+        }
+    }
+}
+
+.panel-content {
+    padding: 20px;
+    margin: 0;
+    flex-grow: 1;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto !important;
+
+    pre[class*="language-"],
+    code[class*="language-"],
+    pre, code {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important; 
+        font-family: 'Fira Code', Consolas, Monaco, monospace !important;
+        text-shadow: none !important; 
+        white-space: pre !important;
+        word-wrap: normal !important;
+        word-break: normal !important;
+    }
+    
+    .token.comment { color: #718096; }
+    .token.keyword { color: #d53f8c; font-weight: bold; }
+    .token.string { color: #38a169; }
+    .token.function { color: #3182ce; }
+}
+
+.has-line-numbers {
+    .panel-content {
+        padding-left: 64px !important;
+    }
+}
+
+/* ==========================================================================
+   5. STEP 4: AI EXPLANATION DRAWER SUB-SYSTEM
+   ========================================================================== */
+.code-explanation-drawer {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 16px 20px;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: #334155;
+    transition: all 0.3s ease;
+
+    .explanation-inner {
+        position: relative;
+    }
+
+    .explanation-loading-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px 0;
+
+        .spinner-icon {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #cbd5e1;
+            border-top-color: #0f172a;
+            border-radius: 50%;
+            animation: wpe-spin 0.8s linear infinite;
+        }
+    }
+
+    .explanation-text {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .explanation-error {
+        color: #ef4444;
+        font-size: 0.8125rem;
+    }
+}
+
+/* ==========================================================================
+   6. COMPONENT LAYOUT FOOTER WORKSPACE
+   ========================================================================== */
+.code-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 12px 20px;
+    background: #ffffff;
+    border-top: 1px solid #f1f5f9;
+    position: relative;
+    z-index: 95;
+
+    button {
+        font-family: inherit;
+        font-size: 0.875rem;
+        font-weight: 500;
+        background: #0f172a;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 14px;
+        cursor: pointer;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        transition: background 0.2s ease, transform 0.1s ease;
+
+        &:hover { background: #1e293b; }
+        &:active { transform: scale(0.98); }
+        
+        &.is-completed {
+            background: #10b981 !important;
+            color: white !important;
+        }
+    }
+}
+
+.code-analytics-meta {
+    margin-right: auto; 
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+
+    .meta-divider {
+        color: #cbd5e1;
+    }
+}
+
+/* KEYFRAME ANIMATIONS */
+@keyframes popIn {
+    0% { transform: scale(0.7); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes wpe-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   STEP 4: EXPLANATION DRAWER, CLOSE BUTTON & SPINNER STYLES
+   ========================================================================== */
+
+.code-explanation-drawer {
+	background-color: #f8fafc;
+	border-top: 1px solid #e2e8f0;
+	border-bottom: 1px solid #e2e8f0;
+	padding: 14px 16px;
+	transition: all 0.25s ease-in-out;
+}
+
+.dark-theme .code-explanation-drawer {
+	background-color: #1e293b;
+	border-top-color: #334155;
+	border-bottom-color: #334155;
+}
+
+/* Header & Flex Alignment */
+.explanation-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 12px;
+}
+
+.explanation-title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #2563eb;
+}
+
+.dark-theme .explanation-title {
+	color: #60a5fa;
+}
+
+/* Styled Close Button */
+.explanation-close-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	background: transparent;
+	border: none;
+	border-radius: 4px;
+	font-size: 18px;
+	line-height: 1;
+	color: #64748b;
+	cursor: pointer;
+	padding: 0;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.explanation-close-btn:hover {
+	background-color: #e2e8f0;
+	color: #0f172a;
+}
+
+.dark-theme .explanation-close-btn:hover {
+	background-color: #334155;
+	color: #f8fafc;
+}
+
+/* Spinner & Loading Bar */
+.explanation-loading-container {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 4px 0;
+}
+
+.spinner-status-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	font-weight: 500;
+	color: #475569;
+}
+
+.dark-theme .spinner-status-bar {
+	color: #94a3b8;
+}
+
+.spinner-icon {
+	width: 14px;
+	height: 14px;
+	border: 2px solid #cbd5e1;
+	border-top-color: #2563eb;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+}
+
+.dark-theme .spinner-icon {
+	border-color: #475569;
+	border-top-color: #60a5fa;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Skeleton Lines */
+.explanation-skeleton {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.skeleton-line {
+	height: 10px;
+	border-radius: 4px;
+	background: #e2e8f0;
+	width: 100%;
+}
+
+.skeleton-line.short {
+	width: 60%;
+}
+
+.skeleton-line.medium {
+	width: 80%;
+}
+.explanation-error-card {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    margin-top:10px;
+    padding: 12px;
+    border-radius: 6px;
+    color: #b91c1c;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.shimmer {
+	background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+	background-size: 200% 100%;
+	animation: shimmer 1.5s infinite;
+}
+
+.dark-theme .shimmer {
+	background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+	background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+	0% { background-position: -200% 0; }
+	100% { background-position: 200% 0; }
+}

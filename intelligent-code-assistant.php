@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:       Code Dropdown
- * Description:       Dropdown code block with interactive front-end controls and AI-powered metadata auto-fill via WordPress Abilities API.
- * Version:           1.0.0
+ * Plugin Name:       WP Intelligent Code Assistant
+ * Description:       An interactive code block with inline AI assistance for technical articles, powered by the WordPress AI Client, Abilities API and Interactivity API.
+ * Version:           1.1.0
  * Text Domain:       intelligent-code-assistant
  */
 
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Register custom block types from build directory metadata.
+ * Register custom block types from the build directory metadata.
  */
 function intelligent_code_assistant_register_blocks() {
 	register_block_type_from_metadata( __DIR__ . '/build/intelligent-code-assistant' );
@@ -31,7 +31,7 @@ add_action( 'wp_enqueue_scripts', function() {
 		null,
 		true
 	);
-});
+} );
 
 /**
  * Enqueue Prism.js assets on the front-end for syntax highlighting.
@@ -65,19 +65,19 @@ function wpe_enqueue_syntax_highlighter_assets() {
 add_action( 'wp_enqueue_scripts', 'wpe_enqueue_syntax_highlighter_assets' );
 
 /* ==========================================================================
-   WORDPRESS 6.9+ ABILITIES API & AI INTEGRATION
+   WORDPRESS ABILITIES API & AI INTEGRATION
    ========================================================================== */
 
 /**
- * Register Ability Category for Code Dropdown Tools.
+ * Register the assistant's Ability category.
  */
 add_action( 'wp_abilities_api_categories_init', function() {
 	if ( function_exists( 'wp_register_ability_category' ) ) {
 		wp_register_ability_category(
 			'intelligent-code-assistant-tools',
 			array(
-				'label'       => __( 'Code Dropdown Utilities', 'intelligent-code-assistant' ),
-				'description' => __( 'Abilities for code analysis, syntax detection, and block metadata generation.', 'intelligent-code-assistant' ),
+				'label'       => __( 'Intelligent Code Assistant', 'intelligent-code-assistant' ),
+				'description' => __( 'Abilities for code analysis and AI-powered assistance inside technical articles.', 'intelligent-code-assistant' ),
 			)
 		);
 	}
@@ -150,15 +150,7 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_autofill_ability' ) 
 			);
 		}
 
-		$prompt = "You are a software engineer and code analyzer. Analyze the snippet below and return ONLY a raw JSON object (no markdown, no backticks) with these exact keys:
-- 'codeLanguage': The exact matching token from ['PHP', 'JS', 'CSS', 'HTML', 'JSON', 'SQL', 'Bash'].
-- 'filename': An idiomatic filename (e.g., 'block.json', 'class-wp-widget.php', 'useFetch.js').
-- 'title': A concise 3-6 word summary title.
-- 'highlightLines': Important line numbers to highlight (e.g. '1', '3-5', '2,8-10') or empty string '' if none.
-- 'showLineNumbers': true if the snippet has more than 3 lines or structural logic, false otherwise.
-
-Snippet:
-{$code}";
+		$prompt = "You are a software engineer and code analyzer. Analyze the snippet below and return ONLY a raw JSON object (no markdown, no backticks) with these exact keys:\n- 'codeLanguage': The exact matching token from ['PHP', 'JS', 'CSS', 'HTML', 'JSON', 'SQL', 'Bash'].\n- 'filename': An idiomatic filename (e.g., 'block.json', 'class-wp-widget.php', 'useFetch.js').\n- 'title': A concise 3-6 word summary title.\n- 'highlightLines': Important line numbers to highlight (e.g. '1', '3-5', '2,8-10') or empty string '' if none.\n- 'showLineNumbers': true if the snippet has more than 3 lines or structural logic, false otherwise.\n\nSnippet:\n{$code}";
 
 		if ( function_exists( 'wp_ai_client_prompt' ) ) {
 			try {
@@ -197,17 +189,15 @@ Snippet:
 						);
 					}
 				}
-			} catch ( Exception $e ) {
-				// Fall through to fallback engine
+			} catch ( Throwable $e ) {
+				// Fall through to the deterministic fallback engine.
 			}
 		}
 
-		// Smart Fallback Parser (Runs offline or when AI provider key is not configured)
 		$trimmed_code = trim( $code );
 		$lines_count  = count( explode( "\n", $trimmed_code ) );
 
-		if ( ( str_starts_with( $trimmed_code, '{' ) && str_ends_with( $trimmed_code, '}' ) ) || 
-		     ( str_starts_with( $trimmed_code, '[' ) && str_ends_with( $trimmed_code, ']' ) ) ) {
+		if ( ( str_starts_with( $trimmed_code, '{' ) && str_ends_with( $trimmed_code, '}' ) ) || ( str_starts_with( $trimmed_code, '[' ) && str_ends_with( $trimmed_code, ']' ) ) ) {
 			$json_test = json_decode( $trimmed_code, true );
 			return array(
 				'codeLanguage'    => 'JSON',
@@ -258,7 +248,7 @@ Snippet:
 	}
 }
 
-/* Direct REST API Fallback Route */
+/* Direct REST fallback for editor-only metadata generation. */
 add_action( 'rest_api_init', function() {
 	register_rest_route(
 		'intelligent-code-assistant/v1',
@@ -278,21 +268,18 @@ add_action( 'rest_api_init', function() {
 } );
 
 /* ==========================================================================
-   USER PERSISTENCE REST ENDPOINTS & META
+   USER PERSISTENCE
    ========================================================================== */
 
-/**
- * Register user meta for completed code blocks.
- */
 add_action( 'init', function() {
 	register_meta(
 		'user',
 		'_wpe_completed_blocks',
 		array(
-			'type'          => 'object',
-			'description'   => 'Track completed code block IDs per user.',
-			'single'        => true,
-			'show_in_rest'  => array(
+			'type'         => 'object',
+			'description'  => 'Track completed code block IDs per user.',
+			'single'       => true,
+			'show_in_rest' => array(
 				'schema' => array(
 					'type'                 => 'object',
 					'additionalProperties' => array( 'type' => 'boolean' ),
@@ -305,9 +292,6 @@ add_action( 'init', function() {
 	);
 } );
 
-/**
- * REST API route to toggle block completion state for logged-in users.
- */
 add_action( 'rest_api_init', function() {
 	register_rest_route(
 		'intelligent-code-assistant/v1',
@@ -349,7 +333,7 @@ add_action( 'rest_api_init', function() {
 					'type'              => 'string',
 					'sanitize_callback' => 'sanitize_text_field',
 				),
-				'status'   => array(
+				'status' => array(
 					'required' => true,
 					'type'     => 'boolean',
 				),
@@ -372,21 +356,21 @@ add_action( 'wp_abilities_api_init', function() {
 		array(
 			'category'            => 'intelligent-code-assistant-tools',
 			'label'               => __( 'Explain This Code', 'intelligent-code-assistant' ),
-			'description'         => __( 'Generates a clear, line-by-line or conceptual summary of a code snippet.', 'intelligent-code-assistant' ),
+			'description'         => __( 'Generates a concise explanation of a code snippet for a technical article reader.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
 			'show_in_mcp'         => true,
-			'permission_callback' => '__return_true', // Publicly readable for front-end tutorial visitors
+			'permission_callback' => '__return_true',
 			'input_schema'        => array(
 				'type'       => 'object',
 				'properties' => array(
-					'code'     => array(
+					'code' => array(
 						'type'        => 'string',
 						'description' => __( 'The raw code snippet to explain.', 'intelligent-code-assistant' ),
 						'minLength'   => 1,
 					),
 					'language' => array(
 						'type'        => 'string',
-						'description' => __( 'Programming language context.', 'intelligent-code-assistant' ),
+						description  => __( 'Programming language context.', 'intelligent-code-assistant' ),
 					),
 				),
 				'required'             => array( 'code' ),
@@ -397,7 +381,7 @@ add_action( 'wp_abilities_api_init', function() {
 				'properties' => array(
 					'explanation' => array(
 						'type'        => 'string',
-						'description' => __( 'Concise 3-bullet breakdown of the code snippet.', 'intelligent-code-assistant' ),
+						'description' => __( 'A concise three-point explanation.', 'intelligent-code-assistant' ),
 					),
 				),
 				'required'             => array( 'explanation' ),
@@ -409,191 +393,96 @@ add_action( 'wp_abilities_api_init', function() {
 } );
 
 /**
- * Execution callback for Step 4 code explanation ability.
- * Explicitly boots the AI Client Connector during front-end REST API execution.
+ * Generate the explanation through the WordPress AI Client.
  *
- * @param array $args Sanitized inputs matching input_schema.
- * @return array|WP_Error Output array containing 'explanation' string.
+ * @param array $args Sanitized inputs matching the Ability schema.
+ * @return array|WP_Error Output containing the explanation.
  */
 if ( ! function_exists( 'intelligent_code_assistant_execute_explain_ability' ) ) {
 	function intelligent_code_assistant_execute_explain_ability( array $args ) {
-error_log( '[Code Dropdown AI] Ability invoked with raw args: ' . wp_json_encode( $args ) );
+		$raw_input = isset( $args['code'] ) && is_string( $args['code'] ) ? $args['code'] : '';
+		$code      = wp_unslash( trim( html_entity_decode( $raw_input, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) );
+		$language  = isset( $args['language'] ) ? sanitize_text_field( $args['language'] ) : 'code';
 
+		if ( '' === $code ) {
+			return new WP_Error(
+				'empty_code',
+				__( 'Code snippet cannot be empty.', 'intelligent-code-assistant' ),
+				array( 'status' => 400 )
+			);
+		}
 
-// 1. Prepare and sanitise the code input.
+		if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
+			return new WP_Error(
+				'ai_client_unavailable',
+				__( 'The WordPress AI Client is not available.', 'intelligent-code-assistant' ),
+				array( 'status' => 503 )
+			);
+		}
 
-$raw_input = isset( $args['code'] ) && is_string( $args['code'] )
-	? $args['code']
-	: '';
+		$prompt = "You are an expert technical instructor.\n\nAnalyze the following {$language} code snippet and explain what it does in exactly 3 clear, concise bullet points.\n\nRequirements:\n* Maximum 25 words per bullet.\n* Focus on the actual functions, variables, conditions and logic present.\n* Do not invent functionality that is not present.\n* Do not include a preamble.\n* Do not use markdown code fences.\n* Return only the 3 bullet points.\n\nCode Snippet:\n{$code}";
 
-$decoded = html_entity_decode(
-	$raw_input,
-	ENT_QUOTES | ENT_HTML5,
-	'UTF-8'
-);
+		try {
+			$result = wp_ai_client_prompt( $prompt )->generate_text();
 
-$decoded = html_entity_decode(
-	$decoded,
-	ENT_QUOTES | ENT_HTML5,
-	'UTF-8'
-);
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
 
-$code = wp_unslash( trim( $decoded ) );
+			$explanation = is_string( $result ) ? trim( $result ) : '';
 
-$language = isset( $args['language'] )
-	? sanitize_text_field( $args['language'] )
-	: 'code';
+			if ( '' === $explanation ) {
+				return new WP_Error(
+					'ai_empty_response',
+					__( 'The AI provider returned an empty response.', 'intelligent-code-assistant' ),
+					array( 'status' => 502 )
+				);
+			}
 
-if ( empty( $code ) ) {
-	return new WP_Error(
-		'empty_code',
-		__( 'Code snippet cannot be empty.', 'intelligent-code-assistant' ),
-		array( 'status' => 400 )
-	);
+			return array(
+				'explanation' => sanitize_textarea_field( $explanation ),
+			);
+		} catch ( Throwable $e ) {
+			return new WP_Error(
+				'ai_generation_exception',
+				__( 'An unexpected error occurred while generating the explanation.', 'intelligent-code-assistant' ),
+				array( 'status' => 500 )
+			);
+		}
+	}
 }
 
-
-// 2. Build the AI prompt.
-
-$prompt = "You are an expert technical instructor.\n```
-
-Analyze the following {$language} code snippet and explain what it does in exactly 3 clear, concise bullet points.
-
-Requirements:
-
-* Maximum 25 words per bullet.
-* Focus on the actual functions, variables, conditions and logic present in the code.
-* Do not invent functionality that is not present.
-* Do not include a preamble.
-* Do not use markdown code fences.
-* Return only the 3 bullet points.
-
-Code Snippet:
-{$code}";
-
-// 3. Check that the WordPress AI Client is available.
-if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
-	error_log(
-		'[Code Dropdown AI Error] wp_ai_client_prompt() is not available.'
-	);
-
-	return new WP_Error(
-		'ai_client_unavailable',
-		__(
-			'The WordPress AI Client is not available.',
-			'intelligent-code-assistant'
-		),
-		array( 'status' => 503 )
-	);
-}
-
-// 4. Generate the response using the current WordPress AI Client API.
-// wp_ai_client_prompt() returns a WP_AI_Client_Prompt_Builder.
-// The builder uses generate_text() as the text-generation method.
-try {
-	error_log(
-		'[Code Dropdown AI] Calling wp_ai_client_prompt()->generate_text()'
-	);
-
-	$result = wp_ai_client_prompt( $prompt )->generate_text();
-
-	/*
-	 * generate_text() returns WP_Error when generation fails.
-	 */
-	if ( is_wp_error( $result ) ) {
-		error_log(
-			'[Code Dropdown AI Error] generate_text() failed: ' .
-			$result->get_error_message()
-		);
-
-		error_log(
-			'[Code Dropdown AI Error] Error code: ' .
-			$result->get_error_code()
-		);
-
-		return $result;
-	}
-
-	// 5. Validate the generated response.
-	$explanation = is_string( $result )
-		? trim( $result )
-		: '';
-
-	if ( empty( $explanation ) ) {
-		error_log(
-			'[Code Dropdown AI Error] generate_text() returned an empty response.'
-		);
-
-		return new WP_Error(
-			'ai_empty_response',
-			__(
-				'The AI provider returned an empty response.',
-				'intelligent-code-assistant'
-			),
-			array( 'status' => 502 )
-		);
-	}
-
-	error_log(
-		'[Code Dropdown AI Success] AI explanation generated successfully.'
-	);
-
-	error_log(
-		'[Code Dropdown AI Response] ' . $explanation
-	);
-
-	return array(
-		'explanation' => sanitize_textarea_field( $explanation ),
-	);
-
-} catch ( Throwable $e ) {
-	error_log(
-		'[Code Dropdown AI Exception] ' . $e->getMessage()
-	);
-
-	return new WP_Error(
-		'ai_generation_exception',
-		__(
-			'An unexpected error occurred while generating the explanation.',
-			'intelligent-code-assistant'
-		),
+/* Direct REST fallback for front-end tutorial visitors. */
+add_action( 'rest_api_init', function() {
+	register_rest_route(
+		'intelligent-code-assistant/v1',
+		'/explain-code',
 		array(
-			'status' => 500,
+			'methods'             => 'POST',
+			'callback'            => function( WP_REST_Request $request ) {
+				$params   = $request->get_json_params();
+				$raw_code = is_array( $params ) && isset( $params['code'] ) ? $params['code'] : $request->get_param( 'code' );
+				$language = is_array( $params ) && isset( $params['language'] ) ? $params['language'] : $request->get_param( 'language' );
+
+				return intelligent_code_assistant_execute_explain_ability(
+					array(
+						'code'     => (string) $raw_code,
+						'language' => (string) $language,
+					)
+				);
+			},
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'code' => array(
+					'required' => true,
+					'type'     => 'string',
+					'minimum' => 1,
+				),
+				'language' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+			),
 		)
 	);
-}
-
-}
-
-}
-
-/* Ensure Direct REST Fallback Route Flushes Cleanly */
-add_action( 'rest_api_init', function() {
-    register_rest_route(
-        'intelligent-code-assistant/v1',
-        '/explain-code',
-        array(
-            'methods'             => 'POST',
-            'callback'            => function( WP_REST_Request $request ) {
-
-                $params = $request->get_json_params();
-
-                $raw_code = is_array( $params ) && isset( $params['code'] )
-                    ? $params['code']
-                    : $request->get_param( 'code' );
-
-                $language = is_array( $params ) && isset( $params['language'] )
-                    ? $params['language']
-                    : $request->get_param( 'language' );
-
-                return intelligent_code_assistant_execute_explain_ability(
-                    array(
-                        'code'     => (string) $raw_code,
-                        'language' => (string) $language,
-                    )
-                );
-            },
-            'permission_callback' => '__return_true',
-        )
-    );
 } );

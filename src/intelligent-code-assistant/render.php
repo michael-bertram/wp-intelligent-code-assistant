@@ -106,7 +106,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 		'activeCodeText'         => $raw_code_text,
 		'codeLanguage'           => $code_lang,
 		'highlightLines'         => $highlight_lines,
-		'rawCodeText'             => $raw_code_text,
+		'rawCodeText'            => $raw_code_text,
 		'completeText'            => esc_html__( 'Done', 'intelligent-code-assistant' ),
 	) ); ?>
 >

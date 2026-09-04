@@ -106,7 +106,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 		'activeCodeText'         => $raw_code_text,
 		'codeLanguage'           => $code_lang,
 		'highlightLines'         => $highlight_lines,
-		'rawCodeText'            => $raw_code_text,
+		'rawCodeText'             => $raw_code_text,
 		'completeText'            => esc_html__( 'Done', 'intelligent-code-assistant' ),
 	) ); ?>
 >
@@ -158,7 +158,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 					<button type="button" class="explanation-close-btn" data-wp-on--click="actions.closeExplanation" aria-label="<?php esc_attr_e( 'Close explanation', 'intelligent-code-assistant' ); ?>">&times;</button>
 				</div>
 
-				<div class="explanation-loading-container" data-wp-bind--hidden="!context.isAnalyzingExplanation" aria-live="polite">
+				<div class="explanation-loading-container" data-wp-bind--hidden="!context.isAnalyzingExplanation" data-wp-class--is-hidden="!context.isAnalyzingExplanation" aria-live="polite">
 					<div class="spinner-status-bar">
 						<span class="spinner-icon" aria-hidden="true"></span>
 						<span class="spinner-text"><?php esc_html_e( 'Analyzing code logic with AI...', 'intelligent-code-assistant' ); ?></span>

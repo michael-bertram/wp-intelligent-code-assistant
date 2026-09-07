@@ -627,3 +627,107 @@ a:focus {
 	0% { background-position: -200% 0; }
 	100% { background-position: 200% 0; }
 }
+
+/* ==========================================================================
+   STAGE 2: SELECTED LINE AI ACTIONS
+   ========================================================================== */
+
+.line-ai-actions {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+
+	margin-top: 16px;
+	padding: 10px 12px;
+
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+	border-radius: 6px;
+
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+	&[hidden] {
+		display: none !important;
+	}
+}
+
+.selected-line-label {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+
+	font-size: 0.75rem !important;
+	line-height: 1.4 !important;
+	color: #64748b;
+
+	strong {
+		font-size: inherit !important;
+		color: #334155;
+		font-weight: 600;
+	}
+}
+
+.explain-line-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+
+	padding: 6px 10px;
+
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
+	border-radius: 6px;
+
+	color: #334155;
+	font-size: 0.75rem !important;
+	font-weight: 600;
+
+	cursor: pointer;
+
+	transition:
+		background-color 0.15s ease,
+		border-color 0.15s ease,
+		color 0.15s ease;
+
+	&:hover:not(:disabled) {
+		background: #0f172a;
+		border-color: #0f172a;
+		color: #ffffff;
+	}
+
+	&:disabled {
+		opacity: 0.6;
+		cursor: wait;
+	}
+}
+
+/* Dark theme */
+
+.dark-theme {
+
+	.line-ai-actions {
+		background: #1e1e1e;
+		border-color: #334155;
+	}
+
+	.selected-line-label {
+		color: #94a3b8;
+
+		strong {
+			color: #e2e8f0;
+		}
+	}
+
+	.explain-line-button {
+		background: #27272a;
+		border-color: #3f3f46;
+		color: #e4e4e7;
+
+		&:hover:not(:disabled) {
+			background: #ffffff;
+			border-color: #ffffff;
+			color: #18181b;
+		}
+	}
+}

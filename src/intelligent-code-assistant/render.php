@@ -108,6 +108,12 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 		'highlightLines'         => $highlight_lines,
 		'rawCodeText'            => $raw_code_text,
 		'completeText'            => esc_html__( 'Done', 'intelligent-code-assistant' ),
+		'selectedLineNumber' => 0,
+		'selectedLineText'   => '',
+		'isExplainingLine'   => false,
+		'isAnalyzingLine'    => false,
+		'lineExplanation'    => '',
+		'lineExplanationError' => '',
 	) ); ?>
 >
 	<div class="editor-combined-container">
@@ -141,6 +147,33 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 					<?php echo $line_gutter_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 					<div class="panel-content">
 						<pre><code class="language-<?php echo esc_attr( $selected_lang ); ?>" data-wp-text="context.activeCodeText"><?php echo esc_html( $raw_code_text ); ?></code></pre>
+						<div
+    class="line-ai-actions"
+    data-wp-bind--hidden="!context.selectedLineNumber"
+>
+    <span class="selected-line-label">
+        <?php esc_html_e( 'Selected:', 'intelligent-code-assistant' ); ?>
+        <strong>
+            <?php esc_html_e( 'Line', 'intelligent-code-assistant' ); ?>
+            <span data-wp-text="context.selectedLineNumber"></span>
+        </strong>
+    </span>
+
+    <button
+        type="button"
+        class="explain-line-button"
+        data-wp-on--click="actions.explainLine"
+        data-wp-bind--disabled="context.isAnalyzingLine"
+    >
+        <span data-wp-bind--hidden="context.isAnalyzingLine">
+            <?php esc_html_e( 'Explain this line', 'intelligent-code-assistant' ); ?>
+        </span>
+
+        <span data-wp-bind--hidden="!context.isAnalyzingLine">
+            <?php esc_html_e( 'Explaining...', 'intelligent-code-assistant' ); ?>
+        </span>
+    </button>
+</div>
 					</div>
 				</div>
 			</div>

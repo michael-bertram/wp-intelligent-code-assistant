@@ -260,6 +260,25 @@ const {
       }
       context.isAnalyzingExplanation = false;
     },
+    *explainLine() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      if (!context.selectedLineNumber || !context.selectedLineText) {
+        context.lineExplanationError = 'Select a line of code first.';
+        return;
+      }
+      context.isExplainingLine = true;
+      context.isAnalyzingLine = true;
+      context.lineExplanation = '';
+      context.lineExplanationError = '';
+      console.log('Explain line request:', {
+        lineNumber: context.selectedLineNumber,
+        lineText: context.selectedLineText,
+        language: context.codeLanguage
+      });
+
+      // Temporary — will be replaced with the AI request.
+      context.isAnalyzingLine = false;
+    },
     async copyToClipboard() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
       const {

@@ -39,8 +39,29 @@ export async function requestAICapability(capability, payload) {
     }
   ).catch(() => null);
 
-  if (directResponse?.ok) {
-    return directResponse.json();
+  if (directResponse) {
+    const directData = await directResponse
+      .json()
+      .catch(() => null);
+
+    if (directResponse.ok) {
+      return directData;
+    }
+
+    // The endpoint exists and WordPress returned a meaningful error.
+    // Preserve it instead of masking it with a fallback request.
+    if (directData?.code) {
+      return {
+        error: true,
+        code: directData.code,
+        message:
+          directData.message ||
+          'The AI request failed.',
+        status:
+          directData.data?.status ||
+          directResponse.status,
+      };
+    }
   }
 
   const abilityResponse = await fetch(
@@ -52,8 +73,29 @@ export async function requestAICapability(capability, payload) {
     }
   ).catch(() => null);
 
-  if (abilityResponse?.ok) {
-    return abilityResponse.json();
+  if (!abilityResponse) {
+    return null;
+  }
+
+  const abilityData = await abilityResponse
+    .json()
+    .catch(() => null);
+
+  if (abilityResponse.ok) {
+    return abilityData;
+  }
+
+  if (abilityData?.code) {
+    return {
+      error: true,
+      code: abilityData.code,
+      message:
+        abilityData.message ||
+        'The AI request failed.',
+      status:
+        abilityData.data?.status ||
+        abilityResponse.status,
+    };
   }
 
   return null;

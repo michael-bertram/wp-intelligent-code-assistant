@@ -12,6 +12,20 @@ import {
 
 const STORAGE_KEY = 'wpe_tasks';
 
+function getAIErrorMessage(response) {
+  const status = Number(response?.status || 0);
+
+  if (status === 429) {
+    return 'AI assistance is temporarily unavailable. Please try again later.';
+  }
+
+  if (status === 503) {
+    return 'The AI service is currently busy. Please try again in a moment.';
+  }
+
+  return 'Unable to generate an AI response right now. Please try again.';
+}
+
 const { state } = store('wpe', {
   state: {
     currentlyOpenId: null,
@@ -152,20 +166,24 @@ const { state } = store('wpe', {
         buildAIContext(context)
       );
 
-      if (
-        response &&
-        typeof response.explanation === 'string' &&
-        response.explanation.trim()
-      ) {
-        context.explanationText =
-          response.explanation.trim();
-
-        context.explanationItems =
-          formatAIItems(response.explanation);
-      } else {
-        context.explanationError =
-          'Unable to generate a code explanation right now.';
-      }
+      if (response?.error) {
+  context.explanationText = '';
+  context.explanationItems = [];
+  context.explanationError = getAIErrorMessage(response);
+} else if (
+  response &&
+  typeof response.explanation === 'string' &&
+  response.explanation.trim()
+) {
+  context.explanationText = response.explanation.trim();
+  context.explanationItems = formatAIItems(response.explanation);
+  context.explanationError = '';
+} else {
+  context.explanationText = '';
+  context.explanationItems = [];
+  context.explanationError =
+    'Unable to generate a code explanation right now.';
+}
 
       context.isAnalyzingExplanation = false;
     },
@@ -175,43 +193,81 @@ const { state } = store('wpe', {
        ========================================================================== */
 
     *explainLine() {
-      const context = getContext();
+  const context = getContext();
 
-      if (
-        !context.selectedLineNumber ||
-        !context.selectedLineText
-      ) {
-        context.lineExplanationError =
-          'Select a line of code first.';
-        return;
-      }
+  if (!context.selectedLineNumber || !context.selectedLineText) {
+    context.lineExplanationError = 'Select a line of code first.';
+    return;
+  }
 
-      context.isExplainingLine = true;
-      context.isAnalyzingLine = true;
-      context.lineExplanation = '';
-      context.lineExplanationError = '';
+  context.isExplainingLine = true;
+  context.isAnalyzingLine = true;
+  context.lineExplanation = '';
+  context.lineExplanationError = '';
 
-      /*
-       * Temporary Stage 2 test.
-       *
-       * The next step will replace this with:
-       *
-       * requestAICapability(
-       *   'explain-line',
-       *   buildAIContext(...)
-       * )
-       */
-      console.log(
-        '[Intelligent Code Assistant] Explain line request:',
-        {
-          lineNumber: context.selectedLineNumber,
-          lineText: context.selectedLineText,
-          language: context.codeLanguage,
-        }
-      );
+  const lines = (context.rawCodeText || '').split('\n');
 
-      context.isAnalyzingLine = false;
-    },
+  const selectedLineNumber = Number(
+    context.selectedLineNumber
+  );
+
+  const start = Math.max(
+    1,
+    selectedLineNumber - 2
+  );
+
+  const end = Math.min(
+    lines.length,
+    selectedLineNumber + 2
+  );
+
+  const surroundingCode = lines
+    .slice(start - 1, end)
+    .map((line, index) => {
+      const lineNumber = start + index;
+
+      const marker =
+        lineNumber === selectedLineNumber
+          ? '>>>'
+          : '   ';
+
+      return `${marker} ${lineNumber}: ${line}`;
+    })
+    .join('\n');
+
+  const payload = buildAIContext(
+    context,
+    {
+      selectedLineNumber,
+      selectedLine:
+        context.selectedLineText,
+      surroundingCode,
+    }
+  );
+
+  const response =
+    yield requestAICapability(
+      'explain-line',
+      payload
+    );
+if (response?.error) {
+  context.lineExplanation = '';
+  context.lineExplanationError = getAIErrorMessage(response);
+} else if (
+  response &&
+  typeof response.explanation === 'string' &&
+  response.explanation.trim()
+) {
+  context.lineExplanation = response.explanation.trim();
+  context.lineExplanationError = '';
+} else {
+  context.lineExplanation = '';
+  context.lineExplanationError =
+    'Unable to explain this line right now.';
+}
+
+context.isAnalyzingLine = false;
+},
 
     /* ==========================================================================
        CLIPBOARD

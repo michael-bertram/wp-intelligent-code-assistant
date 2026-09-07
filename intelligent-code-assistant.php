@@ -302,35 +302,45 @@ add_action( 'wp_abilities_api_init', function() {
 
 			'input_schema'        => array(
 				'type'       => 'object',
+'properties' => array(
 
-				'properties' => array(
-					'code' => array(
-						'type'        => 'string',
-						'description' => __( 'The complete code snippet containing the selected line.', 'intelligent-code-assistant' ),
-						'minLength'   => 1,
-					),
+	'code' => array(
+		'type'        => 'string',
+		'description' => __( 'The complete code snippet containing the selected line.', 'intelligent-code-assistant' ),
+		'minLength'   => 1,
+	),
 
-					'language' => array(
-						'type'        => 'string',
-						'description' => __( 'Programming language context.', 'intelligent-code-assistant' ),
-					),
+	'language' => array(
+		'type'        => 'string',
+		'description' => __( 'Programming language context.', 'intelligent-code-assistant' ),
+	),
 
-					'selectedLineNumber' => array(
-						'type'        => 'integer',
-						'description' => __( 'The one-based line number selected by the reader.', 'intelligent-code-assistant' ),
-						'minimum'     => 1,
-					),
+	'filename' => array(
+		'type'        => 'string',
+		'description' => __( 'Optional filename associated with the code snippet.', 'intelligent-code-assistant' ),
+	),
 
-					'selectedLine' => array(
-						'type'        => 'string',
-						'description' => __( 'The exact selected line of code.', 'intelligent-code-assistant' ),
-					),
+	'title' => array(
+		'type'        => 'string',
+		'description' => __( 'Optional title associated with the code snippet.', 'intelligent-code-assistant' ),
+	),
 
-					'surroundingCode' => array(
-						'type'        => 'string',
-						'description' => __( 'Nearby lines included to give the AI local context.', 'intelligent-code-assistant' ),
-					),
-				),
+	'selectedLineNumber' => array(
+		'type'        => 'integer',
+		'description' => __( 'The one-based line number selected by the reader.', 'intelligent-code-assistant' ),
+		'minimum'     => 1,
+	),
+
+	'selectedLine' => array(
+		'type'        => 'string',
+		'description' => __( 'The exact selected line of code.', 'intelligent-code-assistant' ),
+	),
+
+	'surroundingCode' => array(
+		'type'        => 'string',
+		'description' => __( 'Nearby lines included to give the AI local context.', 'intelligent-code-assistant' ),
+	),
+),
 
 				'required' => array(
 					'code',

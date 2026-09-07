@@ -505,6 +505,68 @@ $selected_lang =
 							</button>
 
 						</div>
+						<div
+	class="line-explanation-panel"
+	data-wp-bind--hidden="!context.isExplainingLine"
+>
+
+	<div class="line-explanation-header">
+
+		<div class="line-explanation-title">
+			<?php esc_html_e(
+				'Line',
+				'intelligent-code-assistant'
+			); ?>
+
+			<span
+				class="line-explanation-number"
+				data-wp-text="context.selectedLineNumber"
+			></span>
+			<?php esc_html_e(
+				'explanation',
+				'intelligent-code-assistant'
+			); ?>
+		</div>
+
+	</div>
+
+	<div
+		class="line-explanation-loading"
+		data-wp-bind--hidden="!context.isAnalyzingLine"
+	>
+		<span
+			class="spinner-icon"
+			aria-hidden="true"
+		></span>
+
+		<span>
+			<?php esc_html_e(
+				'Explaining selected line...',
+				'intelligent-code-assistant'
+			); ?>
+		</span>
+	</div>
+
+	<div
+		class="line-explanation-content"
+		data-wp-bind--hidden="context.isAnalyzingLine || !context.lineExplanation"
+	>
+		<p data-wp-text="context.lineExplanation"></p>
+	</div>
+
+	<div
+		class="line-explanation-error"
+		data-wp-bind--hidden="!context.lineExplanationError"
+		role="alert"
+	>
+		<span aria-hidden="true">⚠</span>
+
+		<span
+			data-wp-text="context.lineExplanationError"
+		></span>
+	</div>
+
+</div>
 
 					</div>
 

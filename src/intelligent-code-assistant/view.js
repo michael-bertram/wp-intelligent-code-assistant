@@ -67,7 +67,30 @@ const { state, actions } = store('wpe', {
       context.explanationText = '';
       context.explanationItems = [];
 
-      const response = yield requestAICapability('explain-code', buildAIContext(context));
+      let requestContext = context;
+
+      if (context.selectedLineNumber) {
+        const lines = (context.rawCodeText || '').split('\n');
+        const selectedLineNumber = Number(context.selectedLineNumber);
+        const start = Math.max(1, selectedLineNumber - 2);
+        const end = Math.min(lines.length, selectedLineNumber + 2);
+        const focusedCode = lines
+          .slice(start - 1, end)
+          .map((line, index) => {
+            const lineNumber = start + index;
+            const marker = lineNumber === selectedLineNumber ? '>>> SELECTED LINE' : '    context';
+            return `${marker} ${lineNumber}: ${line}`;
+          })
+          .join('\n');
+
+        requestContext = {
+          ...context,
+          rawCodeText: focusedCode,
+          activeCodeText: focusedCode,
+        };
+      }
+
+      const response = yield requestAICapability('explain-code', buildAIContext(requestContext));
 
       if (response && typeof response.explanation === 'string' && response.explanation.trim()) {
         context.explanationText = response.explanation.trim();
@@ -144,6 +167,8 @@ const { state, actions } = store('wpe', {
       context.explanationText = '';
       context.explanationItems = [];
       context.explanationError = '';
+      context.selectedLineNumber = 0;
+      context.selectedLineText = '';
       context.completeText = context.isComplete ? '✓' : 'Mark as complete';
 
       if (context.highlightLines) {
@@ -159,6 +184,47 @@ const { state, actions } = store('wpe', {
         context.highlightedNumbers = Array.from(targetLines);
       } else {
         context.highlightedNumbers = [];
+      }
+
+      const { ref: blockElement } = getElement();
+      const panel = blockElement?.querySelector('.panel-content');
+      const pre = panel?.querySelector('pre');
+
+      if (panel && pre && !panel.dataset.lineSelectionBound) {
+        panel.dataset.lineSelectionBound = 'true';
+        panel.setAttribute('aria-label', 'Code. Click a line to select it for AI explanation.');
+
+        panel.addEventListener('click', (event) => {
+          if (event.target.closest('button, a, input, textarea, select')) return;
+
+          const rect = pre.getBoundingClientRect();
+          const computed = window.getComputedStyle(pre);
+          const lineHeight = parseFloat(computed.lineHeight) || (parseFloat(computed.fontSize) * 1.5);
+          const relativeY = event.clientY - rect.top;
+          const lines = (context.rawCodeText || '').split('\n');
+          const lineNumber = Math.max(1, Math.min(lines.length, Math.floor(relativeY / lineHeight) + 1));
+
+          context.selectedLineNumber = lineNumber;
+          context.selectedLineText = lines[lineNumber - 1] || '';
+          context.isExplaining = false;
+          context.isAnalyzingExplanation = false;
+          context.explanationText = '';
+          context.explanationItems = [];
+          context.explanationError = '';
+
+          pre.style.backgroundImage = `linear-gradient(to bottom, transparent 0, transparent ${(lineNumber - 1) * lineHeight}px, rgba(37, 99, 235, 0.10) ${(lineNumber - 1) * lineHeight}px, rgba(37, 99, 235, 0.10) ${lineNumber * lineHeight}px, transparent ${lineNumber * lineHeight}px)`;
+          pre.style.backgroundRepeat = 'no-repeat';
+          pre.style.backgroundSize = '100% 100%';
+
+          const block = panel.closest('[data-wp-interactive="wpe"]');
+          const explainButton = block?.querySelector('.explain-button');
+          if (explainButton) {
+            const label = explainButton.querySelector('span');
+            if (label) label.textContent = `Explain line ${lineNumber}`;
+            explainButton.classList.add('line-selected');
+            explainButton.setAttribute('aria-label', `Explain line ${lineNumber} using AI`);
+          }
+        });
       }
     },
   },

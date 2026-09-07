@@ -160,8 +160,7 @@ __webpack_require__.r(__webpack_exports__);
 
 const STORAGE_KEY = 'wpe_tasks';
 const {
-  state,
-  actions
+  state
 } = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.store)('wpe', {
   state: {
     currentlyOpenId: null,
@@ -175,7 +174,9 @@ const {
       return state.registeredIds.filter(id => state.tasks[id]).length;
     },
     get progressPercent() {
-      if (!state.totalTasks) return 0;
+      if (!state.totalTasks) {
+        return 0;
+      }
       return Math.round(state.completedTasks / state.totalTasks * 100);
     },
     get progressBarStyle() {
@@ -201,7 +202,9 @@ const {
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
-      } catch (err) {/* Optional storage. */}
+      } catch (err) {
+        // Local storage is optional.
+      }
       try {
         yield fetch('/wp-json/intelligent-code-assistant/v1/toggle-complete', {
           method: 'POST',
@@ -214,8 +217,14 @@ const {
             status: context.isComplete
           })
         });
-      } catch (err) {/* Local completion remains available. */}
+      } catch (err) {
+        // Local completion remains available.
+      }
     },
+    /* ==========================================================================
+       EXPLAIN ENTIRE CODE SNIPPET
+       ========================================================================== */
+
     closeExplanation() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
       context.isExplaining = false;
@@ -229,29 +238,22 @@ const {
         return;
       }
       context.isExplaining = true;
-      if (context.explanationText && !context.explanationError) return;
+      if (context.explanationText && !context.explanationError) {
+        return;
+      }
       context.isAnalyzingExplanation = true;
       context.explanationError = '';
       context.explanationText = '';
       context.explanationItems = [];
-      let requestContext = context;
-      if (context.selectedLineNumber) {
-        const lines = (context.rawCodeText || '').split('\n');
-        const selectedLineNumber = Number(context.selectedLineNumber);
-        const start = Math.max(1, selectedLineNumber - 2);
-        const end = Math.min(lines.length, selectedLineNumber + 2);
-        const focusedCode = lines.slice(start - 1, end).map((line, index) => {
-          const lineNumber = start + index;
-          const marker = lineNumber === selectedLineNumber ? '>>> SELECTED LINE' : '    context';
-          return `${marker} ${lineNumber}: ${line}`;
-        }).join('\n');
-        requestContext = {
-          ...context,
-          rawCodeText: focusedCode,
-          activeCodeText: focusedCode
-        };
-      }
-      const response = yield (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.requestAICapability)('explain-code', (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.buildAIContext)(requestContext));
+
+      /*
+       * Explain Code always receives the complete snippet.
+       *
+       * Selecting a line should not change the meaning of the
+       * original Explain button. Line explanations use their
+       * own action and Ability.
+       */
+      const response = yield (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.requestAICapability)('explain-code', (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.buildAIContext)(context));
       if (response && typeof response.explanation === 'string' && response.explanation.trim()) {
         context.explanationText = response.explanation.trim();
         context.explanationItems = (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.formatAIItems)(response.explanation);
@@ -260,6 +262,10 @@ const {
       }
       context.isAnalyzingExplanation = false;
     },
+    /* ==========================================================================
+       STAGE 2: EXPLAIN SELECTED LINE
+       ========================================================================== */
+
     *explainLine() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
       if (!context.selectedLineNumber || !context.selectedLineText) {
@@ -270,26 +276,44 @@ const {
       context.isAnalyzingLine = true;
       context.lineExplanation = '';
       context.lineExplanationError = '';
-      console.log('Explain line request:', {
+
+      /*
+       * Temporary Stage 2 test.
+       *
+       * The next step will replace this with:
+       *
+       * requestAICapability(
+       *   'explain-line',
+       *   buildAIContext(...)
+       * )
+       */
+      console.log('[Intelligent Code Assistant] Explain line request:', {
         lineNumber: context.selectedLineNumber,
         lineText: context.selectedLineText,
         language: context.codeLanguage
       });
-
-      // Temporary — will be replaced with the AI request.
       context.isAnalyzingLine = false;
     },
+    /* ==========================================================================
+       CLIPBOARD
+       ========================================================================== */
+
     async copyToClipboard() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
-      const {
-        ref: buttonElement
-      } = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getElement)();
-      if (!buttonElement) return;
-      const blockElement = buttonElement.closest('[data-wp-interactive="wpe"]');
-      const contentContainer = blockElement?.querySelector('.panel-content');
-      if (!contentContainer) return;
+
+      /*
+       * Use the original code context rather than panel.textContent.
+       *
+       * The panel now also contains line-selection controls, so
+       * copying the panel would include UI text such as:
+       *
+       * "Selected: Line 4 Explain this line".
+       */
+      const cleanedText = (context.rawCodeText || '').trim();
+      if (!cleanedText) {
+        return;
+      }
       try {
-        const cleanedText = (contentContainer.textContent || contentContainer.innerText || '').trim();
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(cleanedText);
         } else {
@@ -314,7 +338,9 @@ const {
   },
   callbacks: {
     initShared() {
-      if (state._storageLoaded) return;
+      if (state._storageLoaded) {
+        return;
+      }
       try {
         const storedTasks = localStorage.getItem(STORAGE_KEY);
         state.tasks = storedTasks ? JSON.parse(storedTasks) : {};
@@ -325,7 +351,13 @@ const {
     },
     initTask() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
-      if (!context.id) return;
+      if (!context.id) {
+        return;
+      }
+
+      /*
+       * Load shared completion state.
+       */
       if (!state._storageLoaded) {
         try {
           const storedTasks = localStorage.getItem(STORAGE_KEY);
@@ -335,16 +367,32 @@ const {
         }
         state._storageLoaded = true;
       }
+
+      /*
+       * Register this block instance.
+       */
       if (!state.registeredIds.includes(context.id)) {
         state.registeredIds = [...state.registeredIds, context.id];
       }
+
+      /*
+       * Base block state.
+       */
       context.isComplete = state.tasks[context.id] ?? false;
       context.isCopied = false;
+
+      /*
+       * Whole-code explanation state.
+       */
       context.isExplaining = false;
       context.isAnalyzingExplanation = false;
       context.explanationText = '';
       context.explanationItems = [];
       context.explanationError = '';
+
+      /*
+       * Selected-line state.
+       */
       context.selectedLineNumber = 0;
       context.selectedLineText = '';
       context.isExplainingLine = false;
@@ -352,12 +400,22 @@ const {
       context.lineExplanation = '';
       context.lineExplanationError = '';
       context.completeText = context.isComplete ? '✓' : 'Mark as complete';
+
+      /*
+       * Existing author-defined important lines.
+       *
+       * This remains separate from the reader's selected line.
+       */
       if (context.highlightLines) {
         const targetLines = new Set();
         context.highlightLines.split(',').forEach(range => {
           const parts = range.split('-').map(num => parseInt(num.trim(), 10));
           if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
-            for (let i = Math.min(parts[0], parts[1]); i <= Math.max(parts[0], parts[1]); i += 1) targetLines.add(i);
+            const start = Math.min(parts[0], parts[1]);
+            const end = Math.max(parts[0], parts[1]);
+            for (let i = start; i <= end; i += 1) {
+              targetLines.add(i);
+            }
           } else if (parts.length === 1 && !Number.isNaN(parts[0])) {
             targetLines.add(parts[0]);
           }
@@ -366,41 +424,94 @@ const {
       } else {
         context.highlightedNumbers = [];
       }
+
+      /*
+       * Stage 2 line selection.
+       *
+       * Each source-code line now exists as a real .code-line
+       * element, so we no longer need to calculate a line based
+       * on mouse coordinates and line height.
+       */
       const {
         ref: blockElement
       } = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getElement)();
       const panel = blockElement?.querySelector('.panel-content');
-      const pre = panel?.querySelector('pre');
-      if (panel && pre && !panel.dataset.lineSelectionBound) {
-        panel.dataset.lineSelectionBound = 'true';
-        panel.setAttribute('aria-label', 'Code. Click a line to select it for AI explanation.');
-        panel.addEventListener('click', event => {
-          if (event.target.closest('button, a, input, textarea, select')) return;
-          const rect = pre.getBoundingClientRect();
-          const computed = window.getComputedStyle(pre);
-          const lineHeight = parseFloat(computed.lineHeight) || parseFloat(computed.fontSize) * 1.5;
-          const relativeY = event.clientY - rect.top;
-          const lines = (context.rawCodeText || '').split('\n');
-          const lineNumber = Math.max(1, Math.min(lines.length, Math.floor(relativeY / lineHeight) + 1));
-          context.selectedLineNumber = lineNumber;
-          context.selectedLineText = lines[lineNumber - 1] || '';
-          context.isExplainingLine = false;
-          context.isAnalyzingLine = false;
-          context.lineExplanation = '';
-          context.lineExplanationError = '';
-          pre.style.backgroundImage = `linear-gradient(to bottom, transparent 0, transparent ${(lineNumber - 1) * lineHeight}px, rgba(37, 99, 235, 0.10) ${(lineNumber - 1) * lineHeight}px, rgba(37, 99, 235, 0.10) ${lineNumber * lineHeight}px, transparent ${lineNumber * lineHeight}px)`;
-          pre.style.backgroundRepeat = 'no-repeat';
-          pre.style.backgroundSize = '100% 100%';
-          const block = panel.closest('[data-wp-interactive="wpe"]');
-          const explainButton = block?.querySelector('.explain-button');
-          if (explainButton) {
-            const label = explainButton.querySelector('span');
-            if (label) label.textContent = `Explain line ${lineNumber}`;
-            explainButton.classList.add('line-selected');
-            explainButton.setAttribute('aria-label', `Explain line ${lineNumber} using AI`);
-          }
-        });
+      if (!panel || panel.dataset.lineSelectionBound) {
+        return;
       }
+      panel.dataset.lineSelectionBound = 'true';
+      panel.setAttribute('aria-label', 'Code. Select a line to explain it with AI.');
+
+      /**
+       * Select one source-code line.
+       *
+       * @param {HTMLElement} lineElement
+       */
+      const selectLine = lineElement => {
+        const lineNumber = Number(lineElement.dataset.lineNumber);
+        if (!lineNumber || Number.isNaN(lineNumber)) {
+          return;
+        }
+        const lines = (context.rawCodeText || '').split('\n');
+        context.selectedLineNumber = lineNumber;
+        context.selectedLineText = lines[lineNumber - 1] || '';
+
+        /*
+         * Selecting another line invalidates any previous
+         * line-specific explanation.
+         */
+        context.isExplainingLine = false;
+        context.isAnalyzingLine = false;
+        context.lineExplanation = '';
+        context.lineExplanationError = '';
+
+        /*
+         * Remove the previous reader selection.
+         */
+        panel.querySelectorAll('.code-line').forEach(line => {
+          line.classList.remove('is-selected');
+          line.removeAttribute('aria-current');
+        });
+
+        /*
+         * Highlight only the newly selected line.
+         */
+        lineElement.classList.add('is-selected');
+        lineElement.setAttribute('aria-current', 'true');
+      };
+
+      /*
+       * Mouse/pointer selection.
+       *
+       * Prism may add token spans inside each code line,
+       * therefore event.target.closest('.code-line') is used
+       * instead of assuming the clicked element is the line.
+       */
+      panel.addEventListener('click', event => {
+        const lineElement = event.target.closest('.code-line');
+        if (!lineElement || !panel.contains(lineElement)) {
+          return;
+        }
+        selectLine(lineElement);
+      });
+
+      /*
+       * Keyboard selection.
+       *
+       * Lines are focusable in render.php, so Enter or Space
+       * performs the same selection as clicking.
+       */
+      panel.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+        const lineElement = event.target.closest('.code-line');
+        if (!lineElement || !panel.contains(lineElement)) {
+          return;
+        }
+        event.preventDefault();
+        selectLine(lineElement);
+      });
     }
   }
 });

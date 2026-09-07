@@ -18,6 +18,10 @@
   transition: background-color 0.3s ease, border-color 0.3s ease;
   margin: 1.5rem 0;
 }
+.wp-block-wpe-intelligent-code-assistant-editor button,
+.wp-block-wpe-intelligent-code-assistant button {
+  cursor: pointer;
+}
 .wp-block-wpe-intelligent-code-assistant-editor .editor-combined-container,
 .wp-block-wpe-intelligent-code-assistant .editor-combined-container {
   position: relative;
@@ -176,6 +180,18 @@
   padding: 6px 16px !important;
 }
 
+/* Consistent interaction cursors across all assistant controls */
+.wp-block-wpe-intelligent-code-assistant-editor button:not(:disabled),
+.wp-block-wpe-intelligent-code-assistant button:not(:disabled) {
+  cursor: pointer;
+}
+.wp-block-wpe-intelligent-code-assistant-editor button:disabled,
+.wp-block-wpe-intelligent-code-assistant-editor button[disabled],
+.wp-block-wpe-intelligent-code-assistant button:disabled,
+.wp-block-wpe-intelligent-code-assistant button[disabled] {
+  cursor: wait;
+}
+
 a:focus {
   outline: none;
 }
@@ -233,7 +249,7 @@ a:focus {
 .copy-button:hover,
 .toggle-button:hover {
   background: #f1f5f9;
-  color: #1e293b;
+  color: #303b4d;
 }
 .copy-button:active,
 .toggle-button:active {
@@ -492,7 +508,7 @@ a:focus {
   transition: background 0.2s ease, transform 0.1s ease;
 }
 .code-footer button:hover {
-  background: #1e293b;
+  background: #343d4a;
 }
 .code-footer button:active {
   transform: scale(0.98);
@@ -738,12 +754,16 @@ a:focus {
   font-size: 0.75rem !important;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 .explain-line-button:hover:not(:disabled) {
   background: #0f172a;
   border-color: #0f172a;
   color: #ffffff;
+}
+.explain-line-button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 .explain-line-button:disabled {
   opacity: 0.6;
@@ -770,6 +790,86 @@ a:focus {
   background: #ffffff;
   border-color: #ffffff;
   color: #18181b;
+}
+.dark-theme .explain-line-button:focus-visible {
+  outline-color: #60a5fa;
+}
+
+/* ==========================================================================
+   STAGE 2: INTERACTIVE CODE LINES
+   ========================================================================== */
+.panel-content .code-lines {
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block;
+  background: transparent !important;
+}
+
+.panel-content .code-lines .code-line {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 1.5em;
+  padding: 0 10px !important;
+  margin: 0 !important;
+  border-left: 3px solid transparent;
+  background: transparent !important;
+  background-color: transparent !important;
+  font-family: "Fira Code", Consolas, Monaco, monospace !important;
+  font-size: var(--editor-code-font-size, 14px) !important;
+  line-height: 1.5 !important;
+  white-space: pre !important;
+  word-break: normal !important;
+  word-wrap: normal !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.panel-content .code-lines .code-line:hover {
+  background: rgba(37, 99, 235, 0.06) !important;
+  background-color: rgba(37, 99, 235, 0.06) !important;
+}
+.panel-content .code-lines .code-line:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+.panel-content .code-lines .code-line.is-selected {
+  background: rgba(37, 99, 235, 0.16) !important;
+  background-color: rgba(37, 99, 235, 0.16) !important;
+  border-left-color: #2563eb !important;
+}
+
+/* Dark theme needs extra specificity because the legacy dark-theme
+   panel-content code rule uses !important. */
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .panel-content .code-lines .code-line:hover,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .panel-content .code-lines .code-line:hover {
+  background: rgba(96, 165, 250, 0.1) !important;
+  background-color: rgba(96, 165, 250, 0.1) !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .panel-content .code-lines .code-line:focus-visible,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .panel-content .code-lines .code-line:focus-visible {
+  outline-color: #60a5fa;
+}
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .panel-content .code-lines .code-line.is-selected,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .panel-content .code-lines .code-line.is-selected {
+  background: rgba(96, 165, 250, 0.18) !important;
+  background-color: rgba(96, 165, 250, 0.18) !important;
+  border-left-color: #60a5fa !important;
+}
+
+/* Temporary cursor diagnostic */
+.wp-block-wpe-intelligent-code-assistant-editor button,
+.wp-block-wpe-intelligent-code-assistant-editor [role=button],
+.wp-block-wpe-intelligent-code-assistant-editor .code-line,
+.wp-block-wpe-intelligent-code-assistant button,
+.wp-block-wpe-intelligent-code-assistant [role=button],
+.wp-block-wpe-intelligent-code-assistant .code-line {
+  cursor: pointer !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor button:disabled,
+.wp-block-wpe-intelligent-code-assistant-editor button[disabled],
+.wp-block-wpe-intelligent-code-assistant button:disabled,
+.wp-block-wpe-intelligent-code-assistant button[disabled] {
+  cursor: wait !important;
 }
 
 /*# sourceMappingURL=style-index.css.map*/

@@ -15,6 +15,10 @@
     transition: background-color 0.3s ease, border-color 0.3s ease;
     margin: 1.5rem 0;
 
+    button {
+        cursor: pointer;
+    }
+
     .editor-combined-container {
         position: relative;
         width: 100%;
@@ -138,6 +142,19 @@
     }
 }
 
+/* Consistent interaction cursors across all assistant controls */
+.wp-block-wpe-intelligent-code-assistant-editor,
+.wp-block-wpe-intelligent-code-assistant {
+    button:not(:disabled) {
+        cursor: pointer;
+    }
+
+    button:disabled,
+    button[disabled] {
+        cursor: wait;
+    }
+}
+
 a:focus {
     outline: none;
 }
@@ -195,7 +212,7 @@ a:focus {
 
     &:hover {
         background: #f1f5f9;
-        color: #1e293b;
+        color: #303b4d;
     }
 
     &:active {
@@ -434,7 +451,7 @@ a:focus {
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         transition: background 0.2s ease, transform 0.1s ease;
 
-        &:hover { background: #1e293b; }
+        &:hover { background: #343d4a; }
         &:active { transform: scale(0.98); }
         
         &.is-completed {
@@ -688,12 +705,18 @@ a:focus {
 	transition:
 		background-color 0.15s ease,
 		border-color 0.15s ease,
-		color 0.15s ease;
+		color 0.15s ease,
+		opacity 0.15s ease;
 
 	&:hover:not(:disabled) {
 		background: #0f172a;
 		border-color: #0f172a;
 		color: #ffffff;
+	}
+
+	&:focus-visible {
+		outline: 2px solid #2563eb;
+		outline-offset: 2px;
 	}
 
 	&:disabled {
@@ -703,9 +726,7 @@ a:focus {
 }
 
 /* Dark theme */
-
 .dark-theme {
-
 	.line-ai-actions {
 		background: #1e1e1e;
 		border-color: #334155;
@@ -729,5 +750,108 @@ a:focus {
 			border-color: #ffffff;
 			color: #18181b;
 		}
+
+		&:focus-visible {
+			outline-color: #60a5fa;
+		}
+	}
+}
+
+/* ==========================================================================
+   STAGE 2: INTERACTIVE CODE LINES
+   ========================================================================== */
+
+.panel-content .code-lines {
+	margin: 0 !important;
+	padding: 0 !important;
+	display: block;
+	background: transparent !important;
+}
+
+.panel-content .code-lines .code-line {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 1.5em;
+
+	padding: 0 10px !important;
+	margin: 0 !important;
+
+	border-left: 3px solid transparent;
+
+	background: transparent !important;
+	background-color: transparent !important;
+
+	font-family: 'Fira Code', Consolas, Monaco, monospace !important;
+	font-size: var(--editor-code-font-size, 14px) !important;
+	line-height: 1.5 !important;
+
+	white-space: pre !important;
+	word-break: normal !important;
+	word-wrap: normal !important;
+
+	cursor: pointer !important;
+
+	transition:
+		background-color 0.15s ease,
+		border-color 0.15s ease;
+
+	&:hover {
+		background: rgba(37, 99, 235, 0.06) !important;
+		background-color: rgba(37, 99, 235, 0.06) !important;
+	}
+
+	&:focus-visible {
+		outline: 2px solid #2563eb;
+		outline-offset: -2px;
+	}
+
+	&.is-selected {
+		background: rgba(37, 99, 235, 0.16) !important;
+		background-color: rgba(37, 99, 235, 0.16) !important;
+		border-left-color: #2563eb !important;
+	}
+}
+
+/* Dark theme needs extra specificity because the legacy dark-theme
+   panel-content code rule uses !important. */
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme
+	.panel-content
+	.code-lines
+	.code-line,
+.wp-block-wpe-intelligent-code-assistant.dark-theme
+	.panel-content
+	.code-lines
+	.code-line {
+
+	&:hover {
+		background: rgba(96, 165, 250, 0.10) !important;
+		background-color: rgba(96, 165, 250, 0.10) !important;
+	}
+
+	&:focus-visible {
+		outline-color: #60a5fa;
+	}
+
+	&.is-selected {
+		background: rgba(96, 165, 250, 0.18) !important;
+		background-color: rgba(96, 165, 250, 0.18) !important;
+		border-left-color: #60a5fa !important;
+	}
+}
+
+/* Temporary cursor diagnostic */
+.wp-block-wpe-intelligent-code-assistant-editor,
+.wp-block-wpe-intelligent-code-assistant {
+
+	button,
+	[role="button"],
+	.code-line {
+		cursor: pointer !important;
+	}
+
+	button:disabled,
+	button[disabled] {
+		cursor: wait !important;
 	}
 }

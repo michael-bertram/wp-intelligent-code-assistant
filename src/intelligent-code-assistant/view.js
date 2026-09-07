@@ -169,6 +169,10 @@ const { state, actions } = store('wpe', {
       context.explanationError = '';
       context.selectedLineNumber = 0;
       context.selectedLineText = '';
+      context.isExplainingLine = false;
+      context.isAnalyzingLine = false;
+      context.lineExplanation = '';
+      context.lineExplanationError = '';
       context.completeText = context.isComplete ? '✓' : 'Mark as complete';
 
       if (context.highlightLines) {
@@ -206,11 +210,10 @@ const { state, actions } = store('wpe', {
 
           context.selectedLineNumber = lineNumber;
           context.selectedLineText = lines[lineNumber - 1] || '';
-          context.isExplaining = false;
-          context.isAnalyzingExplanation = false;
-          context.explanationText = '';
-          context.explanationItems = [];
-          context.explanationError = '';
+          context.isExplainingLine = false;
+          context.isAnalyzingLine = false;
+          context.lineExplanation = '';
+          context.lineExplanationError = '';
 
           pre.style.backgroundImage = `linear-gradient(to bottom, transparent 0, transparent ${(lineNumber - 1) * lineHeight}px, rgba(37, 99, 235, 0.10) ${(lineNumber - 1) * lineHeight}px, rgba(37, 99, 235, 0.10) ${lineNumber * lineHeight}px, transparent ${lineNumber * lineHeight}px)`;
           pre.style.backgroundRepeat = 'no-repeat';

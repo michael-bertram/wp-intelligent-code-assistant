@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/namespaces.ts"],
+  "sourcesContent": ["const namespaceStack: string[] = [];\n\nexport const getNamespace = () => namespaceStack.slice( -1 )[ 0 ];\n\nexport const setNamespace = ( namespace: string ) => {\n\tnamespaceStack.push( namespace );\n};\nexport const resetNamespace = () => {\n\tnamespaceStack.pop();\n};\n"],
+  "mappings": ";AAAA,IAAM,iBAA2B,CAAC;AAE3B,IAAM,eAAe,MAAM,eAAe,MAAO,EAAG,EAAG,CAAE;AAEzD,IAAM,eAAe,CAAE,cAAuB;AACpD,iBAAe,KAAM,SAAU;AAChC;AACO,IAAM,iBAAiB,MAAM;AACnC,iBAAe,IAAI;AACpB;",
+  "names": []
+}

@@ -280,3 +280,308 @@ add_action( 'rest_api_init', function() {
 		),
 	) );
 } );
+
+/* ==========================================================================
+   ABILITY - EXPLAIN THIS LINE
+   ========================================================================== */
+
+add_action( 'wp_abilities_api_init', function() {
+	if ( ! function_exists( 'wp_register_ability' ) ) {
+		return;
+	}
+
+	wp_register_ability(
+		'intelligent-code-assistant/explain-line',
+		array(
+			'category'            => 'intelligent-code-assistant-tools',
+			'label'               => __( 'Explain This Line', 'intelligent-code-assistant' ),
+			'description'         => __( 'Explains a selected line of code using the surrounding snippet as context.', 'intelligent-code-assistant' ),
+			'show_in_rest'        => true,
+			'show_in_mcp'         => true,
+			'permission_callback' => '__return_true',
+
+			'input_schema'        => array(
+				'type'       => 'object',
+
+				'properties' => array(
+					'code' => array(
+						'type'        => 'string',
+						'description' => __( 'The complete code snippet containing the selected line.', 'intelligent-code-assistant' ),
+						'minLength'   => 1,
+					),
+
+					'language' => array(
+						'type'        => 'string',
+						'description' => __( 'Programming language context.', 'intelligent-code-assistant' ),
+					),
+
+					'selectedLineNumber' => array(
+						'type'        => 'integer',
+						'description' => __( 'The one-based line number selected by the reader.', 'intelligent-code-assistant' ),
+						'minimum'     => 1,
+					),
+
+					'selectedLine' => array(
+						'type'        => 'string',
+						'description' => __( 'The exact selected line of code.', 'intelligent-code-assistant' ),
+					),
+
+					'surroundingCode' => array(
+						'type'        => 'string',
+						'description' => __( 'Nearby lines included to give the AI local context.', 'intelligent-code-assistant' ),
+					),
+				),
+
+				'required' => array(
+					'code',
+					'selectedLineNumber',
+					'selectedLine',
+				),
+
+				'additionalProperties' => false,
+			),
+
+			'output_schema' => array(
+				'type'       => 'object',
+
+				'properties' => array(
+					'explanation' => array(
+						'type'        => 'string',
+						'description' => __( 'A concise explanation of the selected line.', 'intelligent-code-assistant' ),
+					),
+				),
+
+				'required' => array(
+					'explanation',
+				),
+
+				'additionalProperties' => false,
+			),
+
+			'execute_callback' =>
+				'intelligent_code_assistant_execute_explain_line_ability',
+		)
+	);
+} );
+
+/**
+ * Generate an explanation for one selected line of code.
+ *
+ * @param array $args Ability input matching the input schema.
+ * @return array|WP_Error
+ */
+if ( ! function_exists( 'intelligent_code_assistant_execute_explain_line_ability' ) ) {
+
+	function intelligent_code_assistant_execute_explain_line_ability( array $args ) {
+
+		$raw_code = isset( $args['code'] ) && is_string( $args['code'] )
+			? $args['code']
+			: '';
+
+		$code = wp_unslash(
+			trim(
+				html_entity_decode(
+					$raw_code,
+					ENT_QUOTES | ENT_HTML5,
+					'UTF-8'
+				)
+			)
+		);
+
+		$language = isset( $args['language'] )
+			? sanitize_text_field( $args['language'] )
+			: 'code';
+
+		$selected_line_number = isset( $args['selectedLineNumber'] )
+			? absint( $args['selectedLineNumber'] )
+			: 0;
+
+		$selected_line = isset( $args['selectedLine'] ) && is_string( $args['selectedLine'] )
+			? wp_unslash(
+				html_entity_decode(
+					$args['selectedLine'],
+					ENT_QUOTES | ENT_HTML5,
+					'UTF-8'
+				)
+			)
+			: '';
+
+		$surrounding_code = isset( $args['surroundingCode'] ) && is_string( $args['surroundingCode'] )
+			? wp_unslash(
+				html_entity_decode(
+					$args['surroundingCode'],
+					ENT_QUOTES | ENT_HTML5,
+					'UTF-8'
+				)
+			)
+			: '';
+
+		if (
+			'' === $code ||
+			! $selected_line_number
+		) {
+			return new WP_Error(
+				'invalid_line_context',
+				__( 'A valid code snippet and selected line are required.', 'intelligent-code-assistant' ),
+				array(
+					'status' => 400,
+				)
+			);
+		}
+
+		if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
+			return new WP_Error(
+				'ai_client_unavailable',
+				__( 'The WordPress AI Client is not available.', 'intelligent-code-assistant' ),
+				array(
+					'status' => 503,
+				)
+			);
+		}
+
+		$prompt = <<<PROMPT
+You are an expert technical instructor helping a reader understand code inside a tutorial.
+
+Explain the selected line from the following {$language} code.
+
+Selected line number:
+{$selected_line_number}
+
+Selected line:
+{$selected_line}
+
+Nearby code:
+{$surrounding_code}
+
+Full code snippet:
+{$code}
+
+Requirements:
+- Explain only the selected line.
+- Use the surrounding and full snippet only to understand its context.
+- Explain the important functions, variables, operators or language features used on this line.
+- Explain how this line contributes to the surrounding code.
+- Do not invent behaviour that is not present.
+- Keep the explanation concise and suitable for a reader following a technical tutorial.
+- Maximum 80 words.
+- Do not include markdown code fences.
+- Return only the explanation.
+PROMPT;
+
+		try {
+
+			$result = wp_ai_client_prompt(
+				$prompt
+			)->generate_text();
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+
+			$explanation = is_string( $result )
+				? trim( $result )
+				: '';
+
+			if ( '' === $explanation ) {
+				return new WP_Error(
+					'ai_empty_response',
+					__( 'The AI provider returned an empty response.', 'intelligent-code-assistant' ),
+					array(
+						'status' => 502,
+					)
+				);
+			}
+
+			return array(
+				'explanation' =>
+					sanitize_textarea_field(
+						$explanation
+					),
+			);
+
+		} catch ( Throwable $e ) {
+
+			return new WP_Error(
+				'ai_generation_exception',
+				__( 'An unexpected error occurred while generating the line explanation.', 'intelligent-code-assistant' ),
+				array(
+					'status' => 500,
+				)
+			);
+		}
+	}
+}
+
+/* Direct REST fallback for selected-line explanations. */
+add_action( 'rest_api_init', function() {
+
+	register_rest_route(
+		'intelligent-code-assistant/v1',
+		'/explain-line',
+		array(
+			'methods' => 'POST',
+
+			'callback' => function( WP_REST_Request $request ) {
+
+				$params =
+					$request->get_json_params();
+
+				return intelligent_code_assistant_execute_explain_line_ability(
+					array(
+						'code' => isset( $params['code'] )
+							? (string) $params['code']
+							: '',
+
+						'language' => isset( $params['language'] )
+							? (string) $params['language']
+							: 'code',
+
+						'selectedLineNumber' => isset( $params['selectedLineNumber'] )
+							? (int) $params['selectedLineNumber']
+							: 0,
+
+						'selectedLine' => isset( $params['selectedLine'] )
+							? (string) $params['selectedLine']
+							: '',
+
+						'surroundingCode' => isset( $params['surroundingCode'] )
+							? (string) $params['surroundingCode']
+							: '',
+					)
+				);
+			},
+
+			'permission_callback' =>
+				'__return_true',
+
+			'args' => array(
+				'code' => array(
+					'required'  => true,
+					'type'      => 'string',
+					'minLength' => 1,
+				),
+
+				'language' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+
+				'selectedLineNumber' => array(
+					'required' => true,
+					'type'     => 'integer',
+					'minimum'  => 1,
+				),
+
+				'selectedLine' => array(
+					'required' => true,
+					'type'     => 'string',
+				),
+
+				'surroundingCode' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+			),
+		)
+	);
+} );

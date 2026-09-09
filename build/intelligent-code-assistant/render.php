@@ -256,6 +256,9 @@ $selected_lang =
 
 			'checkQuestion'           => '',
 			'checkOptions'            => array(),
+			'checkOption0'            => '',
+			'checkOption1'            => '',
+			'checkOption2'            => '',
 			'checkCorrectAnswer'      => null,
 			'checkExplanation'        => '',
 
@@ -837,6 +840,143 @@ $selected_lang =
 >
 	<p data-wp-text="context.codeQuestionError"></p>
 </div>
+	</div>
+</div>
+
+
+
+<div
+	class="understanding-check"
+	data-wp-bind--hidden="!context.isCheckingUnderstanding"
+>
+	<div
+		class="understanding-check-loading"
+		data-wp-bind--hidden="!context.isGeneratingCheck"
+	>
+		<?php
+		esc_html_e(
+			'Creating a question from this code…',
+			'intelligent-code-assistant'
+		);
+		?>
+	</div>
+
+	<div
+		class="understanding-check-content"
+		data-wp-bind--hidden="!context.checkQuestion"
+	>
+		<div class="understanding-check-title">
+			<?php
+			esc_html_e(
+				'Check your understanding',
+				'intelligent-code-assistant'
+			);
+			?>
+		</div>
+
+		<p
+			class="understanding-check-question"
+			data-wp-text="context.checkQuestion"
+		></p>
+
+		<div
+			class="understanding-check-options"
+			role="group"
+			aria-label="<?php
+				esc_attr_e(
+					'Choose an answer',
+					'intelligent-code-assistant'
+				);
+			?>"
+		>
+			<button
+				type="button"
+				class="understanding-check-option"
+				data-answer-index="0"
+				data-wp-on--click="actions.selectCheckAnswer"
+				data-wp-bind--disabled="context.hasAnsweredCheck"
+				data-wp-class--is-correct="state.isCheckOption0Correct"
+				data-wp-class--is-incorrect="state.isCheckOption0Incorrect"
+			>
+				<span data-wp-text="context.checkOption0"></span>
+			</button>
+
+			<button
+				type="button"
+				class="understanding-check-option"
+				data-answer-index="1"
+				data-wp-on--click="actions.selectCheckAnswer"
+				data-wp-bind--disabled="context.hasAnsweredCheck"
+				data-wp-class--is-correct="state.isCheckOption1Correct"
+				data-wp-class--is-incorrect="state.isCheckOption1Incorrect"
+			>
+				<span
+					data-wp-text="context.checkOption1"
+				></span>
+			</button>
+
+			<button
+				type="button"
+				class="understanding-check-option"
+				data-answer-index="2"
+				data-wp-on--click="actions.selectCheckAnswer"
+				data-wp-bind--disabled="context.hasAnsweredCheck"
+				data-wp-class--is-correct="state.isCheckOption2Correct"
+				data-wp-class--is-incorrect="state.isCheckOption2Incorrect"
+			>
+				<span
+					data-wp-text="context.checkOption2"
+				></span>
+			</button>
+			<div
+	class="understanding-check-feedback"
+	data-wp-bind--hidden="!context.hasAnsweredCheck"
+	aria-live="polite"
+>
+	<div
+		class="understanding-check-correct"
+		data-wp-bind--hidden="!context.isCheckCorrect"
+	>
+		<strong>
+			<?php
+			esc_html_e(
+				'Correct!',
+				'intelligent-code-assistant'
+			);
+			?>
+		</strong>
+	</div>
+
+	<div
+		class="understanding-check-incorrect"
+		data-wp-bind--hidden="context.isCheckCorrect"
+	>
+		<strong>
+			<?php
+			esc_html_e(
+				'Not quite.',
+				'intelligent-code-assistant'
+			);
+			?>
+		</strong>
+	</div>
+
+	<p
+		class="understanding-check-explanation"
+		data-wp-text="context.checkExplanation"
+	></p>
+</div>
+		</div>
+	</div>
+
+	<div
+		class="understanding-check-error"
+		role="alert"
+		data-wp-bind--hidden="!context.checkError"
+	>
+		<p
+			data-wp-text="context.checkError"
+		></p>
 	</div>
 </div>
 

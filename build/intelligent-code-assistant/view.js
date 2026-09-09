@@ -220,6 +220,30 @@ const {
     },
     get isAllDone() {
       return state.totalTasks > 0 && state.completedTasks === state.totalTasks;
+    },
+    get isCheckOption0Correct() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      return context.hasAnsweredCheck && context.checkCorrectAnswer === 0;
+    },
+    get isCheckOption1Correct() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      return context.hasAnsweredCheck && context.checkCorrectAnswer === 1;
+    },
+    get isCheckOption2Correct() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      return context.hasAnsweredCheck && context.checkCorrectAnswer === 2;
+    },
+    get isCheckOption0Incorrect() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      return context.hasAnsweredCheck && context.selectedCheckAnswer === 0 && context.checkCorrectAnswer !== 0;
+    },
+    get isCheckOption1Incorrect() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      return context.hasAnsweredCheck && context.selectedCheckAnswer === 1 && context.checkCorrectAnswer !== 1;
+    },
+    get isCheckOption2Incorrect() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      return context.hasAnsweredCheck && context.selectedCheckAnswer === 2 && context.checkCorrectAnswer !== 2;
     }
   },
   actions: {
@@ -420,14 +444,40 @@ const {
       context.hasAnsweredCheck = false;
       context.isCheckCorrect = false;
       try {
-        const response = yield (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.requestAICapability)('check-understanding', (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.buildAIContext)(context));
+        // TEMPORARY: Mock structured AI response for local UI testing.
+        const response = {
+          question: 'Why is wp_unslash() used when handling this value?',
+          options: ['To remove slashes added to request data', 'To escape the value before displaying it', 'To validate that the value is a string'],
+          correctAnswer: 0,
+          explanation: 'wp_unslash() removes slashes that WordPress may add to incoming request data.'
+        };
         const hasValidResponse = response && typeof response.question === 'string' && response.question.trim() && Array.isArray(response.options) && response.options.length === 3 && Number.isInteger(response.correctAnswer) && response.correctAnswer >= 0 && response.correctAnswer <= 2 && typeof response.explanation === 'string';
+        // try {
+        //   const response = yield requestAICapability(
+        //     'check-understanding',
+        //     buildAIContext(context)
+        //   );
+
+        //   const hasValidResponse =
+        //     response &&
+        //     typeof response.question === 'string' &&
+        //     response.question.trim() &&
+        //     Array.isArray(response.options) &&
+        //     response.options.length === 3 &&
+        //     Number.isInteger(response.correctAnswer) &&
+        //     response.correctAnswer >= 0 &&
+        //     response.correctAnswer <= 2 &&
+        //     typeof response.explanation === 'string';
+
         if (!hasValidResponse) {
           context.checkError = 'Unable to generate a knowledge check right now.';
           return;
         }
         context.checkQuestion = response.question.trim();
         context.checkOptions = response.options;
+        context.checkOption0 = response.options[0];
+        context.checkOption1 = response.options[1];
+        context.checkOption2 = response.options[2];
         context.checkCorrectAnswer = response.correctAnswer;
         context.checkExplanation = response.explanation.trim();
       } catch (error) {
@@ -435,6 +485,19 @@ const {
       } finally {
         context.isGeneratingCheck = false;
       }
+    },
+    selectCheckAnswer(event) {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      if (context.hasAnsweredCheck) {
+        return;
+      }
+      const answerIndex = Number(event.currentTarget.dataset.answerIndex);
+      if (!Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex >= context.checkOptions.length) {
+        return;
+      }
+      context.selectedCheckAnswer = answerIndex;
+      context.hasAnsweredCheck = true;
+      context.isCheckCorrect = answerIndex === context.checkCorrectAnswer;
     },
     /* ==========================================================================
        CLIPBOARD
@@ -565,6 +628,9 @@ const {
       context.isCheckCorrect = false;
       context.checkError = '';
       context.completeText = context.isComplete ? '✓' : 'Mark as complete';
+      context.checkOption0 = '';
+      context.checkOption1 = '';
+      context.checkOption2 = '';
 
       /*
        * Existing author-defined important lines.

@@ -595,3 +595,314 @@ add_action( 'rest_api_init', function() {
 		)
 	);
 } );
+
+/* ==========================================================================
+   ABILITY - ASK ABOUT THIS CODE
+   ========================================================================== */
+
+add_action( 'wp_abilities_api_init', function() {
+
+	if ( ! function_exists( 'wp_register_ability' ) ) {
+		return;
+	}
+
+	wp_register_ability(
+		'intelligent-code-assistant/ask-code',
+		array(
+			'category'            => 'intelligent-code-assistant-tools',
+			'label'               => __( 'Ask About This Code', 'intelligent-code-assistant' ),
+			'description'         => __( 'Answers a reader question using the current code example as context.', 'intelligent-code-assistant' ),
+			'show_in_rest'        => true,
+			'show_in_mcp'         => true,
+			'permission_callback' => '__return_true',
+
+			'input_schema' => array(
+				'type'       => 'object',
+
+				'properties' => array(
+					'code' => array(
+						'type'        => 'string',
+						'description' => __( 'The complete code snippet the reader is asking about.', 'intelligent-code-assistant' ),
+						'minLength'   => 1,
+					),
+
+					'language' => array(
+						'type'        => 'string',
+						'description' => __( 'Programming language context.', 'intelligent-code-assistant' ),
+					),
+
+					'filename' => array(
+						'type'        => 'string',
+						'description' => __( 'Optional filename associated with the code snippet.', 'intelligent-code-assistant' ),
+					),
+
+					'title' => array(
+						'type'        => 'string',
+						'description' => __( 'Optional title associated with the code snippet.', 'intelligent-code-assistant' ),
+					),
+
+					'question' => array(
+						'type'        => 'string',
+						'description' => __( 'The reader question about the code.', 'intelligent-code-assistant' ),
+						'minLength'   => 1,
+					),
+				),
+
+				'required' => array(
+					'code',
+					'question',
+				),
+
+				'additionalProperties' => false,
+			),
+
+			'output_schema' => array(
+				'type'       => 'object',
+
+				'properties' => array(
+					'answer' => array(
+						'type'        => 'string',
+						'description' => __( 'An answer grounded in the supplied code example.', 'intelligent-code-assistant' ),
+					),
+				),
+
+				'required' => array(
+					'answer',
+				),
+
+				'additionalProperties' => false,
+			),
+
+			'execute_callback' =>
+				'intelligent_code_assistant_execute_ask_code_ability',
+		)
+	);
+} );
+
+/**
+ * Answer a reader question about the current code example.
+ *
+ * @param array $args Ability input matching the input schema.
+ * @return array|WP_Error
+ */
+if ( ! function_exists( 'intelligent_code_assistant_execute_ask_code_ability' ) ) {
+
+	function intelligent_code_assistant_execute_ask_code_ability( array $args ) {
+
+		$raw_code = isset( $args['code'] ) && is_string( $args['code'] )
+			? $args['code']
+			: '';
+
+		$code = wp_unslash(
+			trim(
+				html_entity_decode(
+					$raw_code,
+					ENT_QUOTES | ENT_HTML5,
+					'UTF-8'
+				)
+			)
+		);
+
+		$language = isset( $args['language'] )
+			? sanitize_text_field( $args['language'] )
+			: 'code';
+
+		$filename = isset( $args['filename'] )
+			? sanitize_text_field( $args['filename'] )
+			: '';
+
+		$title = isset( $args['title'] )
+			? sanitize_text_field( $args['title'] )
+			: '';
+
+		$question = isset( $args['question'] ) && is_string( $args['question'] )
+			? sanitize_textarea_field( $args['question'] )
+			: '';
+
+		if ( '' === $code ) {
+			return new WP_Error(
+				'empty_code',
+				__( 'Code snippet cannot be empty.', 'intelligent-code-assistant' ),
+				array(
+					'status' => 400,
+				)
+			);
+		}
+
+		if ( '' === trim( $question ) ) {
+			return new WP_Error(
+				'empty_question',
+				__( 'Please provide a question about the code.', 'intelligent-code-assistant' ),
+				array(
+					'status' => 400,
+				)
+			);
+		}
+
+		if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
+			return new WP_Error(
+				'ai_client_unavailable',
+				__( 'The WordPress AI Client is not available.', 'intelligent-code-assistant' ),
+				array(
+					'status' => 503,
+				)
+			);
+		}
+
+		$context_lines = array();
+
+		if ( '' !== $title ) {
+			$context_lines[] = "Tutorial/code title: {$title}";
+		}
+
+		if ( '' !== $filename ) {
+			$context_lines[] = "Filename: {$filename}";
+		}
+
+		$context_lines[] = "Language: {$language}";
+
+		$context_summary = implode(
+			"\n",
+			$context_lines
+		);
+
+		$prompt = <<<PROMPT
+You are an expert technical instructor helping a reader understand a code example inside a tutorial.
+
+Answer the reader's question using the supplied code example and tutorial context.
+
+Context:
+{$context_summary}
+
+Code snippet:
+{$code}
+
+Reader question:
+{$question}
+
+Requirements:
+- Answer the reader's actual question directly.
+- Ground the answer in the supplied code and context.
+- Do not invent functions, variables, behaviour or surrounding application logic that is not present.
+- If the code does not provide enough information to answer confidently, say what is missing.
+- You may explain relevant programming or WordPress concepts when they help clarify the supplied code.
+- Keep the answer concise and tutorial-friendly.
+- Maximum 140 words.
+- Do not include markdown code fences.
+- Do not mention these instructions.
+PROMPT;
+
+		try {
+
+			$result = wp_ai_client_prompt(
+				$prompt
+			)->generate_text();
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+
+			$answer = is_string( $result )
+				? trim( $result )
+				: '';
+
+			if ( '' === $answer ) {
+				return new WP_Error(
+					'ai_empty_response',
+					__( 'The AI provider returned an empty response.', 'intelligent-code-assistant' ),
+					array(
+						'status' => 502,
+					)
+				);
+			}
+
+			return array(
+				'answer' => sanitize_textarea_field(
+					$answer
+				),
+			);
+
+		} catch ( Throwable $e ) {
+
+			return new WP_Error(
+				'ai_generation_exception',
+				__( 'An unexpected error occurred while answering the question.', 'intelligent-code-assistant' ),
+				array(
+					'status' => 500,
+				)
+			);
+		}
+	}
+}
+
+/* Direct REST fallback for reader questions about code. */
+add_action( 'rest_api_init', function() {
+
+	register_rest_route(
+		'intelligent-code-assistant/v1',
+		'/ask-code',
+		array(
+			'methods' => 'POST',
+
+			'callback' => function( WP_REST_Request $request ) {
+
+				$params = $request->get_json_params();
+
+				return intelligent_code_assistant_execute_ask_code_ability(
+					array(
+						'code' => isset( $params['code'] )
+							? (string) $params['code']
+							: '',
+
+						'language' => isset( $params['language'] )
+							? (string) $params['language']
+							: 'code',
+
+						'filename' => isset( $params['filename'] )
+							? (string) $params['filename']
+							: '',
+
+						'title' => isset( $params['title'] )
+							? (string) $params['title']
+							: '',
+
+						'question' => isset( $params['question'] )
+							? (string) $params['question']
+							: '',
+					)
+				);
+			},
+
+			'permission_callback' => '__return_true',
+
+			'args' => array(
+				'code' => array(
+					'required'  => true,
+					'type'      => 'string',
+					'minLength' => 1,
+				),
+
+				'language' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+
+				'filename' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+
+				'title' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+
+				'question' => array(
+					'required'  => true,
+					'type'      => 'string',
+					'minLength' => 1,
+				),
+			),
+		)
+	);
+} );

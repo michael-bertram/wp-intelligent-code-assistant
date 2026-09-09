@@ -245,6 +245,11 @@ $selected_lang =
 				'Done',
 				'intelligent-code-assistant'
 			),
+			'isAskingCode'          => false,
+			'isSubmittingQuestion'  => false,
+			'codeQuestion'          => '',
+			'codeAnswer'            => '',
+			'codeQuestionError'     => '',
 		)
 	);
 	?>
@@ -740,6 +745,86 @@ $selected_lang =
 			</div>
 
 		</div>
+		<div
+	class="ask-code-panel"
+	data-wp-bind--hidden="!context.isAskingCode"
+>
+	<div class="ask-code-header">
+		<div class="ask-code-title">
+			<?php esc_html_e(
+				'Ask about this code',
+				'intelligent-code-assistant'
+			); ?>
+		</div>
+	</div>
+
+	<div class="ask-code-form">
+		<label
+			for="<?php echo esc_attr( $persistent_id . '-question' ); ?>"
+			class="ask-code-label"
+		>
+			<?php esc_html_e(
+				'What would you like to know?',
+				'intelligent-code-assistant'
+			); ?>
+		</label>
+
+		<textarea
+			id="<?php echo esc_attr( $persistent_id . '-question' ); ?>"
+			class="ask-code-input"
+			rows="3"
+			data-wp-on--input="actions.handleCodeQuestionInput"
+			data-wp-bind--value="context.codeQuestion"
+			placeholder="<?php esc_attr_e(
+				'For example: Why is wp_unslash() needed here?',
+				'intelligent-code-assistant'
+			); ?>"
+		></textarea>
+
+		<div class="ask-code-actions">
+			<button
+	type="button"
+	class="ask-code-submit"
+	data-wp-on--click="actions.submitCodeQuestion"
+	data-wp-bind--disabled="context.isSubmittingQuestion"
+>
+	<span data-wp-bind--hidden="context.isSubmittingQuestion">
+		<?php esc_html_e(
+			'Ask AI',
+			'intelligent-code-assistant'
+		); ?>
+	</span>
+
+	<span data-wp-bind--hidden="!context.isSubmittingQuestion">
+		<?php esc_html_e(
+			'Thinking…',
+			'intelligent-code-assistant'
+		); ?>
+	</span>
+</button>
+		</div>
+		<div
+	class="ask-code-response"
+	data-wp-bind--hidden="!context.codeAnswer"
+>
+	<div class="ask-code-response-title">
+		<?php esc_html_e(
+			'Answer',
+			'intelligent-code-assistant'
+		); ?>
+	</div>
+
+	<p data-wp-text="context.codeAnswer"></p>
+</div>
+<div
+	class="ask-code-error"
+	role="alert"
+	data-wp-bind--hidden="!context.codeQuestionError"
+>
+	<p data-wp-text="context.codeQuestionError"></p>
+</div>
+	</div>
+</div>
 
 		<!-- ==============================================================
 		     FOOTER
@@ -788,6 +873,19 @@ $selected_lang =
 			</div>
 
 			<div class="code-footer-actions">
+				<button
+	type="button"
+	class="ask-code-button"
+	data-wp-on--click="actions.toggleAskCode"
+	data-wp-class--active="context.isAskingCode"
+>
+	<span>
+		<?php esc_html_e(
+			'Ask about this code',
+			'intelligent-code-assistant'
+		); ?>
+	</span>
+</button>
 
 				<button
 					type="button"

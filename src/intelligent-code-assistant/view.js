@@ -269,6 +269,76 @@ if (response?.error) {
 context.isAnalyzingLine = false;
 },
 
+/* ==========================================================================
+       ASK CODE QUESTION
+  ========================================================================== */
+
+handleCodeQuestionInput(event) {
+  const context = getContext();
+
+  context.codeQuestion = event.target.value;
+  context.codeQuestionError = '';
+},
+
+toggleAskCode() {
+  const context = getContext();
+
+  context.isAskingCode = !context.isAskingCode;
+
+  if (!context.isAskingCode) {
+    context.codeQuestionError = '';
+  }
+},
+
+*submitCodeQuestion() {
+  const context = getContext();
+  const question = (context.codeQuestion || '').trim();
+
+  if (!question) {
+    context.codeQuestionError = 'Enter a question about this code first.';
+    return;
+  }
+
+  if (context.isSubmittingQuestion) {
+    return;
+  }
+
+  context.isSubmittingQuestion = true;
+  context.codeQuestionError = '';
+  context.codeAnswer = '';
+
+  const requestContext = {
+    ...context,
+    question,
+  };
+
+  try {
+    const response = yield requestAICapability(
+      'ask-code',
+      buildAIContext(requestContext)
+    );
+
+    if (
+      response &&
+      typeof response.answer === 'string' &&
+      response.answer.trim()
+    ) {
+      context.codeAnswer = response.answer.trim();
+      context.codeQuestionError = '';
+    } else {
+      context.codeAnswer = '';
+      context.codeQuestionError =
+        'AI assistance is temporarily unavailable. Please try again later.';
+    }
+  } catch (error) {
+    context.codeAnswer = '';
+    context.codeQuestionError =
+      'AI assistance is temporarily unavailable. Please try again later.';
+  } finally {
+    context.isSubmittingQuestion = false;
+  }
+},
+
     /* ==========================================================================
        CLIPBOARD
        ========================================================================== */
@@ -416,6 +486,15 @@ context.isAnalyzingLine = false;
       context.isAnalyzingLine = false;
       context.lineExplanation = '';
       context.lineExplanationError = '';
+
+      /*
+       * Ask question state.
+       */
+      context.isAskingCode = false;
+      context.isSubmittingQuestion = false;
+      context.codeQuestion = '';
+      context.codeAnswer = '';
+      context.codeQuestionError = '';
 
       context.completeText = context.isComplete
         ? '✓'

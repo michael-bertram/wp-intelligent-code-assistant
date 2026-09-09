@@ -10,12 +10,12 @@
  */
 export function buildAIContext(context, extras = {}) {
   return {
-    code: context.rawCodeText || context.activeCodeText || '',
-    language: context.codeLanguage || 'code',
-    filename: context.filename || '',
-    title: context.title || '',
-    ...extras,
-  };
+  code: context.activeCodeText || context.rawCodeText || '',
+  language: context.codeLanguage || 'PHP',
+  filename: context.codeFilename || '',
+  title: context.codeTitle || '',
+  question: context.question || context.codeQuestion || '',
+};
 }
 
 /**

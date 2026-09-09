@@ -339,6 +339,70 @@ toggleAskCode() {
   }
 },
 
+
+
+*generateUnderstandingCheck() {
+  const context = getContext();
+
+  if (context.isGeneratingCheck) {
+    return;
+  }
+
+  // If the panel already contains a generated question,
+  // use the button as a toggle instead of generating again.
+  if (context.checkQuestion) {
+    context.isCheckingUnderstanding = !context.isCheckingUnderstanding;
+    return;
+  }
+
+  context.isCheckingUnderstanding = true;
+  context.isGeneratingCheck = true;
+  context.checkError = '';
+
+  // Reset any previous exercise state.
+  context.checkQuestion = '';
+  context.checkOptions = [];
+  context.checkCorrectAnswer = null;
+  context.checkExplanation = '';
+  context.selectedCheckAnswer = null;
+  context.hasAnsweredCheck = false;
+  context.isCheckCorrect = false;
+
+  try {
+    const response = yield requestAICapability(
+      'check-understanding',
+      buildAIContext(context)
+    );
+
+    const hasValidResponse =
+      response &&
+      typeof response.question === 'string' &&
+      response.question.trim() &&
+      Array.isArray(response.options) &&
+      response.options.length === 3 &&
+      Number.isInteger(response.correctAnswer) &&
+      response.correctAnswer >= 0 &&
+      response.correctAnswer <= 2 &&
+      typeof response.explanation === 'string';
+
+    if (!hasValidResponse) {
+      context.checkError =
+        'Unable to generate a knowledge check right now.';
+      return;
+    }
+
+    context.checkQuestion = response.question.trim();
+    context.checkOptions = response.options;
+    context.checkCorrectAnswer = response.correctAnswer;
+    context.checkExplanation = response.explanation.trim();
+  } catch (error) {
+    context.checkError =
+      'Unable to generate a knowledge check right now.';
+  } finally {
+    context.isGeneratingCheck = false;
+  }
+},
+
     /* ==========================================================================
        CLIPBOARD
        ========================================================================== */

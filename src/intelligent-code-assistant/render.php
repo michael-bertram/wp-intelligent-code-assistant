@@ -889,13 +889,33 @@ $selected_lang =
 			<div class="code-footer-actions">
 				<button
 	type="button"
+	class="check-understanding-button"
+	data-wp-on--click="actions.generateUnderstandingCheck"
+	data-wp-bind--disabled="context.isGeneratingCheck"
+>
+	<span data-wp-bind--hidden="context.isGeneratingCheck">
+		<?php esc_html_e(
+			'Check understanding',
+			'intelligent-code-assistant'
+		); ?>
+	</span>
+
+	<span data-wp-bind--hidden="!context.isGeneratingCheck">
+		<?php esc_html_e(
+			'Creating question…',
+			'intelligent-code-assistant'
+		); ?>
+	</span>
+</button>
+				<button
+	type="button"
 	class="ask-code-button"
 	data-wp-on--click="actions.toggleAskCode"
 	data-wp-class--active="context.isAskingCode"
 >
 	<span>
 		<?php esc_html_e(
-			'Ask about this code',
+			'Ask',
 			'intelligent-code-assistant'
 		); ?>
 	</span>

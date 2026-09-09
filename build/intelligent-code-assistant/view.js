@@ -444,31 +444,8 @@ const {
       context.hasAnsweredCheck = false;
       context.isCheckCorrect = false;
       try {
-        // TEMPORARY: Mock structured AI response for local UI testing.
-        const response = {
-          question: 'Why is wp_unslash() used when handling this value?',
-          options: ['To remove slashes added to request data', 'To escape the value before displaying it', 'To validate that the value is a string'],
-          correctAnswer: 0,
-          explanation: 'wp_unslash() removes slashes that WordPress may add to incoming request data.'
-        };
+        const response = yield (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.requestAICapability)('check-understanding', (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.buildAIContext)(context));
         const hasValidResponse = response && typeof response.question === 'string' && response.question.trim() && Array.isArray(response.options) && response.options.length === 3 && Number.isInteger(response.correctAnswer) && response.correctAnswer >= 0 && response.correctAnswer <= 2 && typeof response.explanation === 'string';
-        // try {
-        //   const response = yield requestAICapability(
-        //     'check-understanding',
-        //     buildAIContext(context)
-        //   );
-
-        //   const hasValidResponse =
-        //     response &&
-        //     typeof response.question === 'string' &&
-        //     response.question.trim() &&
-        //     Array.isArray(response.options) &&
-        //     response.options.length === 3 &&
-        //     Number.isInteger(response.correctAnswer) &&
-        //     response.correctAnswer >= 0 &&
-        //     response.correctAnswer <= 2 &&
-        //     typeof response.explanation === 'string';
-
         if (!hasValidResponse) {
           context.checkError = 'Unable to generate a knowledge check right now.';
           return;

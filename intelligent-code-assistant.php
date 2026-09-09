@@ -906,3 +906,337 @@ add_action( 'rest_api_init', function() {
 		)
 	);
 } );
+
+/* ==========================================================================
+   ABILITY - CHECK YOUR UNDERSTANDING
+   ========================================================================== */
+
+add_action( 'wp_abilities_api_init', function() {
+
+	if ( ! function_exists( 'wp_register_ability' ) ) {
+		return;
+	}
+
+	wp_register_ability(
+		'intelligent-code-assistant/check-understanding',
+		array(
+			'category'            => 'intelligent-code-assistant-tools',
+			'label'               => __( 'Check Your Understanding', 'intelligent-code-assistant' ),
+			'description'         => __( 'Generates a short multiple-choice question based on the current code example.', 'intelligent-code-assistant' ),
+			'show_in_rest'        => true,
+			'show_in_mcp'         => true,
+			'permission_callback' => '__return_true',
+
+			'input_schema' => array(
+				'type'       => 'object',
+
+				'properties' => array(
+					'code' => array(
+						'type'        => 'string',
+						'description' => __( 'The code snippet the question should be based on.', 'intelligent-code-assistant' ),
+						'minLength'   => 1,
+					),
+
+					'language' => array(
+						'type'        => 'string',
+						'description' => __( 'Programming language used by the code snippet.', 'intelligent-code-assistant' ),
+					),
+
+					'filename' => array(
+						'type'        => 'string',
+						'description' => __( 'Optional filename associated with the code.', 'intelligent-code-assistant' ),
+					),
+
+					'title' => array(
+						'type'        => 'string',
+						'description' => __( 'Optional title associated with the code example.', 'intelligent-code-assistant' ),
+					),
+				),
+
+				'required' => array(
+					'code',
+				),
+
+				'additionalProperties' => false,
+			),
+
+			'output_schema' => array(
+				'type'       => 'object',
+
+				'properties' => array(
+					'question' => array(
+						'type' => 'string',
+					),
+
+					'options' => array(
+						'type'     => 'array',
+						'minItems' => 3,
+						'maxItems' => 3,
+
+						'items' => array(
+							'type' => 'string',
+						),
+					),
+
+					'correctAnswer' => array(
+						'type'    => 'integer',
+						'minimum' => 0,
+						'maximum' => 2,
+					),
+
+					'explanation' => array(
+						'type' => 'string',
+					),
+				),
+
+				'required' => array(
+					'question',
+					'options',
+					'correctAnswer',
+					'explanation',
+				),
+
+				'additionalProperties' => false,
+			),
+
+			'execute_callback' =>
+				'intelligent_code_assistant_execute_check_understanding_ability',
+		)
+	);
+} );
+
+/**
+ * Generate a multiple-choice question from the supplied code.
+ *
+ * @param array $args Ability input matching the input schema.
+ * @return array|WP_Error
+ */
+if ( ! function_exists( 'intelligent_code_assistant_execute_check_understanding_ability' ) ) {
+
+	function intelligent_code_assistant_execute_check_understanding_ability( array $args ) {
+
+		$raw_code = isset( $args['code'] ) && is_string( $args['code'] )
+			? $args['code']
+			: '';
+
+		$code = wp_unslash(
+			trim(
+				html_entity_decode(
+					$raw_code,
+					ENT_QUOTES | ENT_HTML5,
+					'UTF-8'
+				)
+			)
+		);
+
+		$language = isset( $args['language'] )
+			? sanitize_text_field( $args['language'] )
+			: 'code';
+
+		$filename = isset( $args['filename'] )
+			? sanitize_text_field( $args['filename'] )
+			: '';
+
+		$title = isset( $args['title'] )
+			? sanitize_text_field( $args['title'] )
+			: '';
+
+		if ( '' === $code ) {
+			return new WP_Error(
+				'empty_code',
+				__( 'Code snippet cannot be empty.', 'intelligent-code-assistant' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
+			return new WP_Error(
+				'ai_client_unavailable',
+				__( 'The WordPress AI Client is not available.', 'intelligent-code-assistant' ),
+				array( 'status' => 503 )
+			);
+		}
+
+		$schema = array(
+			'type'       => 'object',
+			'properties' => array(
+				'question' => array(
+					'type' => 'string',
+				),
+				'options' => array(
+					'type'     => 'array',
+					'minItems' => 3,
+					'maxItems' => 3,
+					'items'    => array(
+						'type' => 'string',
+					),
+				),
+				'correctAnswer' => array(
+					'type'    => 'integer',
+					'minimum' => 0,
+					'maximum' => 2,
+				),
+				'explanation' => array(
+					'type' => 'string',
+				),
+			),
+			'required' => array(
+				'question',
+				'options',
+				'correctAnswer',
+				'explanation',
+			),
+			'additionalProperties' => false,
+		);
+
+		$context = "Language: {$language}";
+
+		if ( '' !== $title ) {
+			$context .= "\nTitle: {$title}";
+		}
+
+		if ( '' !== $filename ) {
+			$context .= "\nFilename: {$filename}";
+		}
+
+		$prompt = <<<PROMPT
+You are creating a short knowledge-check question for a reader following a technical tutorial.
+
+Use only the supplied code and context to create one multiple-choice question that tests whether the reader understands an important concept demonstrated by the example.
+
+Context:
+{$context}
+
+Code:
+{$code}
+
+Requirements:
+- Create exactly three possible answers.
+- Only one answer must be correct.
+- correctAnswer must be the zero-based array index of the correct option: 0, 1, or 2.
+- Make the incorrect answers plausible, but clearly incorrect when the code is understood.
+- Test understanding rather than trivial syntax recognition.
+- Keep the question concise.
+- Keep each option concise.
+- Provide a short explanation of why the correct answer is correct.
+- Do not rely on information that cannot be inferred from the supplied code or context.
+PROMPT;
+
+		try {
+
+			$result = wp_ai_client_prompt( $prompt )
+				->as_json_response( $schema )
+				->generate_text();
+
+			if ( is_wp_error( $result ) ) {
+				return $result;
+			}
+
+			if ( ! is_string( $result ) || '' === trim( $result ) ) {
+				return new WP_Error(
+					'ai_empty_response',
+					__( 'The AI provider returned an empty response.', 'intelligent-code-assistant' ),
+					array( 'status' => 502 )
+				);
+			}
+
+			$data = json_decode( $result, true );
+
+			if (
+				! is_array( $data ) ||
+				! isset(
+					$data['question'],
+					$data['options'],
+					$data['correctAnswer'],
+					$data['explanation']
+				)
+			) {
+				return new WP_Error(
+					'ai_invalid_response',
+					__( 'The AI provider returned an invalid structured response.', 'intelligent-code-assistant' ),
+					array( 'status' => 502 )
+				);
+			}
+
+			return array(
+				'question'      => sanitize_text_field( $data['question'] ),
+				'options'       => array_map(
+					'sanitize_text_field',
+					$data['options']
+				),
+				'correctAnswer' => (int) $data['correctAnswer'],
+				'explanation'   => sanitize_textarea_field( $data['explanation'] ),
+			);
+
+		} catch ( Throwable $e ) {
+
+			return new WP_Error(
+				'ai_generation_exception',
+				__( 'Unable to generate a knowledge check right now.', 'intelligent-code-assistant' ),
+				array( 'status' => 500 )
+			);
+		}
+	}
+}
+
+/* Direct REST fallback for generated knowledge checks. */
+add_action( 'rest_api_init', function() {
+
+	register_rest_route(
+		'intelligent-code-assistant/v1',
+		'/check-understanding',
+		array(
+			'methods' => 'POST',
+
+			'callback' => function( WP_REST_Request $request ) {
+
+				$params = $request->get_json_params();
+
+				return intelligent_code_assistant_execute_check_understanding_ability(
+					array(
+						'code' => isset( $params['code'] )
+							? (string) $params['code']
+							: '',
+
+						'language' => isset( $params['language'] )
+							? (string) $params['language']
+							: 'code',
+
+						'filename' => isset( $params['filename'] )
+							? (string) $params['filename']
+							: '',
+
+						'title' => isset( $params['title'] )
+							? (string) $params['title']
+							: '',
+					)
+				);
+			},
+
+			'permission_callback' => '__return_true',
+
+			'args' => array(
+				'code' => array(
+					'required'  => true,
+					'type'      => 'string',
+					'minLength' => 1,
+				),
+
+				'language' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+
+				'filename' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+
+				'title' => array(
+					'required' => false,
+					'type'     => 'string',
+				),
+			),
+		)
+	);
+} );

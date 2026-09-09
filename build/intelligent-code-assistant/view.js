@@ -509,6 +509,20 @@ const {
       context.codeQuestion = '';
       context.codeAnswer = '';
       context.codeQuestionError = '';
+
+      /*
+       * Check understanding state.
+       */
+      context.isCheckingUnderstanding = false;
+      context.isGeneratingCheck = false;
+      context.checkQuestion = '';
+      context.checkOptions = [];
+      context.checkCorrectAnswer = null;
+      context.checkExplanation = '';
+      context.selectedCheckAnswer = null;
+      context.hasAnsweredCheck = false;
+      context.isCheckCorrect = false;
+      context.checkError = '';
       context.completeText = context.isComplete ? '✓' : 'Mark as complete';
 
       /*

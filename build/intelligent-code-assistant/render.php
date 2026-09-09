@@ -250,6 +250,20 @@ $selected_lang =
 			'codeQuestion'          => '',
 			'codeAnswer'            => '',
 			'codeQuestionError'     => '',
+
+			'isCheckingUnderstanding' => false,
+			'isGeneratingCheck'       => false,
+
+			'checkQuestion'           => '',
+			'checkOptions'            => array(),
+			'checkCorrectAnswer'      => null,
+			'checkExplanation'        => '',
+
+			'selectedCheckAnswer'     => null,
+			'hasAnsweredCheck'        => false,
+			'isCheckCorrect'          => false,
+
+			'checkError'              => '',
 		)
 	);
 	?>

@@ -1,0 +1,73 @@
+.code-footer .ai-assistant-button {
+	display: none !important;
+}
+
+.wpe-floating-ai-assistant {
+	position: fixed !important;
+	right: 24px !important;
+	bottom: 24px !important;
+	left: auto !important;
+	top: auto !important;
+	z-index: 100000;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 46px;
+	padding: 10px 16px;
+	border: 1px solid #0f172a;
+	border-radius: 999px;
+	background: #0f172a;
+	color: #ffffff;
+	font: 600 0.875rem/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22);
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+
+	&[hidden] {
+		display: none !important;
+	}
+
+	&:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 14px 34px rgba(15, 23, 42, 0.28);
+	}
+
+	&:focus-visible {
+		outline: 3px solid rgba(37, 99, 235, 0.4);
+		outline-offset: 3px;
+	}
+
+	&[aria-expanded="true"] {
+		background: #2563eb;
+		border-color: #2563eb;
+	}
+}
+
+[data-ai-assistant-enabled="true"][data-ai-assistant-active="true"] .ai-assistant-drawer {
+	position: fixed !important;
+	right: 24px !important;
+	bottom: 82px !important;
+	left: auto !important;
+	top: auto !important;
+	z-index: 99999;
+	width: min(420px, calc(100vw - 32px));
+	max-height: min(70vh, 680px);
+	margin: 0 !important;
+	overflow-y: auto;
+	border-radius: 12px;
+	box-shadow: 0 20px 55px rgba(15, 23, 42, 0.22);
+}
+
+@media (max-width: 600px) {
+	.wpe-floating-ai-assistant {
+		right: 16px !important;
+		bottom: 16px !important;
+	}
+
+	[data-ai-assistant-enabled="true"][data-ai-assistant-active="true"] .ai-assistant-drawer {
+		right: 16px !important;
+		bottom: 74px !important;
+		width: calc(100vw - 32px);
+		max-height: 72vh;
+	}
+}

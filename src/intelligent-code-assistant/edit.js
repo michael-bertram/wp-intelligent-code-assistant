@@ -105,8 +105,22 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         }
 
         if (/^\s*<(!doctype\s+html|html|[a-z][\w-]*)(\s|>)/i.test(trimmedCode)) return 'HTML';
-        if (/<\?php|\bnamespace\s+[A-Za-z_\\]|\bfunction\s+\w+\s*\([^)]*\)\s*\{/i.test(trimmedCode)) return 'PHP';
-        if (/\b(import|export|const|let|var|async|await)\b|=>|\bconsole\./.test(trimmedCode)) return 'JS';
+
+        // Only treat code as PHP when it contains PHP-specific syntax. A plain
+        // `function name() {}` declaration is valid JavaScript too and must not
+        // be enough to classify the snippet as PHP.
+        if (
+            /<\?php|\bnamespace\s+[A-Za-z_\\]|\$[A-Za-z_]\w*|->|::|\b(add_action|add_filter|wp_register_ability|register_block_type)\s*\(/i.test(trimmedCode)
+        ) {
+            return 'PHP';
+        }
+
+        if (
+            /\b(import|export|const|let|var|async|await|function)\b|=>|\bconsole\.|\bdocument\.|\bwindow\.|\bJSON\./.test(trimmedCode)
+        ) {
+            return 'JS';
+        }
+
         if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/im.test(trimmedCode)) return 'SQL';
         if (/^\s*#!.*\b(bash|sh)\b/m.test(trimmedCode) || /^\s*(echo|cd|pwd|mkdir|chmod|curl|grep)\s+/m.test(trimmedCode)) return 'Bash';
         if (/([.#]?[A-Za-z][\w-]*|\*)\s*(?:,[^{]+)?\{[^}]*:[^}]*;?\s*\}/s.test(trimmedCode)) return 'CSS';

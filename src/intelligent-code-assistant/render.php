@@ -18,6 +18,7 @@ $font_size       = $attributes['fontSize'] ?? '14px';
 $max_height      = $attributes['maxHeight'] ?? 'none';
 $show_lines      = $attributes['showLineNumbers'] ?? false;
 $highlight_lines = $attributes['highlightLines'] ?? '';
+$enable_ai_assistant = $attributes['enableAIAssistant'] ?? false;
 
 $theme_class   = $is_dark ? 'dark-theme' : '';
 $compact_class = $is_compact ? 'is-compact' : '';
@@ -183,6 +184,7 @@ $selected_lang =
 	data-wp-interactive="wpe"
 	data-wp-init="callbacks.initTask"
 	data-wp-class--complete="context.isComplete"
+	data-ai-assistant-enabled="<?php echo $enable_ai_assistant ? 'true' : 'false'; ?>"
 
 	<?php echo $inline_styles; ?>
 
@@ -213,6 +215,7 @@ $selected_lang =
 
 			'isComplete'             => false,
 			'isCopied'               => false,
+			'aiAssistantEnabled' => $enable_ai_assistant,
 
 			/*
 			 * Entire-code explanation.
@@ -266,7 +269,7 @@ $selected_lang =
 			'hasAnsweredCheck'        => false,
 			'isCheckCorrect'          => false,
 
-			'checkError'              => '',
+			'checkError'              => ''
 		)
 	);
 	?>
@@ -462,7 +465,9 @@ $selected_lang =
 						endforeach;
 						?></pre>
 
-						<!-- ==================================================
+<?php if ( $enable_ai_assistant ) : ?>
+
+							<!-- ==================================================
 						     SELECTED LINE ACTION
 						     ================================================== -->
 
@@ -597,6 +602,8 @@ $selected_lang =
 			</div>
 
 		</div>
+
+<?php endif; ?>
 
 		<!-- ==============================================================
 		     WHOLE-CODE AI EXPLANATION DRAWER

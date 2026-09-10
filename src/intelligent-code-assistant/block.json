@@ -42,7 +42,11 @@
 		"showLineNumbers": {
 			"type": "boolean",
 			"default": false
-		}
+		},
+        "enableAIAssistant": {
+        "type": "boolean",
+        "default": false
+}
     },
     "textdomain": "intelligent-code-assistant",
     "editorScript": "file:./index.js",

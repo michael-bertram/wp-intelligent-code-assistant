@@ -16,7 +16,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         isCompact,
         maxHeight,
         showLineNumbers,
-        fontSize 
+        fontSize,
+        enableAIAssistant
+
     } = attributes;
 
     // AI Auto-Fill Async State
@@ -168,6 +170,20 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             <InspectorControls>
                 {/* AI Automation Panel */}
                 <PanelBody title={__('AI Utilities', 'intelligent-code-assistant')} initialOpen={true}>
+                    <ToggleControl
+    label={__('Enable AI Assistant', 'intelligent-code-assistant')}
+    checked={enableAIAssistant}
+    onChange={(value) =>
+        setAttributes({
+            enableAIAssistant: value,
+        })
+    }
+    help={
+        enableAIAssistant
+            ? __('AI assistance will be available for this code block on the frontend.', 'intelligent-code-assistant')
+            : __('This block will behave as a standard interactive code block without reader-facing AI assistance.', 'intelligent-code-assistant')
+    }
+/>
                     <Button
                         variant="secondary"
                         isBusy={isAnalyzing}

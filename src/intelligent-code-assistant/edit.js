@@ -48,7 +48,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         }
 
         const postTitle = editorStore?.getEditedPostAttribute?.('title') || '';
-
         const topLevelIds = getBlockOrder();
         const currentIndex = topLevelIds.indexOf(clientId);
         const contextFragments = [];
@@ -73,13 +72,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             }
         }
 
+        const contextResult = contextFragments.join('\n').slice(0, 1200);
+
         if (!contentBlock) {
             return {
                 cleanRawText: '',
                 lineCount: 1,
                 headerBlockId: headerBlock?.clientId || null,
                 tutorialTitle: postTitle,
-                derivedTutorialContext: contextFragments.join('\n').slice(0, 1200),
+                derivedTutorialContext: contextResult,
             };
         }
 
@@ -102,7 +103,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             lineCount: calculatedLines,
             headerBlockId: headerBlock?.clientId || null,
             tutorialTitle: postTitle,
-            derivedTutorialContext: contextFragments.join('\n').slice(0, 1200),
+            derivedTutorialContext: contextResult,
         };
     }, [clientId]);
 
@@ -193,9 +194,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             }
 
             const detectedLanguage = detectCodeLanguage(cleanRawText);
+            const responseLanguage = response.codeLanguage || '';
+            const nextLanguage = detectedLanguage || (responseLanguage !== 'PHP' ? responseLanguage : '');
 
             setAttributes({
-                codeLanguage: detectedLanguage || response.codeLanguage || codeLanguage,
+                codeLanguage: nextLanguage,
                 filename: response.filename || filename,
                 highlightLines: response.highlightLines ?? highlightLines,
                 showLineNumbers: response.showLineNumbers ?? showLineNumbers,
@@ -393,10 +396,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                                     const lineNum = index + 1;
                                     const highlighted = isLineHighlighted(lineNum, highlightLines);
                                     return (
-                                        <span
-                                            key={index}
-                                            className={highlighted ? 'is-highlighted' : ''}
-                                        >
+                                        <span key={index} className={highlighted ? 'is-highlighted' : ''}>
                                             {lineNum}
                                         </span>
                                     );

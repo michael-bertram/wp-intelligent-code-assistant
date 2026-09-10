@@ -22,14 +22,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         tutorialContext,
     } = attributes;
 
-    // AI Auto-Fill Async State
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiError, setAiError] = useState(null);
 
-    // Dispatcher for child block attribute mutations
     const { updateBlockAttributes } = useDispatch('core/block-editor');
 
-    // 1. DYNAMIC DATA HOOK: Optimized registry queries to prevent re-render performance leaks
     const { cleanRawText, lineCount, headerBlockId, codeTitle } = useSelect((select) => {
         const { getBlockOrder, getBlock } = select('core/block-editor');
         const innerBlockIds = getBlockOrder(clientId);
@@ -77,7 +74,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
     const characterCount = cleanRawText.replace(/\r/g, '').length;
 
-    // Helper: Evaluates whether a line number falls within the highlightLines expression (e.g. "3, 5-8")
     const isLineHighlighted = (lineNumber, highlightExpression) => {
         if (!highlightExpression) return false;
         const ranges = highlightExpression.split(',');
@@ -92,7 +88,32 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         return false;
     };
 
-    // 2. ABILITIES API DISPATCHER (Step 2 Implementation)
+    const detectCodeLanguage = (code) => {
+        const trimmedCode = code.trim();
+        if (!trimmedCode) return '';
+
+        if (
+            (trimmedCode.startsWith('{') && trimmedCode.endsWith('}')) ||
+            (trimmedCode.startsWith('[') && trimmedCode.endsWith(']'))
+        ) {
+            try {
+                JSON.parse(trimmedCode);
+                return 'JSON';
+            } catch (error) {
+                // Continue with the remaining language checks.
+            }
+        }
+
+        if (/^\s*<(!doctype\s+html|html|[a-z][\w-]*)(\s|>)/i.test(trimmedCode)) return 'HTML';
+        if (/<\?php|\bnamespace\s+[A-Za-z_\\]|\bfunction\s+\w+\s*\([^)]*\)\s*\{/i.test(trimmedCode)) return 'PHP';
+        if (/\b(import|export|const|let|var|async|await)\b|=>|\bconsole\./.test(trimmedCode)) return 'JS';
+        if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/im.test(trimmedCode)) return 'SQL';
+        if (/^\s*#!.*\b(bash|sh)\b/m.test(trimmedCode) || /^\s*(echo|cd|pwd|mkdir|chmod|curl|grep)\s+/m.test(trimmedCode)) return 'Bash';
+        if (/([.#]?[A-Za-z][\w-]*|\*)\s*(?:,[^{]+)?\{[^}]*:[^}]*;?\s*\}/s.test(trimmedCode)) return 'CSS';
+
+        return '';
+    };
+
     const handleAutoFill = async () => {
         if (!cleanRawText || !cleanRawText.trim()) {
             setAiError(__('Please enter some code into the block first.', 'intelligent-code-assistant'));
@@ -109,14 +130,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         try {
             let response;
             try {
-                // Primary Path: Abilities API REST Controller
                 response = await apiFetch({
                     path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run',
                     method: 'POST',
                     data: requestData,
                 });
             } catch (routeErr) {
-                // Fallback Path: Direct Plugin REST Endpoint
                 if (routeErr.code === 'rest_no_route' || routeErr.status === 404) {
                     response = await apiFetch({
                         path: '/intelligent-code-assistant/v1/auto-fill-metadata',
@@ -128,15 +147,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                 }
             }
 
-            // Sync AI response attributes (Metadata + Syntax Formatting)
+            const detectedLanguage = detectCodeLanguage(cleanRawText);
+
             setAttributes({
-                codeLanguage: response.codeLanguage || codeLanguage,
+                codeLanguage: detectedLanguage || response.codeLanguage || codeLanguage,
                 filename: response.filename || filename,
                 highlightLines: response.highlightLines ?? highlightLines,
                 showLineNumbers: response.showLineNumbers ?? showLineNumbers,
             });
 
-            // Update the actual child header title returned by the AI.
             if (headerBlockId && response.title) {
                 updateBlockAttributes(headerBlockId, {
                     title: response.title,

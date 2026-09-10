@@ -21,7 +21,15 @@
     },
     "codeLanguage": {
       "type": "string",
-      "default": "PHP"
+      "default": ""
+    },
+    "filename": {
+      "type": "string",
+      "default": ""
+    },
+    "highlightLines": {
+      "type": "string",
+      "default": ""
     },
     "isDarkMode": {
       "type": "boolean",
@@ -46,14 +54,6 @@
     "enableAIAssistant": {
       "type": "boolean",
       "default": false
-    },
-    "tutorialTitle": {
-    "type": "string",
-    "default": ""
-    },
-    "tutorialContext": {
-    "type": "string",
-    "default": ""
     }
   },
   "textdomain": "intelligent-code-assistant",

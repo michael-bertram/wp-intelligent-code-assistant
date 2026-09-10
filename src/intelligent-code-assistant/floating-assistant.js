@@ -5,6 +5,7 @@ const ACTIVE_ATTRIBUTE = 'data-ai-assistant-active';
 const visibleBlocks = new Map();
 let activeBlock = null;
 let launcher = null;
+let rafId = null;
 
 function getBlockLabel(block) {
 	const title = block?.querySelector('.code-title');
@@ -65,13 +66,26 @@ function setActiveBlock(nextBlock) {
 	syncLauncherState();
 }
 
+function isMeaningfullyVisible(block) {
+	if (!block?.isConnected) {
+		return false;
+	}
+
+	const rect = block.getBoundingClientRect();
+	const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+	const activationTop = viewportHeight * 0.12;
+	const activationBottom = viewportHeight * 0.88;
+
+	return rect.bottom > activationTop && rect.top < activationBottom;
+}
+
 function chooseActiveBlock() {
 	const viewportCenter = window.innerHeight / 2;
 	let bestBlock = null;
 	let bestScore = Number.POSITIVE_INFINITY;
 
 	visibleBlocks.forEach((intersectionRatio, block) => {
-		if (!block.isConnected || intersectionRatio <= 0) {
+		if (intersectionRatio <= 0 || !isMeaningfullyVisible(block)) {
 			return;
 		}
 
@@ -89,6 +103,17 @@ function chooseActiveBlock() {
 	setActiveBlock(bestBlock);
 }
 
+function scheduleActiveBlockUpdate() {
+	if (rafId !== null) {
+		return;
+	}
+
+	rafId = window.requestAnimationFrame(() => {
+		rafId = null;
+		chooseActiveBlock();
+	});
+}
+
 function createLauncher() {
 	if (launcher) {
 		return launcher;
@@ -102,7 +127,8 @@ function createLauncher() {
 	launcher.innerHTML = '<span aria-hidden="true">✦</span><span>AI Assistant</span>';
 
 	launcher.addEventListener('click', () => {
-		if (!activeBlock) {
+		if (!activeBlock || !isMeaningfullyVisible(activeBlock)) {
+			setActiveBlock(null);
 			return;
 		}
 
@@ -126,26 +152,35 @@ function observeBlocks() {
 	createLauncher();
 
 	if (!('IntersectionObserver' in window)) {
-		setActiveBlock(blocks[0]);
+		blocks.forEach((block) => visibleBlocks.set(block, 1));
+		chooseActiveBlock();
+		window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
+		window.addEventListener('resize', scheduleActiveBlockUpdate);
 		return;
 	}
 
 	const observer = new IntersectionObserver(
 		(entries) => {
 			entries.forEach((entry) => {
-				visibleBlocks.set(entry.target, entry.intersectionRatio);
+				if (entry.isIntersecting) {
+					visibleBlocks.set(entry.target, entry.intersectionRatio);
+				} else {
+					visibleBlocks.delete(entry.target);
+				}
 			});
 
 			chooseActiveBlock();
 		},
 		{
 			root: null,
-			rootMargin: '-15% 0px -15% 0px',
+			rootMargin: '-12% 0px -12% 0px',
 			threshold: [0, 0.15, 0.35, 0.5, 0.75, 1],
 		}
 	);
 
 	blocks.forEach((block) => observer.observe(block));
+	window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
+	window.addEventListener('resize', scheduleActiveBlockUpdate);
 
 	const drawerObserver = new MutationObserver((mutations) => {
 		if (
@@ -166,6 +201,8 @@ function observeBlocks() {
 			drawerObserver.observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
 		}
 	});
+
+	chooseActiveBlock();
 }
 
 if (document.readyState === 'loading') {

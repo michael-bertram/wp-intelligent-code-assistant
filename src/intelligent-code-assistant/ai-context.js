@@ -1,23 +1,135 @@
 /**
+ * Find the code block currently being used by the assistant.
+ *
+ * The floating assistant marks its active block. As a fallback, match the
+ * rendered code text so inline interactions still receive useful context.
+ *
+ * @param {string} code Current code snippet.
+ * @return {Element|null} Matching code block element.
+ */
+function getCurrentCodeBlock(code = '') {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const activeBlock = document.querySelector(
+    '[data-ai-assistant-enabled="true"][data-ai-assistant-active="true"]'
+  );
+
+  if (activeBlock) {
+    return activeBlock;
+  }
+
+  const normalizedCode = code.trim();
+
+  if (!normalizedCode) {
+    return null;
+  }
+
+  return (
+    Array.from(
+      document.querySelectorAll('[data-ai-assistant-enabled="true"]')
+    ).find((block) => {
+      const renderedCode = block.querySelector('.code-lines')?.textContent || '';
+      return renderedCode.trim() === normalizedCode;
+    }) || null
+  );
+}
+
+/**
+ * Derive the article title without storing the same value on every code block.
+ *
+ * @return {string} Tutorial/article title.
+ */
+function getTutorialTitle() {
+  if (typeof document === 'undefined') {
+    return '';
+  }
+
+  const titleElement = document.querySelector(
+    'article h1, h1.wp-block-post-title, h1.entry-title, main h1'
+  );
+
+  if (titleElement?.textContent?.trim()) {
+    return titleElement.textContent.trim();
+  }
+
+  return document.title?.trim() || '';
+}
+
+/**
+ * Collect a deliberately small amount of nearby article content.
+ *
+ * We walk backwards from the current code block and stop once the nearest
+ * section heading is found. This keeps the prompt focused rather than sending
+ * the entire article to the model.
+ *
+ * @param {Element|null} block Current code block element.
+ * @return {string} Focused section context.
+ */
+function getFocusedTutorialContext(block) {
+  if (!block) {
+    return '';
+  }
+
+  const fragments = [];
+  let sibling = block.previousElementSibling;
+  let inspected = 0;
+  let foundHeading = false;
+
+  while (sibling && inspected < 8 && !foundHeading) {
+    const candidates = sibling.matches('h2, h3, h4, p')
+      ? [sibling]
+      : Array.from(sibling.querySelectorAll('h2, h3, h4, p'));
+
+    for (let index = candidates.length - 1; index >= 0; index -= 1) {
+      const candidate = candidates[index];
+      const text = candidate.textContent?.replace(/\s+/g, ' ').trim();
+
+      if (!text) {
+        continue;
+      }
+
+      fragments.unshift(text);
+
+      if (/^H[2-4]$/.test(candidate.tagName)) {
+        foundHeading = true;
+        break;
+      }
+    }
+
+    sibling = sibling.previousElementSibling;
+    inspected += 1;
+  }
+
+  return fragments.join('\n').slice(0, 1200);
+}
+
+/**
  * Build the shared context sent to every AI assistant capability.
  *
- * Keeping context construction in one place means new assistant modes can
- * add intent-specific fields without duplicating the basic code metadata.
+ * Article-level context is derived from the rendered tutorial instead of
+ * being duplicated across every code block. Block-specific context still
+ * comes from the current code example.
  *
  * @param {Object} context Block context from the Interactivity API.
  * @param {Object} extras Additional capability-specific context.
  * @return {Object} Normalized AI context.
  */
 export function buildAIContext(context, extras = {}) {
+  const code = context.activeCodeText || context.rawCodeText || '';
+  const currentBlock = getCurrentCodeBlock(code);
+  const renderedCodeTitle =
+    currentBlock?.querySelector('.code-title')?.textContent?.trim() || '';
+
   return {
-    code: context.activeCodeText || context.rawCodeText || '',
-    language: context.codeLanguage || 'PHP',
+    code,
+    language: context.codeLanguage || 'code',
     filename: context.codeFilename || '',
-    title: context.codeTitle || '',
-    // Provide focused tutorial context so the AI can understand
-    // how this code relates to the surrounding lesson.
-    tutorialTitle: context.tutorialTitle || '',
-    tutorialContext: context.tutorialContext || '',
+    title: context.codeTitle || renderedCodeTitle,
+    tutorialTitle: context.tutorialTitle || getTutorialTitle(),
+    tutorialContext:
+      context.tutorialContext || getFocusedTutorialContext(currentBlock),
     question: context.question || context.codeQuestion || '',
     ...extras,
   };

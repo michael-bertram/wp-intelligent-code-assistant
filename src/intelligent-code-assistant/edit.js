@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl } from '@wordpress/components';
+import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
@@ -18,8 +18,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         showLineNumbers,
         fontSize,
         enableAIAssistant,
-        tutorialTitle,
-        tutorialContext,
     } = attributes;
 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -27,7 +25,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
 
-    const { cleanRawText, lineCount, headerBlockId, codeTitle } = useSelect((select) => {
+    const { cleanRawText, lineCount, headerBlockId } = useSelect((select) => {
         const { getBlockOrder, getBlock } = select('core/block-editor');
         const innerBlockIds = getBlockOrder(clientId);
 
@@ -46,7 +44,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                 cleanRawText: '',
                 lineCount: 1,
                 headerBlockId: headerBlock?.clientId || null,
-                codeTitle: headerBlock?.attributes?.title || '',
             };
         }
 
@@ -68,7 +65,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             cleanRawText: cleanText,
             lineCount: calculatedLines,
             headerBlockId: headerBlock?.clientId || null,
-            codeTitle: headerBlock?.attributes?.title || '',
         };
     }, [clientId]);
 
@@ -106,9 +102,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
         if (/^\s*<(!doctype\s+html|html|[a-z][\w-]*)(\s|>)/i.test(trimmedCode)) return 'HTML';
 
-        // Only treat code as PHP when it contains PHP-specific syntax. A plain
-        // `function name() {}` declaration is valid JavaScript too and must not
-        // be enough to classify the snippet as PHP.
         if (
             /<\?php|\bnamespace\s+[A-Za-z_\\]|\$[A-Za-z_]\w*|->|::|\b(add_action|add_filter|wp_register_ability|register_block_type)\s*\(/i.test(trimmedCode)
         ) {
@@ -240,19 +233,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                                     {aiError}
                                 </p>
                             )}
-
-                            <TextControl
-                                label={__('Tutorial title', 'intelligent-code-assistant')}
-                                value={tutorialTitle || ''}
-                                onChange={(value) => setAttributes({ tutorialTitle: value })}
-                            />
-
-                            <TextareaControl
-                                label={__('Tutorial context', 'intelligent-code-assistant')}
-                                value={tutorialContext || ''}
-                                onChange={(value) => setAttributes({ tutorialContext: value })}
-                                help={__('Give the AI focused context about what the reader is learning around this example.', 'intelligent-code-assistant')}
-                            />
                         </>
                     )}
                 </PanelBody>
@@ -278,8 +258,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                     {showLanguageBadge && (
                         <SelectControl
                             label={__('Code Language', 'intelligent-code-assistant')}
-                            value={codeLanguage}
+                            value={codeLanguage || ''}
                             options={[
+                                { label: __('Auto / Not set', 'intelligent-code-assistant'), value: '' },
                                 { label: 'PHP', value: 'PHP' },
                                 { label: 'JavaScript', value: 'JS' },
                                 { label: 'CSS', value: 'CSS' },
@@ -334,8 +315,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
             <div {...blockProps}>
                 <div className="editor-combined-container">
-                    {showLanguageBadge && (
-                        <span className={`code-badge lang-${(codeLanguage || 'php').toLowerCase()}`}>
+                    {showLanguageBadge && codeLanguage && (
+                        <span className={`code-badge lang-${codeLanguage.toLowerCase()}`}>
                             {codeLanguage}
                         </span>
                     )}

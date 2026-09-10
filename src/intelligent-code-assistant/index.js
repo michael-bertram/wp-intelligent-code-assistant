@@ -7,15 +7,12 @@ import { registerBlockType } from '@wordpress/blocks';
 
 /**
  * Lets webpack process CSS, SASS or SCSS files referenced in JavaScript files.
- * All files containing `style` keyword are bundled together. The code used
- * gets applied both to the front of your site and to the editor. All other files
- * get applied to the editor only.
+ * Files imported from style.scss are bundled into the block's frontend stylesheet.
  *
  * @see https://www.npmjs.com/package/@wordpress/scripts#using-css
  */
 import './style.scss';
 import './assistant/style.scss';
-import './floating-assistant-style.scss';
 import './editor.scss';
 
 /**

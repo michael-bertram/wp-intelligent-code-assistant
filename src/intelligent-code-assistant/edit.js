@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl } from '@wordpress/components';
+import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
@@ -18,6 +18,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         showLineNumbers,
         fontSize,
         enableAIAssistant,
+        tutorialContextOverride,
     } = attributes;
 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -25,8 +26,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
 
-    const { cleanRawText, lineCount, headerBlockId } = useSelect((select) => {
+    const {
+        cleanRawText,
+        lineCount,
+        headerBlockId,
+        tutorialTitle,
+        derivedTutorialContext,
+    } = useSelect((select) => {
         const { getBlockOrder, getBlock } = select('core/block-editor');
+        const editorStore = select('core/editor');
         const innerBlockIds = getBlockOrder(clientId);
 
         let contentBlock = null;
@@ -39,11 +47,39 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             if (block.name === 'wpe/code-header') headerBlock = block;
         }
 
+        const postTitle = editorStore?.getEditedPostAttribute?.('title') || '';
+
+        const topLevelIds = getBlockOrder();
+        const currentIndex = topLevelIds.indexOf(clientId);
+        const contextFragments = [];
+
+        if (currentIndex > 0) {
+            for (let index = currentIndex - 1, inspected = 0; index >= 0 && inspected < 8; index -= 1, inspected += 1) {
+                const block = getBlock(topLevelIds[index]);
+                if (!block) continue;
+
+                if (block.name === 'core/paragraph' || block.name === 'core/heading') {
+                    const rawContent = block.attributes?.content || '';
+                    const text = rawContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
+                    if (text) {
+                        contextFragments.unshift(text);
+                    }
+
+                    if (block.name === 'core/heading') {
+                        break;
+                    }
+                }
+            }
+        }
+
         if (!contentBlock) {
             return {
                 cleanRawText: '',
                 lineCount: 1,
                 headerBlockId: headerBlock?.clientId || null,
+                tutorialTitle: postTitle,
+                derivedTutorialContext: contextFragments.join('\n').slice(0, 1200),
             };
         }
 
@@ -65,6 +101,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             cleanRawText: cleanText,
             lineCount: calculatedLines,
             headerBlockId: headerBlock?.clientId || null,
+            tutorialTitle: postTitle,
+            derivedTutorialContext: contextFragments.join('\n').slice(0, 1200),
         };
     }, [clientId]);
 
@@ -233,6 +271,27 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                                     {aiError}
                                 </p>
                             )}
+
+                            <TextControl
+                                label={__('Tutorial title', 'intelligent-code-assistant')}
+                                value={tutorialTitle}
+                                disabled
+                                help={__('Derived from the current post title. Edit the post title to change this value.', 'intelligent-code-assistant')}
+                            />
+
+                            <TextareaControl
+                                label={__('Detected tutorial context', 'intelligent-code-assistant')}
+                                value={derivedTutorialContext}
+                                disabled
+                                help={__('Derived from the nearest heading and paragraphs before this code block.', 'intelligent-code-assistant')}
+                            />
+
+                            <TextareaControl
+                                label={__('Context override', 'intelligent-code-assistant')}
+                                value={tutorialContextOverride || ''}
+                                onChange={(value) => setAttributes({ tutorialContextOverride: value })}
+                                help={__('Optional. When set, this replaces the automatically detected tutorial context for this code block.', 'intelligent-code-assistant')}
+                            />
                         </>
                     )}
                 </PanelBody>

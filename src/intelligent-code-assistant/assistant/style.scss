@@ -73,6 +73,53 @@
 			letter-spacing: 0 !important;
 			text-transform: none !important;
 		}
+
+		/* Shared shimmer loading state used by Explain, Explain Line and Check Understanding. */
+		.explanation-loading-container,
+		.line-explanation-loading,
+		.understanding-check-loading {
+			position: relative;
+			padding-bottom: 48px !important;
+
+			&::before,
+			&::after {
+				content: '';
+				position: absolute;
+				left: 0;
+				height: 10px;
+				border-radius: 4px;
+				background: linear-gradient(
+					90deg,
+					#e2e8f0 25%,
+					#f8fafc 50%,
+					#e2e8f0 75%
+				);
+				background-size: 200% 100%;
+				animation: ai-assistant-shimmer 1.4s ease-in-out infinite;
+			}
+
+			&::before {
+				bottom: 24px;
+				width: 100%;
+			}
+
+			&::after {
+				bottom: 6px;
+				width: 72%;
+			}
+		}
+
+		/* Give Ask's submit state the same visual language while a response is generated. */
+		.ask-code-submit:disabled {
+			background: linear-gradient(
+				90deg,
+				#0f172a 25%,
+				#334155 50%,
+				#0f172a 75%
+			) !important;
+			background-size: 200% 100% !important;
+			animation: ai-assistant-shimmer 1.4s ease-in-out infinite;
+		}
 	}
 
 	&.dark-theme {
@@ -90,7 +137,32 @@
 			.ai-assistant-view > h3 {
 				color: #f4f4f5 !important;
 			}
+
+			.explanation-loading-container,
+			.line-explanation-loading,
+			.understanding-check-loading {
+				&::before,
+				&::after {
+					background: linear-gradient(
+						90deg,
+						#27272a 25%,
+						#3f3f46 50%,
+						#27272a 75%
+					);
+					background-size: 200% 100%;
+				}
+			}
 		}
+	}
+}
+
+@keyframes ai-assistant-shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+
+	100% {
+		background-position: -200% 0;
 	}
 }
 

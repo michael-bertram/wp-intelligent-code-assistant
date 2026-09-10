@@ -15,6 +15,7 @@ import { registerBlockType } from '@wordpress/blocks';
  */
 import './style.scss';
 import './assistant/style.scss';
+import './floating-assistant-style.scss';
 import './editor.scss';
 
 /**

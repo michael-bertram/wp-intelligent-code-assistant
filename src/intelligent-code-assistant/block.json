@@ -54,6 +54,10 @@
     "enableAIAssistant": {
       "type": "boolean",
       "default": false
+    },
+    "tutorialContextOverride": {
+      "type": "string",
+      "default": ""
     }
   },
   "textdomain": "intelligent-code-assistant",

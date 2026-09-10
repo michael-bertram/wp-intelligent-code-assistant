@@ -1,3 +1,5 @@
+import './floating-assistant.scss';
+
 const BLOCK_SELECTOR = '[data-ai-assistant-enabled="true"]';
 const LAUNCHER_CLASS = 'wpe-floating-ai-assistant';
 const ACTIVE_ATTRIBUTE = 'data-ai-assistant-active';

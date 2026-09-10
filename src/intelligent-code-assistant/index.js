@@ -14,6 +14,7 @@ import { registerBlockType } from '@wordpress/blocks';
  * @see https://www.npmjs.com/package/@wordpress/scripts#using-css
  */
 import './style.scss';
+import './assistant-style.css';
 import './editor.scss';
 
 /**
@@ -28,7 +29,7 @@ import { InnerBlocks } from '@wordpress/block-editor';
 /**
  * Every block starts by registering a new block type definition.
  *
- * @see https://developer.wordpress.org/block-editor/developers/block-api/#registering-a-block
+ * @see ./edit.js
  */
 registerBlockType(metadata.name, {
   /**

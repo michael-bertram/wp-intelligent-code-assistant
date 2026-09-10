@@ -46,6 +46,14 @@
     "enableAIAssistant": {
       "type": "boolean",
       "default": false
+    },
+    "tutorialTitle": {
+    "type": "string",
+    "default": ""
+    },
+    "tutorialContext": {
+    "type": "string",
+    "default": ""
     }
   },
   "textdomain": "intelligent-code-assistant",

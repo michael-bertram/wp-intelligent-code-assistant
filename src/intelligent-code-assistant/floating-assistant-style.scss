@@ -22,6 +22,7 @@
 	box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22);
 	cursor: pointer;
 	transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+	animation: bounce 0.3s ease forwards 0.5s infinite ;
 
 	&[hidden] {
 		display: none !important;
@@ -40,6 +41,18 @@
 	&[aria-expanded="true"] {
 		background: #2563eb;
 		border-color: #2563eb;
+	}
+}
+
+@keyframes bounce {
+	0% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-4px);
+	}
+	100% {
+		transform: translateY(0);
 	}
 }
 

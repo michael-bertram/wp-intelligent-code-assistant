@@ -14,6 +14,10 @@ export function buildAIContext(context, extras = {}) {
     language: context.codeLanguage || 'PHP',
     filename: context.codeFilename || '',
     title: context.codeTitle || '',
+    // Provide focused tutorial context so the AI can understand
+    // how this code relates to the surrounding lesson.
+    tutorialTitle: context.tutorialTitle || '',
+    tutorialContext: context.tutorialContext || '',
     question: context.question || context.codeQuestion || '',
     ...extras,
   };

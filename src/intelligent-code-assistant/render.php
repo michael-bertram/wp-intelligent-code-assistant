@@ -271,7 +271,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 								<?php esc_html_e( 'Ask about this code', 'intelligent-code-assistant' ); ?>
 							</button>
 							<button type="button" class="check-understanding-button" data-wp-on--click="actions.generateUnderstandingCheck">
-								<?php esc_html_e( 'Check your understanding', 'intelligent-code-assistant' ); ?>
+								<?php esc_html_e( 'Check understanding', 'intelligent-code-assistant' ); ?>
 							</button>
 							<button
 								type="button"

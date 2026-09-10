@@ -29,7 +29,12 @@ function buildAIContext(context, extras = {}) {
     language: context.codeLanguage || 'PHP',
     filename: context.codeFilename || '',
     title: context.codeTitle || '',
-    question: context.question || context.codeQuestion || ''
+    // Provide focused tutorial context so the AI can understand
+    // how this code relates to the surrounding lesson.
+    tutorialTitle: context.tutorialTitle || '',
+    tutorialContext: context.tutorialContext || '',
+    question: context.question || context.codeQuestion || '',
+    ...extras
   };
 }
 
@@ -203,6 +208,21 @@ const {
     registeredIds: [],
     tasks: {},
     _storageLoaded: false,
+    get isAssistantMenu() {
+      return (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)().aiAssistantView === 'menu';
+    },
+    get isAssistantExplain() {
+      return (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)().aiAssistantView === 'explain';
+    },
+    get isAssistantExplainLine() {
+      return (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)().aiAssistantView === 'explain-line';
+    },
+    get isAssistantAsk() {
+      return (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)().aiAssistantView === 'ask';
+    },
+    get isAssistantCheck() {
+      return (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)().aiAssistantView === 'check';
+    },
     get totalTasks() {
       return state.registeredIds.length;
     },
@@ -247,6 +267,27 @@ const {
     }
   },
   actions: {
+    openAssistant() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'menu';
+    },
+    closeAssistant() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      context.aiAssistantOpen = false;
+      context.aiAssistantView = 'menu';
+    },
+    showAssistantMenu() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      context.aiAssistantView = 'menu';
+    },
+    showAskCode() {
+      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'ask';
+      context.isAskingCode = true;
+      context.codeQuestionError = '';
+    },
     toggleOpen() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
       context.isOpen = !context.isOpen;
@@ -281,22 +322,10 @@ const {
         // Local completion remains available.
       }
     },
-    /* ==========================================================================
-       EXPLAIN ENTIRE CODE SNIPPET
-       ========================================================================== */
-
-    closeExplanation() {
-      const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
-      context.isExplaining = false;
-      context.isAnalyzingExplanation = false;
-      context.explanationError = '';
-    },
     *explainCode() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
-      if (context.isExplaining && context.explanationText && !context.isAnalyzingExplanation) {
-        context.isExplaining = false;
-        return;
-      }
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'explain';
       context.isExplaining = true;
       if (context.explanationText && !context.explanationError) {
         return;
@@ -305,40 +334,25 @@ const {
       context.explanationError = '';
       context.explanationText = '';
       context.explanationItems = [];
-
-      /*
-       * Explain Code always receives the complete snippet.
-       *
-       * Selecting a line should not change the meaning of the
-       * original Explain button. Line explanations use their
-       * own action and Ability.
-       */
       const response = yield (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.requestAICapability)('explain-code', (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.buildAIContext)(context));
       if (response?.error) {
-        context.explanationText = '';
-        context.explanationItems = [];
         context.explanationError = getAIErrorMessage(response);
       } else if (response && typeof response.explanation === 'string' && response.explanation.trim()) {
         context.explanationText = response.explanation.trim();
         context.explanationItems = (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.formatAIItems)(response.explanation);
-        context.explanationError = '';
       } else {
-        context.explanationText = '';
-        context.explanationItems = [];
         context.explanationError = 'Unable to generate a code explanation right now.';
       }
       context.isAnalyzingExplanation = false;
     },
-    /* ==========================================================================
-       STAGE 2: EXPLAIN SELECTED LINE
-       ========================================================================== */
-
     *explainLine() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
       if (!context.selectedLineNumber || !context.selectedLineText) {
         context.lineExplanationError = 'Select a line of code first.';
         return;
       }
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'explain-line';
       context.isExplainingLine = true;
       context.isAnalyzingLine = true;
       context.lineExplanation = '';
@@ -359,21 +373,14 @@ const {
       });
       const response = yield (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.requestAICapability)('explain-line', payload);
       if (response?.error) {
-        context.lineExplanation = '';
         context.lineExplanationError = getAIErrorMessage(response);
       } else if (response && typeof response.explanation === 'string' && response.explanation.trim()) {
         context.lineExplanation = response.explanation.trim();
-        context.lineExplanationError = '';
       } else {
-        context.lineExplanation = '';
         context.lineExplanationError = 'Unable to explain this line right now.';
       }
       context.isAnalyzingLine = false;
     },
-    /* ==========================================================================
-           ASK CODE QUESTION
-      ========================================================================== */
-
     handleCodeQuestionInput(event) {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
       context.codeQuestion = event.target.value;
@@ -381,10 +388,10 @@ const {
     },
     toggleAskCode() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
-      context.isAskingCode = !context.isAskingCode;
-      if (!context.isAskingCode) {
-        context.codeQuestionError = '';
-      }
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'ask';
+      context.isAskingCode = true;
+      context.codeQuestionError = '';
     },
     *submitCodeQuestion() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
@@ -407,13 +414,10 @@ const {
         const response = yield (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.requestAICapability)('ask-code', (0,_ai_context__WEBPACK_IMPORTED_MODULE_1__.buildAIContext)(requestContext));
         if (response && typeof response.answer === 'string' && response.answer.trim()) {
           context.codeAnswer = response.answer.trim();
-          context.codeQuestionError = '';
         } else {
-          context.codeAnswer = '';
           context.codeQuestionError = 'AI assistance is temporarily unavailable. Please try again later.';
         }
       } catch (error) {
-        context.codeAnswer = '';
         context.codeQuestionError = 'AI assistance is temporarily unavailable. Please try again later.';
       } finally {
         context.isSubmittingQuestion = false;
@@ -421,23 +425,23 @@ const {
     },
     *generateUnderstandingCheck() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'check';
       if (context.isGeneratingCheck) {
         return;
       }
-
-      // If the panel already contains a generated question,
-      // use the button as a toggle instead of generating again.
       if (context.checkQuestion) {
-        context.isCheckingUnderstanding = !context.isCheckingUnderstanding;
+        context.isCheckingUnderstanding = true;
         return;
       }
       context.isCheckingUnderstanding = true;
       context.isGeneratingCheck = true;
       context.checkError = '';
-
-      // Reset any previous exercise state.
       context.checkQuestion = '';
       context.checkOptions = [];
+      context.checkOption0 = '';
+      context.checkOption1 = '';
+      context.checkOption2 = '';
       context.checkCorrectAnswer = null;
       context.checkExplanation = '';
       context.selectedCheckAnswer = null;
@@ -476,21 +480,8 @@ const {
       context.hasAnsweredCheck = true;
       context.isCheckCorrect = answerIndex === context.checkCorrectAnswer;
     },
-    /* ==========================================================================
-       CLIPBOARD
-       ========================================================================== */
-
     async copyToClipboard() {
       const context = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getContext)();
-
-      /*
-       * Use the original code context rather than panel.textContent.
-       *
-       * The panel now also contains line-selection controls, so
-       * copying the panel would include UI text such as:
-       *
-       * "Selected: Line 4 Explain this line".
-       */
       const cleanedText = (context.rawCodeText || '').trim();
       if (!cleanedText) {
         return;
@@ -536,10 +527,6 @@ const {
       if (!context.id) {
         return;
       }
-
-      /*
-       * Load shared completion state.
-       */
       if (!state._storageLoaded) {
         try {
           const storedTasks = localStorage.getItem(STORAGE_KEY);
@@ -549,55 +536,36 @@ const {
         }
         state._storageLoaded = true;
       }
-
-      /*
-       * Register this block instance.
-       */
       if (!state.registeredIds.includes(context.id)) {
         state.registeredIds = [...state.registeredIds, context.id];
       }
-
-      /*
-       * Base block state.
-       */
       context.isComplete = state.tasks[context.id] ?? false;
       context.isCopied = false;
-
-      /*
-       * Whole-code explanation state.
-       */
+      context.aiAssistantOpen = false;
+      context.aiAssistantView = 'menu';
       context.isExplaining = false;
       context.isAnalyzingExplanation = false;
       context.explanationText = '';
       context.explanationItems = [];
       context.explanationError = '';
-
-      /*
-       * Selected-line state.
-       */
       context.selectedLineNumber = 0;
       context.selectedLineText = '';
       context.isExplainingLine = false;
       context.isAnalyzingLine = false;
       context.lineExplanation = '';
       context.lineExplanationError = '';
-
-      /*
-       * Ask question state.
-       */
       context.isAskingCode = false;
       context.isSubmittingQuestion = false;
       context.codeQuestion = '';
       context.codeAnswer = '';
       context.codeQuestionError = '';
-
-      /*
-       * Check understanding state.
-       */
       context.isCheckingUnderstanding = false;
       context.isGeneratingCheck = false;
       context.checkQuestion = '';
       context.checkOptions = [];
+      context.checkOption0 = '';
+      context.checkOption1 = '';
+      context.checkOption2 = '';
       context.checkCorrectAnswer = null;
       context.checkExplanation = '';
       context.selectedCheckAnswer = null;
@@ -605,15 +573,6 @@ const {
       context.isCheckCorrect = false;
       context.checkError = '';
       context.completeText = context.isComplete ? '✓' : 'Mark as complete';
-      context.checkOption0 = '';
-      context.checkOption1 = '';
-      context.checkOption2 = '';
-
-      /*
-       * Existing author-defined important lines.
-       *
-       * This remains separate from the reader's selected line.
-       */
       if (context.highlightLines) {
         const targetLines = new Set();
         context.highlightLines.split(',').forEach(range => {
@@ -632,14 +591,6 @@ const {
       } else {
         context.highlightedNumbers = [];
       }
-
-      /*
-       * Stage 2 line selection.
-       *
-       * Each source-code line now exists as a real .code-line
-       * element, so we no longer need to calculate a line based
-       * on mouse coordinates and line height.
-       */
       const {
         ref: blockElement
       } = (0,_wordpress_interactivity__WEBPACK_IMPORTED_MODULE_0__.getElement)();
@@ -648,13 +599,7 @@ const {
         return;
       }
       panel.dataset.lineSelectionBound = 'true';
-      panel.setAttribute('aria-label', 'Code. Select a line to explain it with AI.');
-
-      /**
-       * Select one source-code line.
-       *
-       * @param {HTMLElement} lineElement
-       */
+      panel.setAttribute('aria-label', context.aiAssistantEnabled ? 'Code. Select a line to explain it with AI.' : 'Code.');
       const selectLine = lineElement => {
         const lineNumber = Number(lineElement.dataset.lineNumber);
         if (!lineNumber || Number.isNaN(lineNumber)) {
@@ -663,38 +608,17 @@ const {
         const lines = (context.rawCodeText || '').split('\n');
         context.selectedLineNumber = lineNumber;
         context.selectedLineText = lines[lineNumber - 1] || '';
-
-        /*
-         * Selecting another line invalidates any previous
-         * line-specific explanation.
-         */
         context.isExplainingLine = false;
         context.isAnalyzingLine = false;
         context.lineExplanation = '';
         context.lineExplanationError = '';
-
-        /*
-         * Remove the previous reader selection.
-         */
         panel.querySelectorAll('.code-line').forEach(line => {
           line.classList.remove('is-selected');
           line.removeAttribute('aria-current');
         });
-
-        /*
-         * Highlight only the newly selected line.
-         */
         lineElement.classList.add('is-selected');
         lineElement.setAttribute('aria-current', 'true');
       };
-
-      /*
-       * Mouse/pointer selection.
-       *
-       * Prism may add token spans inside each code line,
-       * therefore event.target.closest('.code-line') is used
-       * instead of assuming the clicked element is the line.
-       */
       panel.addEventListener('click', event => {
         const lineElement = event.target.closest('.code-line');
         if (!lineElement || !panel.contains(lineElement)) {
@@ -702,13 +626,6 @@ const {
         }
         selectLine(lineElement);
       });
-
-      /*
-       * Keyboard selection.
-       *
-       * Lines are focusable in render.php, so Enter or Space
-       * performs the same selection as clicking.
-       */
       panel.addEventListener('keydown', event => {
         if (event.key !== 'Enter' && event.key !== ' ') {
           return;

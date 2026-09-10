@@ -29,10 +29,6 @@
   display: flex;
   flex-direction: column;
 }
-.wp-block-wpe-intelligent-code-assistant-editor,
-.wp-block-wpe-intelligent-code-assistant {
-  /* Complete State - Smooth, subtle background shift */
-}
 .wp-block-wpe-intelligent-code-assistant-editor.complete,
 .wp-block-wpe-intelligent-code-assistant.complete {
   background-color: #f0fdf4 !important;
@@ -41,10 +37,6 @@
 .wp-block-wpe-intelligent-code-assistant-editor.complete .code-header h3,
 .wp-block-wpe-intelligent-code-assistant.complete .code-header h3 {
   color: #166534 !important;
-}
-.wp-block-wpe-intelligent-code-assistant-editor,
-.wp-block-wpe-intelligent-code-assistant {
-  /* UNIFIED CASCADING FONT SYSTEM */
 }
 .wp-block-wpe-intelligent-code-assistant-editor pre, .wp-block-wpe-intelligent-code-assistant-editor code, .wp-block-wpe-intelligent-code-assistant-editor textarea, .wp-block-wpe-intelligent-code-assistant-editor .line-numbers-gutter span, .wp-block-wpe-intelligent-code-assistant-editor [data-placeholder], .wp-block-wpe-intelligent-code-assistant-editor .panel-content *,
 .wp-block-wpe-intelligent-code-assistant pre,
@@ -55,12 +47,6 @@
 .wp-block-wpe-intelligent-code-assistant .panel-content * {
   font-size: var(--editor-code-font-size, 14px) !important;
   line-height: 1.5 !important;
-}
-.wp-block-wpe-intelligent-code-assistant-editor,
-.wp-block-wpe-intelligent-code-assistant {
-  /* ----------------------------------------------------------------------
-     DYNAMIC CUSTOM CONTROLS (DARK THEME & COMPACT SPACING)
-     ---------------------------------------------------------------------- */
 }
 .wp-block-wpe-intelligent-code-assistant-editor.dark-theme,
 .wp-block-wpe-intelligent-code-assistant.dark-theme {
@@ -102,6 +88,7 @@
 .wp-block-wpe-intelligent-code-assistant.dark-theme .line-numbers-gutter span.is-highlighted {
   background-color: rgba(255, 235, 59, 0.15) !important;
   color: #ffeb3b !important;
+  font-weight: 700;
 }
 .wp-block-wpe-intelligent-code-assistant-editor.dark-theme .code-footer,
 .wp-block-wpe-intelligent-code-assistant.dark-theme .code-footer {
@@ -159,10 +146,6 @@
   background-color: #062e14 !important;
   border-color: #14532d !important;
 }
-.wp-block-wpe-intelligent-code-assistant-editor,
-.wp-block-wpe-intelligent-code-assistant {
-  /* FRONTEND COMPACT CONFIGURATIONS */
-}
 .wp-block-wpe-intelligent-code-assistant-editor.is-compact .code-header,
 .wp-block-wpe-intelligent-code-assistant.is-compact .code-header {
   padding: 8px 16px !important;
@@ -180,7 +163,6 @@
   padding: 6px 16px !important;
 }
 
-/* Consistent interaction cursors across all assistant controls */
 .wp-block-wpe-intelligent-code-assistant-editor button:not(:disabled),
 .wp-block-wpe-intelligent-code-assistant button:not(:disabled) {
   cursor: pointer;
@@ -230,9 +212,6 @@ a:focus {
   gap: 6px;
 }
 
-/* ----------------------------------------------------------------------
-   HEADER INTERACTION BUTTONS & SVGS
-   ---------------------------------------------------------------------- */
 .copy-button,
 .toggle-button {
   background: transparent;
@@ -273,7 +252,6 @@ a:focus {
   animation: popIn 0.2s ease-out;
 }
 
-/* Step 4 Explain Code Button */
 .explain-button {
   background: rgba(15, 23, 42, 0.05);
   border: 1px solid #e2e8f0;
@@ -445,7 +423,7 @@ a:focus {
 }
 
 /* ==========================================================================
-   5. STEP 4: AI EXPLANATION DRAWER SUB-SYSTEM
+   5. AI EXPLANATION DRAWER SUB-SYSTEM
    ========================================================================== */
 .code-explanation-drawer {
   background: #f8fafc;
@@ -474,7 +452,6 @@ a:focus {
   font-size: 0.8125rem;
 }
 
-/* Loading must disappear once Interactivity API sets is-hidden/hidden. */
 .code-explanation-drawer .explanation-loading-container.is-hidden,
 .code-explanation-drawer .explanation-loading-container[hidden] {
   display: none !important;
@@ -517,6 +494,12 @@ a:focus {
   color: white !important;
 }
 
+.code-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .code-analytics-meta {
   margin-left: auto;
   display: flex;
@@ -532,7 +515,6 @@ a:focus {
   color: #cbd5e1;
 }
 
-/* KEYFRAME ANIMATIONS */
 @keyframes popIn {
   0% {
     transform: scale(0.7);
@@ -549,7 +531,7 @@ a:focus {
   }
 }
 /* ==========================================================================
-   STEP 4: EXPLANATION DRAWER, CLOSE BUTTON & SPINNER STYLES
+   EXPLANATION DRAWER, CLOSE BUTTON & SPINNER STYLES
    ========================================================================== */
 .code-explanation-drawer {
   background-color: #f8fafc;
@@ -565,7 +547,6 @@ a:focus {
   border-bottom-color: #334155;
 }
 
-/* Header & Flex Alignment */
 .explanation-header {
   display: flex;
   align-items: center;
@@ -573,7 +554,6 @@ a:focus {
   margin-bottom: 12px;
 }
 
-/* Shared AI panel title styling */
 .explanation-title,
 .line-explanation-title {
   display: flex;
@@ -592,7 +572,6 @@ a:focus {
   color: #60a5fa;
 }
 
-/* Styled Close Button */
 .explanation-close-btn {
   display: inline-flex;
   align-items: center;
@@ -620,7 +599,6 @@ a:focus {
   color: #f8fafc;
 }
 
-/* Spinner & Loading Bar */
 .explanation-loading-container {
   display: flex;
   flex-direction: column;
@@ -660,7 +638,6 @@ a:focus {
     transform: rotate(-360deg);
   }
 }
-/* Skeleton Lines */
 .explanation-skeleton {
   display: flex;
   flex-direction: column;
@@ -682,7 +659,6 @@ a:focus {
   width: 80%;
 }
 
-/* Shared AI error styling */
 .explanation-error-card,
 .line-explanation-error {
   display: flex;
@@ -790,7 +766,6 @@ a:focus {
   cursor: wait;
 }
 
-/* Dark theme */
 .dark-theme .line-ai-actions {
   background: #1e1e1e;
   border-color: #334155;
@@ -858,8 +833,6 @@ a:focus {
   border-right-color: #2563eb !important;
 }
 
-/* Dark theme needs extra specificity because the legacy dark-theme
-   panel-content code rule uses !important. */
 .wp-block-wpe-intelligent-code-assistant-editor.dark-theme .panel-content .code-lines .code-line:hover,
 .wp-block-wpe-intelligent-code-assistant.dark-theme .panel-content .code-lines .code-line:hover {
   background: rgba(96, 165, 250, 0.1) !important;
@@ -876,7 +849,6 @@ a:focus {
   border-right-color: #60a5fa !important;
 }
 
-/* Temporary cursor diagnostic */
 .wp-block-wpe-intelligent-code-assistant-editor button,
 .wp-block-wpe-intelligent-code-assistant-editor [role=button],
 .wp-block-wpe-intelligent-code-assistant-editor .code-line,
@@ -945,7 +917,6 @@ a:focus {
   color: #334155;
 }
 
-/* Dark mode */
 .dark-theme .line-explanation-panel {
   background: #18181b;
   border-color: #3f3f46;
@@ -1097,7 +1068,6 @@ a:focus {
   margin: 0;
 }
 
-/* Dark theme */
 .dark-theme .ask-code-panel {
   background: #18181b;
   border-color: #3f3f46;
@@ -1156,8 +1126,6 @@ a:focus {
   display: none !important;
 }
 
-/* Loading
-   ========================================================================== */
 .understanding-check-loading {
   padding: 10px 0;
   color: #64748b;
@@ -1168,8 +1136,6 @@ a:focus {
   display: none !important;
 }
 
-/* Content
-   ========================================================================== */
 .understanding-check-content[hidden] {
   display: none !important;
 }
@@ -1192,8 +1158,6 @@ a:focus {
   font-weight: 600;
 }
 
-/* Answer options
-   ========================================================================== */
 .understanding-check-options {
   display: flex;
   flex-direction: column;
@@ -1243,8 +1207,6 @@ a:focus {
   color: #991b1b;
 }
 
-/* Feedback
-   ========================================================================== */
 .understanding-check-feedback {
   margin-top: 16px;
   padding: 12px 14px;
@@ -1283,8 +1245,6 @@ a:focus {
   line-height: 1.6 !important;
 }
 
-/* Error
-   ========================================================================== */
 .understanding-check-error {
   margin-top: 12px;
   padding: 12px;
@@ -1303,8 +1263,6 @@ a:focus {
   margin: 0;
 }
 
-/* Dark theme
-   ========================================================================== */
 .dark-theme .understanding-check {
   background: #18181b;
   border-color: #3f3f46;
@@ -1357,4 +1315,436 @@ a:focus {
   background: rgba(127, 29, 29, 0.18);
   border-color: #7f1d1d;
   color: #fecaca;
+}
+
+/* ==========================================================================
+   UNIFIED AI ASSISTANT SHELL
+   ========================================================================== */
+.ai-assistant-drawer {
+  padding: 0;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+.ai-assistant-drawer[hidden] {
+  display: none !important;
+}
+
+.ai-assistant-inner {
+  padding: 16px 20px 18px;
+}
+
+.ai-assistant-header {
+  margin-bottom: 14px;
+}
+
+.ai-assistant-header .explanation-title {
+  font-size: 0.75rem !important;
+  line-height: 1.4 !important;
+}
+
+.ai-assistant-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-assistant-intro {
+  margin: 0;
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.ai-assistant-menu-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ai-assistant-menu-actions button {
+  appearance: none;
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #334155;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  font-weight: 600;
+  text-align: right;
+  box-shadow: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.ai-assistant-menu-actions button:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+.ai-assistant-menu-actions button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.ai-assistant-view[hidden] {
+  display: none !important;
+}
+.ai-assistant-view > h3 {
+  margin: 10px 0 14px;
+  color: #0f172a;
+  font-size: 1rem !important;
+  line-height: 1.35 !important;
+  font-weight: 700;
+}
+
+.ai-assistant-back {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  font-weight: 600;
+  box-shadow: none;
+}
+.ai-assistant-back:hover {
+  color: #2563eb;
+  background: transparent;
+}
+.ai-assistant-back:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.ai-assistant-view .ask-code-label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.ai-assistant-view .ask-code-input {
+  box-sizing: border-box;
+  min-height: 96px;
+  margin-bottom: 10px;
+}
+
+.ai-assistant-view .ask-code-submit {
+  margin-right: auto;
+}
+
+.ai-assistant-view .ask-code-response,
+.ai-assistant-view .ask-code-error,
+.ai-assistant-view .explanation-error-card,
+.ai-assistant-view .line-explanation-error,
+.ai-assistant-view .understanding-check-error {
+  margin-top: 12px;
+}
+
+.ai-assistant-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ai-assistant-button span[aria-hidden=true] {
+  display: inline-flex;
+  line-height: 1;
+}
+
+.ai-assistant-button.active {
+  background: #1e293b;
+}
+
+.dark-theme .ai-assistant-drawer {
+  background: #141414 !important;
+  border-top-color: #2e2e2e;
+  border-bottom-color: #2e2e2e;
+  color: #d4d4d8;
+}
+.dark-theme .ai-assistant-intro {
+  color: #d4d4d8;
+}
+.dark-theme .ai-assistant-menu-actions button {
+  background: #202020;
+  border-color: #3f3f46;
+  color: #e4e4e7;
+}
+.dark-theme .ai-assistant-menu-actions button:hover {
+  background: #27272a;
+  border-color: #60a5fa;
+  color: #bfdbfe;
+}
+.dark-theme .ai-assistant-menu-actions button:focus-visible {
+  outline-color: #60a5fa;
+}
+.dark-theme .ai-assistant-view > h3 {
+  color: #f4f4f5;
+}
+.dark-theme .ai-assistant-back {
+  color: #a1a1aa;
+}
+.dark-theme .ai-assistant-back:hover {
+  color: #60a5fa;
+  background: transparent;
+}
+.dark-theme .ai-assistant-back:focus-visible {
+  outline-color: #60a5fa;
+}
+
+/* ==========================================================================
+   FLOATING AI ASSISTANT
+   ========================================================================== */
+.code-footer .ai-assistant-button {
+  display: none !important;
+}
+
+.wpe-floating-ai-assistant {
+  position: fixed !important;
+  left: 24px !important;
+  bottom: 24px !important;
+  right: auto !important;
+  top: auto !important;
+  z-index: 100000 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 10px 16px;
+  border: 1px solid #0f172a;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #ffffff;
+  font: 600 0.875rem/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22);
+  cursor: pointer;
+}
+
+.wpe-floating-ai-assistant[hidden] {
+  display: none !important;
+}
+
+[data-ai-assistant-enabled=true][data-ai-assistant-active=true] .ai-assistant-drawer {
+  position: fixed !important;
+  left: 24px !important;
+  bottom: 82px !important;
+  right: auto !important;
+  top: auto !important;
+  z-index: 99999 !important;
+  width: min(420px, 100vw - 32px);
+  max-height: min(70vh, 680px);
+  margin: 0 !important;
+  overflow-y: auto;
+  border-radius: 12px;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.22);
+}
+
+@media (max-width: 640px) {
+  .ai-assistant-menu-actions {
+    grid-template-columns: 1fr;
+  }
+  .code-footer {
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .code-footer-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .wpe-floating-ai-assistant {
+    left: 16px !important;
+    bottom: 16px !important;
+  }
+  [data-ai-assistant-enabled=true][data-ai-assistant-active=true] .ai-assistant-drawer {
+    left: 16px !important;
+    bottom: 74px !important;
+    width: calc(100vw - 32px);
+    max-height: 72vh;
+  }
+}
+/*!****************************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/intelligent-code-assistant/assistant/style.scss ***!
+  \****************************************************************************************************************************************************************************************************************************************************************************/
+/* Unified AI Assistant styles bundled as frontend block styles. */
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .code-footer-actions,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .code-footer-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button {
+  appearance: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 9px 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  font-family: inherit !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.35 !important;
+  font-weight: 600 !important;
+  text-align: right !important;
+  box-shadow: none !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button:hover,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button:hover {
+  background: #eff6ff !important;
+  border-color: #2563eb !important;
+  color: #1d4ed8 !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn {
+  appearance: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 0 8px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: #64748b !important;
+  font-family: inherit !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.4 !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn:hover,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn:hover {
+  background: transparent !important;
+  color: #2563eb !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > h3,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > h3 {
+  margin: 4px 0 14px !important;
+  color: #0f172a !important;
+  font-family: inherit !important;
+  font-size: 1rem !important;
+  line-height: 1.35 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer {
+  /* Shared shimmer loading state used by Explain, Explain Line and Check Understanding. */
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .explanation-loading-container,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .line-explanation-loading,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .understanding-check-loading,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .explanation-loading-container,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .line-explanation-loading,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .understanding-check-loading {
+  position: relative;
+  padding-bottom: 48px !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .explanation-loading-container::before, .wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .explanation-loading-container::after,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .line-explanation-loading::before,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .line-explanation-loading::after,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .understanding-check-loading::before,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .understanding-check-loading::after,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .explanation-loading-container::before,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .explanation-loading-container::after,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .line-explanation-loading::before,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .line-explanation-loading::after,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .understanding-check-loading::before,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .understanding-check-loading::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(-90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: ai-assistant-shimmer 1.4s ease-in-out infinite;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .explanation-loading-container::before,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .line-explanation-loading::before,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .understanding-check-loading::before,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .explanation-loading-container::before,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .line-explanation-loading::before,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .understanding-check-loading::before {
+  bottom: 24px;
+  width: 100%;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .explanation-loading-container::after,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .line-explanation-loading::after,
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .understanding-check-loading::after,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .explanation-loading-container::after,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .line-explanation-loading::after,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .understanding-check-loading::after {
+  bottom: 6px;
+  width: 72%;
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer {
+  /* Give Ask's submit state the same visual language while a response is generated. */
+}
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ask-code-submit:disabled,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ask-code-submit:disabled {
+  background: linear-gradient(-90deg, #0f172a 25%, #334155 50%, #0f172a 75%) !important;
+  background-size: 200% 100% !important;
+  animation: ai-assistant-shimmer 1.4s ease-in-out infinite;
+}
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button {
+  background: #202020 !important;
+  border-color: #3f3f46 !important;
+  color: #e4e4e7 !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn {
+  color: #a1a1aa !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .ai-assistant-view > h3,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .ai-assistant-view > h3 {
+  color: #f4f4f5 !important;
+}
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .explanation-loading-container::before, .wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .explanation-loading-container::after,
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .line-explanation-loading::before,
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .line-explanation-loading::after,
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .understanding-check-loading::before,
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .understanding-check-loading::after,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .explanation-loading-container::before,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .explanation-loading-container::after,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .line-explanation-loading::before,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .line-explanation-loading::after,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .understanding-check-loading::before,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .understanding-check-loading::after {
+  background: linear-gradient(-90deg, #27272a 25%, #3f3f46 50%, #27272a 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes ai-assistant-shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 300% 0;
+  }
+}
+@media (max-width: 640px) {
+  .wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .code-footer-actions,
+  .wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .code-footer-actions {
+    grid-template-columns: 1fr !important;
+  }
 }

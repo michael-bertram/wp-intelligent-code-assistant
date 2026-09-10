@@ -1,386 +1,13 @@
 /******/ (() => { // webpackBootstrap
-/******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
 /***/ "./src/intelligent-code-assistant/edit.js"
 /*!************************************************!*\
   !*** ./src/intelligent-code-assistant/edit.js ***!
   \************************************************/
-(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+() {
 
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ Edit)
-/* harmony export */ });
-/* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @wordpress/i18n */ "@wordpress/i18n");
-/* harmony import */ var _wordpress_i18n__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _wordpress_block_editor__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @wordpress/block-editor */ "@wordpress/block-editor");
-/* harmony import */ var _wordpress_block_editor__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @wordpress/components */ "@wordpress/components");
-/* harmony import */ var _wordpress_components__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__);
-/* harmony import */ var _wordpress_data__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @wordpress/data */ "@wordpress/data");
-/* harmony import */ var _wordpress_data__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_wordpress_data__WEBPACK_IMPORTED_MODULE_3__);
-/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @wordpress/element */ "@wordpress/element");
-/* harmony import */ var _wordpress_element__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_wordpress_element__WEBPACK_IMPORTED_MODULE_4__);
-/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @wordpress/api-fetch */ "@wordpress/api-fetch");
-/* harmony import */ var _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_5__);
-/* harmony import */ var _editor_scss__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./editor.scss */ "./src/intelligent-code-assistant/editor.scss");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! react/jsx-runtime */ "react/jsx-runtime");
-/* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__);
-
-
-
-
-
-
-
-
-function Edit({
-  attributes,
-  setAttributes,
-  clientId
-}) {
-  const {
-    showLanguageBadge,
-    codeLanguage,
-    filename,
-    highlightLines,
-    isDarkMode,
-    isCompact,
-    maxHeight,
-    showLineNumbers,
-    fontSize,
-    enableAIAssistant
-  } = attributes;
-
-  // AI Auto-Fill Async State
-  const [isAnalyzing, setIsAnalyzing] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useState)(false);
-  const [aiError, setAiError] = (0,_wordpress_element__WEBPACK_IMPORTED_MODULE_4__.useState)(null);
-
-  // Dispatcher for child block attribute mutations
-  const {
-    updateBlockAttributes
-  } = (0,_wordpress_data__WEBPACK_IMPORTED_MODULE_3__.useDispatch)('core/block-editor');
-
-  // 1. DYNAMIC DATA HOOK: Optimized registry queries to prevent re-render performance leaks
-  const {
-    cleanRawText,
-    lineCount,
-    headerBlockId
-  } = (0,_wordpress_data__WEBPACK_IMPORTED_MODULE_3__.useSelect)(select => {
-    const {
-      getBlockOrder,
-      getBlock
-    } = select('core/block-editor');
-    const innerBlockIds = getBlockOrder(clientId);
-    let contentBlock = null;
-    let headerBlock = null;
-    for (const id of innerBlockIds) {
-      const block = getBlock(id);
-      if (!block) continue;
-      if (block.name === 'wpe/code-content') contentBlock = block;
-      if (block.name === 'wpe/code-header') headerBlock = block;
-    }
-    if (!contentBlock) {
-      return {
-        cleanRawText: '',
-        lineCount: 1,
-        headerBlockId: headerBlock?.clientId || null
-      };
-    }
-    const rawContent = contentBlock.attributes?.content || contentBlock.attributes?.code || contentBlock.attributes?.value || '';
-    const textWithNewlines = rawContent.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p><p>/gi, '\n').replace(/<\/div><div>/gi, '\n');
-    const cleanText = textWithNewlines.replace(/<[^>]*>/g, '');
-    const linesArray = cleanText.split('\n');
-    const calculatedLines = cleanText.trim() ? linesArray.length : 1;
-    return {
-      cleanRawText: cleanText,
-      lineCount: calculatedLines,
-      headerBlockId: headerBlock?.clientId || null
-    };
-  }, [clientId]);
-  const characterCount = cleanRawText.replace(/\r/g, '').length;
-
-  // Helper: Evaluates whether a line number falls within the highlightLines expression (e.g. "3, 5-8")
-  const isLineHighlighted = (lineNumber, highlightExpression) => {
-    if (!highlightExpression) return false;
-    const ranges = highlightExpression.split(',');
-    for (const range of ranges) {
-      const parts = range.split('-').map(n => parseInt(n.trim(), 10));
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        if (lineNumber >= parts[0] && lineNumber <= parts[1]) return true;
-      } else if (parts.length === 1 && !isNaN(parts[0])) {
-        if (lineNumber === parts[0]) return true;
-      }
-    }
-    return false;
-  };
-
-  // 2. ABILITIES API DISPATCHER (Step 2 Implementation)
-  const handleAutoFill = async () => {
-    if (!cleanRawText || !cleanRawText.trim()) {
-      setAiError((0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Please enter some code into the block first.', 'intelligent-code-assistant'));
-      return;
-    }
-    setIsAnalyzing(true);
-    setAiError(null);
-    try {
-      let response;
-      try {
-        // Primary Path: Abilities API REST Controller
-        response = await _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_5___default()({
-          path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run',
-          method: 'POST',
-          data: {
-            code: cleanRawText
-          }
-        });
-      } catch (routeErr) {
-        // Fallback Path: Direct Plugin REST Endpoint
-        if (routeErr.code === 'rest_no_route' || routeErr.status === 404) {
-          response = await _wordpress_api_fetch__WEBPACK_IMPORTED_MODULE_5___default()({
-            path: '/intelligent-code-assistant/v1/auto-fill-metadata',
-            method: 'POST',
-            data: {
-              code: cleanRawText
-            }
-          });
-        } else {
-          throw routeErr;
-        }
-      }
-
-      // Sync AI response attributes (Metadata + Syntax Formatting)
-      setAttributes({
-        codeLanguage: response.codeLanguage || codeLanguage,
-        filename: response.filename || filename,
-        highlightLines: response.highlightLines ?? highlightLines,
-        showLineNumbers: response.showLineNumbers ?? showLineNumbers
-      });
-
-      // Update title on child header block (wpe/code-header)
-      if (headerBlockId && response.title) {
-        updateBlockAttributes(headerBlockId, {
-          title: response.title
-        });
-      }
-    } catch (err) {
-      const rawMessage = err.message || (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Failed to auto-fill metadata.', 'intelligent-code-assistant');
-      const cleanMessage = rawMessage.includes('<p>') ? (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Server error occurred during execution. Check WP debug log.', 'intelligent-code-assistant') : rawMessage;
-      setAiError(cleanMessage);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-  const blockProps = (0,_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_1__.useBlockProps)({
-    className: `wp-block-wpe-intelligent-code-assistant-editor ${isDarkMode ? 'dark-theme' : ''} ${isCompact ? 'is-compact' : ''} ${showLineNumbers ? 'has-line-numbers' : ''}`,
-    style: {
-      '--editor-code-font-size': fontSize,
-      '--panel-max-height': maxHeight
-    }
-  });
-  const maxHeightOptions = [{
-    label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('No Limit (Scroll disabled)', 'intelligent-code-assistant'),
-    value: 'none'
-  }, {
-    label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Short (250px)', 'intelligent-code-assistant'),
-    value: '250px'
-  }, {
-    label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Medium (400px)', 'intelligent-code-assistant'),
-    value: '400px'
-  }, {
-    label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Tall (600px)', 'intelligent-code-assistant'),
-    value: '600px'
-  }];
-  const fontSizeOptions = [{
-    label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Small (12px)', 'intelligent-code-assistant'),
-    value: '12px'
-  }, {
-    label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Normal (14px)', 'intelligent-code-assistant'),
-    value: '14px'
-  }, {
-    label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Medium (16px)', 'intelligent-code-assistant'),
-    value: '16px'
-  }, {
-    label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Large (18px)', 'intelligent-code-assistant'),
-    value: '18px'
-  }];
-  return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.Fragment, {
-    children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_1__.InspectorControls, {
-      children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-        title: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('AI Utilities', 'intelligent-code-assistant'),
-        initialOpen: true,
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Enable AI Assistant', 'intelligent-code-assistant'),
-          checked: enableAIAssistant,
-          onChange: value => setAttributes({
-            enableAIAssistant: value
-          }),
-          help: enableAIAssistant ? (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('AI assistance will be available for this code block on the frontend.', 'intelligent-code-assistant') : (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('This block will behave as a standard interactive code block without reader-facing AI assistance.', 'intelligent-code-assistant')
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Button, {
-          variant: "secondary",
-          isBusy: isAnalyzing,
-          disabled: isAnalyzing || !cleanRawText.trim(),
-          onClick: handleAutoFill,
-          style: {
-            width: '100%',
-            justifyContent: 'center',
-            marginBottom: '12px'
-          },
-          children: isAnalyzing ? /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.Spinner, {}) : (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Auto-Fill Details & Syntax (AI)', 'intelligent-code-assistant')
-        }), aiError && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)("p", {
-          style: {
-            color: '#cc1818',
-            fontSize: '12px',
-            marginBottom: '12px'
-          },
-          children: aiError
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Filename / Label', 'intelligent-code-assistant'),
-          value: filename || '',
-          onChange: value => setAttributes({
-            filename: value
-          }),
-          help: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Idiomatic filename auto-generated by AI or specified manually.', 'intelligent-code-assistant')
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.TextControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Highlight Lines (e.g., 3, 5-8)', 'intelligent-code-assistant'),
-          value: highlightLines || '',
-          onChange: value => setAttributes({
-            highlightLines: value
-          }),
-          help: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Comma-separated line numbers or ranges to highlight.', 'intelligent-code-assistant')
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-        title: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Code Display Settings', 'intelligent-code-assistant'),
-        initialOpen: false,
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Show Language Badge', 'intelligent-code-assistant'),
-          checked: showLanguageBadge,
-          onChange: value => setAttributes({
-            showLanguageBadge: value
-          })
-        }), showLanguageBadge && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Code Language', 'intelligent-code-assistant'),
-          value: codeLanguage,
-          options: [{
-            label: 'PHP',
-            value: 'PHP'
-          }, {
-            label: 'JavaScript',
-            value: 'JS'
-          }, {
-            label: 'CSS',
-            value: 'CSS'
-          }, {
-            label: 'HTML',
-            value: 'HTML'
-          }, {
-            label: 'JSON',
-            value: 'JSON'
-          }, {
-            label: 'SQL',
-            value: 'SQL'
-          }, {
-            label: 'Bash',
-            value: 'Bash'
-          }],
-          onChange: value => setAttributes({
-            codeLanguage: value
-          })
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Show Line Numbers', 'intelligent-code-assistant'),
-          checked: showLineNumbers,
-          onChange: value => {
-            if (value && isCompact) {
-              setAttributes({
-                showLineNumbers: value,
-                isCompact: false
-              });
-            } else {
-              setAttributes({
-                showLineNumbers: value
-              });
-            }
-          }
-        })]
-      }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.PanelBody, {
-        title: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Design & Layout', 'intelligent-code-assistant'),
-        initialOpen: false,
-        children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Use Dark Theme', 'intelligent-code-assistant'),
-          checked: isDarkMode,
-          onChange: value => setAttributes({
-            isDarkMode: value
-          })
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.ToggleControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Compact Spacing Layout', 'intelligent-code-assistant'),
-          checked: isCompact,
-          disabled: showLineNumbers,
-          onChange: value => setAttributes({
-            isCompact: value
-          }),
-          help: showLineNumbers ? (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Compact mode is disabled when line numbers are enabled.', 'intelligent-code-assistant') : ''
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Max Panel Height', 'intelligent-code-assistant'),
-          value: maxHeight,
-          options: maxHeightOptions,
-          onChange: value => setAttributes({
-            maxHeight: value
-          })
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_components__WEBPACK_IMPORTED_MODULE_2__.SelectControl, {
-          label: (0,_wordpress_i18n__WEBPACK_IMPORTED_MODULE_0__.__)('Code Font Size', 'intelligent-code-assistant'),
-          value: fontSize,
-          options: fontSizeOptions,
-          onChange: value => setAttributes({
-            fontSize: value
-          })
-        })]
-      })]
-    }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)("div", {
-      ...blockProps,
-      children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)("div", {
-        className: "editor-combined-container",
-        children: [showLanguageBadge && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)("span", {
-          className: `code-badge lang-${(codeLanguage || 'php').toLowerCase()}`,
-          children: codeLanguage
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)("div", {
-          className: "editor-inner-blocks-wrapper",
-          children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_1__.InnerBlocks, {
-            allowedBlocks: ['wpe/code-header', 'wpe/code-content'],
-            template: [['wpe/code-header', {}], ['wpe/code-content', {}]],
-            templateLock: "all"
-          }), showLineNumbers && /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)("div", {
-            className: "line-numbers-gutter",
-            "aria-hidden": "true",
-            children: Array.from({
-              length: lineCount
-            }).map((_, index) => {
-              const lineNum = index + 1;
-              const highlighted = isLineHighlighted(lineNum, highlightLines);
-              return /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)("span", {
-                className: highlighted ? 'is-highlighted' : '',
-                children: lineNum
-              }, index);
-            })
-          })]
-        }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)("div", {
-          className: "code-footer",
-          children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)("div", {
-            className: "code-analytics-meta",
-            children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)("span", {
-              children: [lineCount, " ", lineCount === 1 ? 'line' : 'lines']
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsx)("span", {
-              className: "meta-divider",
-              children: "\u2022"
-            }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_7__.jsxs)("span", {
-              children: [characterCount.toLocaleString(), " chars"]
-            })]
-          })
-        })]
-      })
-    })]
-  });
-}
+throw new Error("Module build failed (from ./node_modules/babel-loader/lib/index.js):\nSyntaxError: /Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/src/intelligent-code-assistant/edit.js: Expected corresponding JSX closing tag for <InspectorControls>. (265:16)\n\n\u001b[0m \u001b[90m 263 |\u001b[39m                         help\u001b[33m=\u001b[39m{__(\u001b[32m'Comma-separated line numbers or ranges to highlight.'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'intelligent-code-assistant'\u001b[39m)}\n \u001b[90m 264 |\u001b[39m                     \u001b[33m/\u001b[39m\u001b[33m>\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 265 |\u001b[39m                 \u001b[33m<\u001b[39m\u001b[33m/\u001b[39m\u001b[33mPanelBody\u001b[39m\u001b[33m>\u001b[39m\n \u001b[90m     |\u001b[39m                 \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 266 |\u001b[39m\n \u001b[90m 267 |\u001b[39m                 \u001b[33m<\u001b[39m\u001b[33mPanelBody\u001b[39m title\u001b[33m=\u001b[39m{__(\u001b[32m'Code Display Settings'\u001b[39m\u001b[33m,\u001b[39m \u001b[32m'intelligent-code-assistant'\u001b[39m)} initialOpen\u001b[33m=\u001b[39m{\u001b[36mfalse\u001b[39m}\u001b[33m>\u001b[39m\n \u001b[90m 268 |\u001b[39m                     \u001b[33m<\u001b[39m\u001b[33mToggleControl\u001b[39m\u001b[0m\n    at constructor (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:365:19)\n    at JSXParserMixin.raise (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:6616:19)\n    at JSXParserMixin.jsxParseElementAt (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:4739:16)\n    at JSXParserMixin.jsxParseElementAt (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:4710:32)\n    at JSXParserMixin.jsxParseElement (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:4761:17)\n    at JSXParserMixin.parseExprAtom (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:4771:19)\n    at JSXParserMixin.parseExprSubscripts (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:11098:23)\n    at JSXParserMixin.parseUpdate (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:11083:21)\n    at JSXParserMixin.parseMaybeUnary (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:11063:23)\n    at JSXParserMixin.parseMaybeUnaryOrPrivate (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10916:61)\n    at JSXParserMixin.parseExprOps (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10921:23)\n    at JSXParserMixin.parseMaybeConditional (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10898:23)\n    at JSXParserMixin.parseMaybeAssign (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10848:21)\n    at /Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10817:39\n    at JSXParserMixin.allowInAnd (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12443:12)\n    at JSXParserMixin.parseMaybeAssignAllowIn (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10817:17)\n    at JSXParserMixin.parseMaybeAssignAllowInOrVoidPattern (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12510:17)\n    at JSXParserMixin.parseParenAndDistinguishExpression (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:11692:28)\n    at JSXParserMixin.parseExprAtom (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:11348:23)\n    at JSXParserMixin.parseExprAtom (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:4776:20)\n    at JSXParserMixin.parseExprSubscripts (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:11098:23)\n    at JSXParserMixin.parseUpdate (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:11083:21)\n    at JSXParserMixin.parseMaybeUnary (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:11063:23)\n    at JSXParserMixin.parseMaybeUnaryOrPrivate (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10916:61)\n    at JSXParserMixin.parseExprOps (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10921:23)\n    at JSXParserMixin.parseMaybeConditional (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10898:23)\n    at JSXParserMixin.parseMaybeAssign (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10848:21)\n    at JSXParserMixin.parseExpressionBase (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10801:23)\n    at /Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10797:39\n    at JSXParserMixin.allowInAnd (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12438:16)\n    at JSXParserMixin.parseExpression (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:10797:17)\n    at JSXParserMixin.parseReturnStatement (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13159:28)\n    at JSXParserMixin.parseStatementContent (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12815:21)\n    at JSXParserMixin.parseStatementLike (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12784:17)\n    at JSXParserMixin.parseStatementListItem (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12764:17)\n    at JSXParserMixin.parseBlockOrModuleBlockBody (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13333:61)\n    at JSXParserMixin.parseBlockBody (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13326:10)\n    at JSXParserMixin.parseBlock (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13314:10)\n    at JSXParserMixin.parseFunctionBody (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12117:24)\n    at JSXParserMixin.parseFunctionBodyAndFinish (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12103:10)\n    at /Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13462:12\n    at JSXParserMixin.withSmartMixTopicForbiddingContext (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12420:14)\n    at JSXParserMixin.parseFunction (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13461:10)\n    at JSXParserMixin.parseExportDefaultExpression (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13924:19)\n    at JSXParserMixin.parseExport (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13845:25)\n    at JSXParserMixin.parseStatementContent (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12895:27)\n    at JSXParserMixin.parseStatementLike (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12784:17)\n    at JSXParserMixin.parseModuleItem (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:12761:17)\n    at JSXParserMixin.parseBlockOrModuleBlockBody (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13333:36)\n    at JSXParserMixin.parseBlockBody (/Users/michaelbertram/Local Sites/codecrafted/app/public/wp-content/plugins/wp-intelligent-code-assistant/node_modules/@babel/parser/lib/index.js:13326:10)");
 
 /***/ },
 
@@ -390,16 +17,18 @@ function Edit({
   \*************************************************/
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
+"use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _wordpress_blocks__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @wordpress/blocks */ "@wordpress/blocks");
 /* harmony import */ var _wordpress_blocks__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_wordpress_blocks__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _style_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./style.scss */ "./src/intelligent-code-assistant/style.scss");
-/* harmony import */ var _editor_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./editor.scss */ "./src/intelligent-code-assistant/editor.scss");
-/* harmony import */ var _edit__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./edit */ "./src/intelligent-code-assistant/edit.js");
-/* harmony import */ var _save__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./save */ "./src/intelligent-code-assistant/save.js");
-/* harmony import */ var _block_json__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./block.json */ "./src/intelligent-code-assistant/block.json");
-/* harmony import */ var _wordpress_block_editor__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @wordpress/block-editor */ "@wordpress/block-editor");
-/* harmony import */ var _wordpress_block_editor__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_6__);
+/* harmony import */ var _assistant_style_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./assistant/style.scss */ "./src/intelligent-code-assistant/assistant/style.scss");
+/* harmony import */ var _editor_scss__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./editor.scss */ "./src/intelligent-code-assistant/editor.scss");
+/* harmony import */ var _edit__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./edit */ "./src/intelligent-code-assistant/edit.js");
+/* harmony import */ var _save__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./save */ "./src/intelligent-code-assistant/save.js");
+/* harmony import */ var _block_json__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./block.json */ "./src/intelligent-code-assistant/block.json");
+/* harmony import */ var _wordpress_block_editor__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @wordpress/block-editor */ "@wordpress/block-editor");
+/* harmony import */ var _wordpress_block_editor__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(_wordpress_block_editor__WEBPACK_IMPORTED_MODULE_7__);
 /**
  * Registers a new block provided a unique name and an object defining its behavior.
  *
@@ -409,12 +38,11 @@ __webpack_require__.r(__webpack_exports__);
 
 /**
  * Lets webpack process CSS, SASS or SCSS files referenced in JavaScript files.
- * All files containing `style` keyword are bundled together. The code used
- * gets applied both to the front of your site and to the editor. All other files
- * get applied to the editor only.
+ * Files imported from style.scss are bundled into the block's frontend stylesheet.
  *
  * @see https://www.npmjs.com/package/@wordpress/scripts#using-css
  */
+
 
 
 
@@ -427,16 +55,16 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
- * Every block starts by registering a new block type definition.
+ * Every block starts by registering a block type definition.
  *
- * @see https://developer.wordpress.org/block-editor/developers/block-api/#registering-a-block
+ * @see ./edit.js
  */
-(0,_wordpress_blocks__WEBPACK_IMPORTED_MODULE_0__.registerBlockType)(_block_json__WEBPACK_IMPORTED_MODULE_5__.name, {
+(0,_wordpress_blocks__WEBPACK_IMPORTED_MODULE_0__.registerBlockType)(_block_json__WEBPACK_IMPORTED_MODULE_6__.name, {
   /**
    * @see ./edit.js
    */
-  edit: _edit__WEBPACK_IMPORTED_MODULE_3__["default"],
-  save: _save__WEBPACK_IMPORTED_MODULE_4__["default"]
+  edit: _edit__WEBPACK_IMPORTED_MODULE_4__["default"],
+  save: _save__WEBPACK_IMPORTED_MODULE_5__["default"]
 });
 
 /***/ },
@@ -447,6 +75,7 @@ __webpack_require__.r(__webpack_exports__);
   \************************************************/
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
+"use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (/* binding */ Save)
@@ -468,12 +97,26 @@ function Save() {
 
 /***/ },
 
+/***/ "./src/intelligent-code-assistant/assistant/style.scss"
+/*!*************************************************************!*\
+  !*** ./src/intelligent-code-assistant/assistant/style.scss ***!
+  \*************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+// extracted by mini-css-extract-plugin
+
+
+/***/ },
+
 /***/ "./src/intelligent-code-assistant/editor.scss"
 /*!****************************************************!*\
   !*** ./src/intelligent-code-assistant/editor.scss ***!
   \****************************************************/
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
+"use strict";
 __webpack_require__.r(__webpack_exports__);
 // extracted by mini-css-extract-plugin
 
@@ -486,6 +129,7 @@ __webpack_require__.r(__webpack_exports__);
   \***************************************************/
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
+"use strict";
 __webpack_require__.r(__webpack_exports__);
 // extracted by mini-css-extract-plugin
 
@@ -498,17 +142,8 @@ __webpack_require__.r(__webpack_exports__);
   \**********************************/
 (module) {
 
+"use strict";
 module.exports = window["ReactJSXRuntime"];
-
-/***/ },
-
-/***/ "@wordpress/api-fetch"
-/*!**********************************!*\
-  !*** external ["wp","apiFetch"] ***!
-  \**********************************/
-(module) {
-
-module.exports = window["wp"]["apiFetch"];
 
 /***/ },
 
@@ -518,6 +153,7 @@ module.exports = window["wp"]["apiFetch"];
   \*************************************/
 (module) {
 
+"use strict";
 module.exports = window["wp"]["blockEditor"];
 
 /***/ },
@@ -528,47 +164,8 @@ module.exports = window["wp"]["blockEditor"];
   \********************************/
 (module) {
 
+"use strict";
 module.exports = window["wp"]["blocks"];
-
-/***/ },
-
-/***/ "@wordpress/components"
-/*!************************************!*\
-  !*** external ["wp","components"] ***!
-  \************************************/
-(module) {
-
-module.exports = window["wp"]["components"];
-
-/***/ },
-
-/***/ "@wordpress/data"
-/*!******************************!*\
-  !*** external ["wp","data"] ***!
-  \******************************/
-(module) {
-
-module.exports = window["wp"]["data"];
-
-/***/ },
-
-/***/ "@wordpress/element"
-/*!*********************************!*\
-  !*** external ["wp","element"] ***!
-  \*********************************/
-(module) {
-
-module.exports = window["wp"]["element"];
-
-/***/ },
-
-/***/ "@wordpress/i18n"
-/*!******************************!*\
-  !*** external ["wp","i18n"] ***!
-  \******************************/
-(module) {
-
-module.exports = window["wp"]["i18n"];
 
 /***/ },
 
@@ -578,7 +175,8 @@ module.exports = window["wp"]["i18n"];
   \***************************************************/
 (module) {
 
-module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://schemas.wp.org/trunk/block.json","apiVersion":3,"name":"wpe/intelligent-code-assistant","version":"0.1.0","title":"Code Dropdown","category":"widgets","icon":"screenoptions","description":"An interactive block with the Interactivity API.","example":{},"supports":{"interactivity":true},"attributes":{"id":{"type":"string"},"showLanguageBadge":{"type":"boolean","default":true},"codeLanguage":{"type":"string","default":"PHP"},"isDarkMode":{"type":"boolean","default":false},"fontSize":{"type":"string","default":"14px"},"isCompact":{"type":"boolean","default":false},"maxHeight":{"type":"string","default":"none"},"showLineNumbers":{"type":"boolean","default":false},"enableAIAssistant":{"type":"boolean","default":false}},"textdomain":"intelligent-code-assistant","editorScript":"file:./index.js","editorStyle":"file:./index.css","style":"file:./style-index.css","render":"file:./render.php","viewScriptModule":"file:./view.js"}');
+"use strict";
+module.exports = /*#__PURE__*/JSON.parse('{"$schema":"https://schemas.wp.org/trunk/block.json","apiVersion":3,"name":"wpe/intelligent-code-assistant","version":"0.1.0","title":"Code Dropdown","category":"widgets","icon":"screenoptions","description":"An interactive block with the Interactivity API.","example":{},"supports":{"interactivity":true},"attributes":{"id":{"type":"string"},"showLanguageBadge":{"type":"boolean","default":true},"codeLanguage":{"type":"string","default":"PHP"},"isDarkMode":{"type":"boolean","default":false},"fontSize":{"type":"string","default":"14px"},"isCompact":{"type":"boolean","default":false},"maxHeight":{"type":"string","default":"none"},"showLineNumbers":{"type":"boolean","default":false},"enableAIAssistant":{"type":"boolean","default":false},"tutorialTitle":{"type":"string","default":""},"tutorialContext":{"type":"string","default":""}},"textdomain":"intelligent-code-assistant","editorScript":"file:./index.js","editorStyle":"file:./index.css","style":"file:./style-index.css","render":"file:./render.php","viewScriptModule":["file:./view.js","file:./floating-assistant.js"]}');
 
 /***/ }
 

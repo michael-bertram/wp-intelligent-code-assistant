@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl } from '@wordpress/components';
+import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl,  } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data'; 
 import { useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
@@ -17,7 +17,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         maxHeight,
         showLineNumbers,
         fontSize,
-        enableAIAssistant
+        enableAIAssistant,
+        tutorialTitle,
+        tutorialContext
 
     } = attributes;
 
@@ -169,21 +171,71 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         <>
             <InspectorControls>
                 {/* AI Automation Panel */}
-                <PanelBody title={__('AI Utilities', 'intelligent-code-assistant')} initialOpen={true}>
-                    <ToggleControl
-    label={__('Enable AI Assistant', 'intelligent-code-assistant')}
-    checked={enableAIAssistant}
-    onChange={(value) =>
-        setAttributes({
-            enableAIAssistant: value,
-        })
-    }
-    help={
-        enableAIAssistant
-            ? __('AI assistance will be available for this code block on the frontend.', 'intelligent-code-assistant')
-            : __('This block will behave as a standard interactive code block without reader-facing AI assistance.', 'intelligent-code-assistant')
-    }
-/>
+                <PanelBody
+    title={__('AI Features', 'intelligent-code-assistant')}
+    initialOpen={true}
+>
+    <ToggleControl
+        label={__('Enable AI Features', 'intelligent-code-assistant')}
+        checked={enableAIAssistant}
+        onChange={(value) =>
+            setAttributes({ enableAIAssistant: value })
+        }
+        help={
+            enableAIAssistant
+                ? __(
+                    'AI-powered authoring tools and reader assistance are enabled for this code block.',
+                    'intelligent-code-assistant'
+                )
+                : __(
+                    'Enable AI features for authoring assistance and the frontend AI Assistant.',
+                    'intelligent-code-assistant'
+                )
+        }
+    />
+
+    {enableAIAssistant && (
+        <>
+            <Button
+                variant="secondary"
+                isBusy={isAnalyzing}
+                disabled={isAnalyzing || !cleanRawText.trim()}
+                onClick={handleAutoFill}
+            >
+                {isAnalyzing
+                    ? <Spinner />
+                    : __('Auto-Fill Code Details', 'intelligent-code-assistant')
+                }
+            </Button>
+
+            {aiError && (
+                <p className="ai-error">
+                    {aiError}
+                </p>
+            )}
+
+            <TextControl
+                label={__('Tutorial title', 'intelligent-code-assistant')}
+                value={tutorialTitle || ''}
+                onChange={(value) =>
+                    setAttributes({ tutorialTitle: value })
+                }
+            />
+
+            <TextareaControl
+                label={__('Tutorial context', 'intelligent-code-assistant')}
+                value={tutorialContext || ''}
+                onChange={(value) =>
+                    setAttributes({ tutorialContext: value })
+                }
+                help={__(
+                    'Give the AI focused context about what the reader is learning around this example.',
+                    'intelligent-code-assistant'
+                )}
+            />
+        </>
+    )}
+</PanelBody>
                     <Button
                         variant="secondary"
                         isBusy={isAnalyzing}

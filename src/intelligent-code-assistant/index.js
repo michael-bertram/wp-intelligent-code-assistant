@@ -14,7 +14,7 @@ import { registerBlockType } from '@wordpress/blocks';
  * @see https://www.npmjs.com/package/@wordpress/scripts#using-css
  */
 import './style.scss';
-import './assistant-style.css';
+import './assistant/style.scss';
 import './editor.scss';
 
 /**
@@ -27,7 +27,7 @@ import metadata from './block.json';
 import { InnerBlocks } from '@wordpress/block-editor';
 
 /**
- * Every block starts by registering a new block type definition.
+ * Every block starts by registering a block type definition.
  *
  * @see ./edit.js
  */

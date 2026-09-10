@@ -104,9 +104,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
         const requestData = {
             code: cleanRawText,
-            currentLanguage: codeLanguage || '',
-            currentFilename: filename || '',
-            currentTitle: codeTitle || '',
         };
 
         try {

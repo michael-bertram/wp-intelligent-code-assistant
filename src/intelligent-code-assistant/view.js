@@ -11,8 +11,8 @@ import {
 } from './ai-context';
 
 import {
-    ANALYTICS_EVENTS,
-    recordAnalyticsEvent,
+  ANALYTICS_EVENTS,
+  recordAnalyticsEvent,
 } from './analytics';
 
 const STORAGE_KEY = 'wpe_tasks';
@@ -205,6 +205,11 @@ const { state } = store('wpe', {
 
     *explainCode() {
       const context = getContext();
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.EXPLAIN_CODE,
+        context
+      );
 
       context.aiAssistantOpen = true;
       context.aiAssistantView = 'explain';
@@ -466,11 +471,10 @@ const { state } = store('wpe', {
         }
 
         context.isCopied = true;
-        console.log('analytics context', context);
         recordAnalyticsEvent(
-      ANALYTICS_EVENTS.COPY_CODE,
-      context
-      );
+          ANALYTICS_EVENTS.COPY_CODE,
+          context
+        );
         setTimeout(() => {
           context.isCopied = false;
         }, 2000);

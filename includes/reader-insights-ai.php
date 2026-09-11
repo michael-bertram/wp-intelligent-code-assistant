@@ -125,6 +125,7 @@ function intelligent_code_assistant_reader_insights_response_text( $value ) {
 				// Try the next supported result shape.
 			}
 		}
+	}
 
 	if ( method_exists( $value, '__toString' ) ) {
 		try {
@@ -309,7 +310,7 @@ PROMPT;
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			$raw_preview = intelligent_code_assistant_reader_insights_response_text( $response );
-			$error_data['responsePreview'] = mb_substr( $raw_preview, 0, 500 );
+			$error_data['responsePreview'] = function_exists( 'mb_substr' ) ? mb_substr( $raw_preview, 0, 500 ) : substr( $raw_preview, 0, 500 );
 		}
 
 		return new WP_Error(

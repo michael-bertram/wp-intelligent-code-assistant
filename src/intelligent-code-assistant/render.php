@@ -10,15 +10,19 @@ $persistent_id = ! empty( $attributes['id'] )
 	? $attributes['id']
 	: wp_unique_id( 'wpe-code-' );
 
-$show_badge          = $attributes['showLanguageBadge'] ?? true;
-$code_lang           = $attributes['codeLanguage'] ?? 'PHP';
-$is_dark             = $attributes['isDarkMode'] ?? false;
-$is_compact          = $attributes['isCompact'] ?? false;
-$font_size           = $attributes['fontSize'] ?? '14px';
-$max_height          = $attributes['maxHeight'] ?? 'none';
-$show_lines          = $attributes['showLineNumbers'] ?? false;
-$highlight_lines     = $attributes['highlightLines'] ?? '';
-$enable_ai_assistant = $attributes['enableAIAssistant'] ?? false;
+$show_badge                = $attributes['showLanguageBadge'] ?? true;
+$code_lang                 = isset( $attributes['codeLanguage'] ) ? sanitize_text_field( $attributes['codeLanguage'] ) : '';
+$filename                  = isset( $attributes['filename'] ) ? sanitize_file_name( $attributes['filename'] ) : '';
+$is_dark                   = $attributes['isDarkMode'] ?? false;
+$is_compact                = $attributes['isCompact'] ?? false;
+$font_size                 = $attributes['fontSize'] ?? '14px';
+$max_height                = $attributes['maxHeight'] ?? 'none';
+$show_lines                = $attributes['showLineNumbers'] ?? false;
+$highlight_lines           = $attributes['highlightLines'] ?? '';
+$enable_ai_assistant       = $attributes['enableAIAssistant'] ?? false;
+$tutorial_context_override = isset( $attributes['tutorialContextOverride'] )
+	? sanitize_textarea_field( $attributes['tutorialContextOverride'] )
+	: '';
 
 $theme_class   = $is_dark ? 'dark-theme' : '';
 $compact_class = $is_compact ? 'is-compact' : '';
@@ -41,6 +45,8 @@ foreach ( $inner_blocks as $inner_block ) {
 		$content_html = render_block( $inner_block );
 	}
 }
+
+$code_title = trim( wp_strip_all_tags( $title_html ) );
 
 $character_count = 0;
 $line_count       = 1;
@@ -121,6 +127,9 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'activeCodeText'           => $raw_code_text,
 			'rawCodeText'              => $raw_code_text,
 			'codeLanguage'             => $code_lang,
+			'codeFilename'             => $filename,
+			'codeTitle'                => $code_title,
+			'tutorialContext'          => $tutorial_context_override,
 			'highlightLines'           => $highlight_lines,
 			'completeText'             => esc_html__( 'Done', 'intelligent-code-assistant' ),
 			'isAskingCode'             => false,
@@ -157,7 +166,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 					?>
 				</div>
 
-				<?php if ( true === $show_badge ) : ?>
+				<?php if ( true === $show_badge && '' !== $code_lang ) : ?>
 					<span class="code-badge lang-<?php echo esc_attr( strtolower( $code_lang ) ); ?>">
 						<?php echo esc_html( $code_lang ); ?>
 					</span>

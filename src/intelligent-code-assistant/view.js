@@ -332,6 +332,12 @@ const { state } = store('wpe', {
         return;
       }
 
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.ASK_QUESTION,
+        context,
+        { question }
+      );
+
       context.isSubmittingQuestion = true;
       context.codeQuestionError = '';
       context.codeAnswer = '';

@@ -458,6 +458,16 @@ const { state } = store('wpe', {
       context.selectedCheckAnswer = answerIndex;
       context.hasAnsweredCheck = true;
       context.isCheckCorrect = answerIndex === context.checkCorrectAnswer;
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.KNOWLEDGE_CHECK,
+        context,
+        {
+          correct: context.isCheckCorrect,
+          selectedAnswer: answerIndex,
+          correctAnswer: context.checkCorrectAnswer,
+        }
+      );
     },
 
     async copyToClipboard() {

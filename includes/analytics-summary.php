@@ -212,3 +212,4 @@ add_action(
 
 require_once __DIR__ . '/analytics-dashboard.php';
 require_once __DIR__ . '/reader-insights-admin.php';
+require_once __DIR__ . '/reader-insights-ai.php';

@@ -460,6 +460,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
                     <div className="code-footer">
                         <div className="code-analytics-meta">
+                            {filename && (
+                                <>
+                                    <span className="code-filename">{filename}</span>
+                                    <span className="meta-divider">•</span>
+                                </>
+                            )}
                             <span>{lineCount} {lineCount === 1 ? 'line' : 'lines'}</span>
                             <span className="meta-divider">•</span>
                             <span>{characterCount.toLocaleString()} chars</span>

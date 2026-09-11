@@ -238,3 +238,5 @@ add_action(
 		);
 	}
 );
+
+require_once __DIR__ . '/analytics-dashboard.php';

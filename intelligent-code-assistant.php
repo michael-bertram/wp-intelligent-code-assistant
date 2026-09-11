@@ -50,6 +50,35 @@ add_action( 'wp_abilities_api_categories_init', function() {
 	}
 } );
 
+/** Build a compact, shared tutorial-context prompt section. */
+if ( ! function_exists( 'intelligent_code_assistant_build_tutorial_context_prompt' ) ) {
+	function intelligent_code_assistant_build_tutorial_context_prompt( array $args ) {
+		$parts = array();
+
+		if ( ! empty( $args['tutorialTitle'] ) ) {
+			$parts[] = 'Tutorial: ' . sanitize_text_field( $args['tutorialTitle'] );
+		}
+
+		if ( ! empty( $args['tutorialContext'] ) ) {
+			$parts[] = "Relevant tutorial context:\n" . sanitize_textarea_field( $args['tutorialContext'] );
+		}
+
+		if ( ! empty( $args['title'] ) ) {
+			$parts[] = 'Code example: ' . sanitize_text_field( $args['title'] );
+		}
+
+		if ( ! empty( $args['filename'] ) ) {
+			$parts[] = 'Filename: ' . sanitize_file_name( $args['filename'] );
+		}
+
+		if ( ! empty( $args['language'] ) ) {
+			$parts[] = 'Language: ' . sanitize_text_field( $args['language'] );
+		}
+
+		return implode( "\n\n", $parts );
+	}
+}
+
 /** Register Ability: Auto-Fill Block Metadata & Syntax Formatting. */
 add_action( 'wp_abilities_api_init', function() {
 	if ( ! function_exists( 'wp_register_ability' ) ) {
@@ -107,38 +136,38 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_autofill_ability' ) 
 
 		$prompt = "You are a software engineer and code analyzer. Analyze the snippet below and return ONLY a raw JSON object (no markdown, no backticks) with these exact keys:\n- 'codeLanguage': The exact matching token from ['PHP', 'JS', 'CSS', 'HTML', 'JSON', 'SQL', 'Bash'].\n- 'filename': An idiomatic filename.\n- 'title': A concise 3-6 word summary title.\n- 'highlightLines': Important line numbers to highlight or empty string.\n- 'showLineNumbers': true if the snippet has more than 3 lines or structural logic, false otherwise.\n\nSnippet:\n{$code}";
 
-	if ( function_exists( 'wp_ai_client_prompt' ) ) {
-		try {
-			$ai_response = wp_ai_client_prompt( $prompt, array( 'response_format' => array( 'type' => 'json_object' ) ) );
-			if ( ! is_wp_error( $ai_response ) ) {
-				$raw_json = '';
-				if ( is_string( $ai_response ) ) {
-					$raw_json = $ai_response;
-				} elseif ( is_object( $ai_response ) ) {
-					if ( method_exists( $ai_response, 'generate' ) ) {
-						$generated = $ai_response->generate();
-						$raw_json  = is_string( $generated ) ? $generated : (string) $generated;
-					} elseif ( method_exists( $ai_response, 'get_text' ) ) {
-						$raw_json = (string) $ai_response->get_text();
-					} elseif ( method_exists( $ai_response, '__toString' ) ) {
-						$raw_json = (string) $ai_response;
+		if ( function_exists( 'wp_ai_client_prompt' ) ) {
+			try {
+				$ai_response = wp_ai_client_prompt( $prompt, array( 'response_format' => array( 'type' => 'json_object' ) ) );
+				if ( ! is_wp_error( $ai_response ) ) {
+					$raw_json = '';
+					if ( is_string( $ai_response ) ) {
+						$raw_json = $ai_response;
+					} elseif ( is_object( $ai_response ) ) {
+						if ( method_exists( $ai_response, 'generate' ) ) {
+							$generated = $ai_response->generate();
+							$raw_json  = is_string( $generated ) ? $generated : (string) $generated;
+						} elseif ( method_exists( $ai_response, 'get_text' ) ) {
+							$raw_json = (string) $ai_response->get_text();
+						} elseif ( method_exists( $ai_response, '__toString' ) ) {
+							$raw_json = (string) $ai_response;
+						}
+					}
+					$data = json_decode( trim( preg_replace( '/^```(json)?|```$/m', '', trim( $raw_json ) ) ), true );
+					if ( is_array( $data ) && isset( $data['codeLanguage'], $data['filename'], $data['title'] ) ) {
+						return array(
+							'codeLanguage'    => sanitize_text_field( $data['codeLanguage'] ),
+							'filename'        => sanitize_file_name( $data['filename'] ),
+							'title'           => sanitize_text_field( $data['title'] ),
+							'highlightLines'  => isset( $data['highlightLines'] ) ? sanitize_text_field( $data['highlightLines'] ) : '',
+							'showLineNumbers' => isset( $data['showLineNumbers'] ) ? (bool) $data['showLineNumbers'] : true,
+						);
 					}
 				}
-				$data = json_decode( trim( preg_replace( '/^```(json)?|```$/m', '', trim( $raw_json ) ) ), true );
-				if ( is_array( $data ) && isset( $data['codeLanguage'], $data['filename'], $data['title'] ) ) {
-					return array(
-						'codeLanguage'    => sanitize_text_field( $data['codeLanguage'] ),
-						'filename'        => sanitize_file_name( $data['filename'] ),
-						'title'           => sanitize_text_field( $data['title'] ),
-						'highlightLines'  => isset( $data['highlightLines'] ) ? sanitize_text_field( $data['highlightLines'] ) : '',
-						'showLineNumbers' => isset( $data['showLineNumbers'] ) ? (bool) $data['showLineNumbers'] : true,
-					);
-				}
+			} catch ( Throwable $e ) {
+				// Fall through to the deterministic fallback engine.
 			}
-		} catch ( Throwable $e ) {
-			// Fall through to the deterministic fallback engine.
 		}
-	}
 
 		$trimmed_code = trim( $code );
 		$lines_count  = count( explode( "\n", $trimmed_code ) );
@@ -247,10 +276,11 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_explain_ability' ) )
 		$raw_input = isset( $args['code'] ) && is_string( $args['code'] ) ? $args['code'] : '';
 		$code      = wp_unslash( trim( html_entity_decode( $raw_input, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) );
 		$language  = isset( $args['language'] ) ? sanitize_text_field( $args['language'] ) : 'code';
+		$context   = intelligent_code_assistant_build_tutorial_context_prompt( $args );
 		if ( '' === $code ) return new WP_Error( 'empty_code', __( 'Code snippet cannot be empty.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
 		if ( ! function_exists( 'wp_ai_client_prompt' ) ) return new WP_Error( 'ai_client_unavailable', __( 'The WordPress AI Client is not available.', 'intelligent-code-assistant' ), array( 'status' => 503 ) );
 
-		$prompt = "You are an expert technical instructor.\n\nAnalyze the following {$language} code snippet and explain what it does in exactly 3 clear, concise bullet points.\n\nRequirements:\n* Maximum 25 words per bullet.\n* Focus on the actual functions, variables, conditions and logic present.\n* Do not invent functionality that is not present.\n* Do not include a preamble.\n* Do not use markdown code fences.\n* Return only the 3 bullet points.\n\nCode Snippet:\n{$code}";
+		$prompt = "You are an expert technical instructor helping a reader understand code inside a tutorial.\n\nTutorial and code context:\n{$context}\n\nAnalyze the following {$language} code snippet and explain what it does in exactly 3 clear, concise bullet points.\n\nRequirements:\n* Maximum 25 words per bullet.\n* Focus on the actual functions, variables, conditions and logic present.\n* Use the tutorial context only to explain why the code matters in this lesson.\n* Treat the code itself as authoritative and do not invent functionality or article facts.\n* Do not include a preamble.\n* Do not use markdown code fences.\n* Return only the 3 bullet points.\n\nCode Snippet:\n{$code}";
 		try {
 			$result = wp_ai_client_prompt( $prompt )->generate_text();
 			if ( is_wp_error( $result ) ) return $result;
@@ -269,9 +299,14 @@ add_action( 'rest_api_init', function() {
 		'methods'             => 'POST',
 		'callback'            => function( WP_REST_Request $request ) {
 			$params = $request->get_json_params();
-			$raw_code = is_array( $params ) && isset( $params['code'] ) ? $params['code'] : $request->get_param( 'code' );
-			$language = is_array( $params ) && isset( $params['language'] ) ? $params['language'] : $request->get_param( 'language' );
-			return intelligent_code_assistant_execute_explain_ability( array( 'code' => (string) $raw_code, 'language' => (string) $language ) );
+			return intelligent_code_assistant_execute_explain_ability( array(
+				'code'            => isset( $params['code'] ) ? (string) $params['code'] : '',
+				'language'        => isset( $params['language'] ) ? (string) $params['language'] : 'code',
+				'filename'        => isset( $params['filename'] ) ? (string) $params['filename'] : '',
+				'title'           => isset( $params['title'] ) ? (string) $params['title'] : '',
+				'tutorialTitle'   => isset( $params['tutorialTitle'] ) ? (string) $params['tutorialTitle'] : '',
+				'tutorialContext' => isset( $params['tutorialContext'] ) ? (string) $params['tutorialContext'] : '',
+			) );
 		},
 		'permission_callback' => '__return_true',
 		'args' => array(
@@ -401,6 +436,7 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_explain_line_ability
 		$language = isset( $args['language'] )
 			? sanitize_text_field( $args['language'] )
 			: 'code';
+		$tutorial_context = intelligent_code_assistant_build_tutorial_context_prompt( $args );
 
 		$selected_line_number = isset( $args['selectedLineNumber'] )
 			? absint( $args['selectedLineNumber'] )
@@ -452,6 +488,9 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_explain_line_ability
 		$prompt = <<<PROMPT
 You are an expert technical instructor helping a reader understand code inside a tutorial.
 
+Tutorial and code context:
+{$tutorial_context}
+
 Explain the selected line from the following {$language} code.
 
 Selected line number:
@@ -468,10 +507,11 @@ Full code snippet:
 
 Requirements:
 - Explain only the selected line.
-- Use the surrounding and full snippet only to understand its context.
+- Use the tutorial context to clarify the purpose of the line in this lesson when useful.
+- Use the surrounding and full snippet to understand local code behaviour.
+- Treat the supplied code as authoritative and do not invent article facts or application behaviour.
 - Explain the important functions, variables, operators or language features used on this line.
 - Explain how this line contributes to the surrounding code.
-- Do not invent behaviour that is not present.
 - Keep the explanation concise and suitable for a reader following a technical tutorial.
 - Maximum 80 words.
 - Do not include markdown code fences.
@@ -533,30 +573,19 @@ add_action( 'rest_api_init', function() {
 
 			'callback' => function( WP_REST_Request $request ) {
 
-				$params =
-					$request->get_json_params();
+				$params = $request->get_json_params();
 
 				return intelligent_code_assistant_execute_explain_line_ability(
 					array(
-						'code' => isset( $params['code'] )
-							? (string) $params['code']
-							: '',
-
-						'language' => isset( $params['language'] )
-							? (string) $params['language']
-							: 'code',
-
-						'selectedLineNumber' => isset( $params['selectedLineNumber'] )
-							? (int) $params['selectedLineNumber']
-							: 0,
-
-						'selectedLine' => isset( $params['selectedLine'] )
-							? (string) $params['selectedLine']
-							: '',
-
-						'surroundingCode' => isset( $params['surroundingCode'] )
-							? (string) $params['surroundingCode']
-							: '',
+						'code' => isset( $params['code'] ) ? (string) $params['code'] : '',
+						'language' => isset( $params['language'] ) ? (string) $params['language'] : 'code',
+						'filename' => isset( $params['filename'] ) ? (string) $params['filename'] : '',
+						'title' => isset( $params['title'] ) ? (string) $params['title'] : '',
+						'tutorialTitle' => isset( $params['tutorialTitle'] ) ? (string) $params['tutorialTitle'] : '',
+						'tutorialContext' => isset( $params['tutorialContext'] ) ? (string) $params['tutorialContext'] : '',
+						'selectedLineNumber' => isset( $params['selectedLineNumber'] ) ? (int) $params['selectedLineNumber'] : 0,
+						'selectedLine' => isset( $params['selectedLine'] ) ? (string) $params['selectedLine'] : '',
+						'surroundingCode' => isset( $params['surroundingCode'] ) ? (string) $params['surroundingCode'] : '',
 					)
 				);
 			},
@@ -749,22 +778,7 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_ask_code_ability' ) 
 			);
 		}
 
-		$context_lines = array();
-
-		if ( '' !== $title ) {
-			$context_lines[] = "Tutorial/code title: {$title}";
-		}
-
-		if ( '' !== $filename ) {
-			$context_lines[] = "Filename: {$filename}";
-		}
-
-		$context_lines[] = "Language: {$language}";
-
-		$context_summary = implode(
-			"\n",
-			$context_lines
-		);
+		$context_summary = intelligent_code_assistant_build_tutorial_context_prompt( $args );
 
 		$prompt = <<<PROMPT
 You are an expert technical instructor helping a reader understand a code example inside a tutorial.
@@ -783,8 +797,9 @@ Reader question:
 Requirements:
 - Answer the reader's actual question directly.
 - Ground the answer in the supplied code and context.
-- Do not invent functions, variables, behaviour or surrounding application logic that is not present.
-- If the code does not provide enough information to answer confidently, say what is missing.
+- Treat the code itself as authoritative.
+- Use tutorial context to connect the answer to the current lesson, but do not invent facts that are not supplied.
+- If the code and context do not provide enough information to answer confidently, say what is missing.
 - You may explain relevant programming or WordPress concepts when they help clarify the supplied code.
 - Keep the answer concise and tutorial-friendly.
 - Maximum 140 words.
@@ -850,25 +865,13 @@ add_action( 'rest_api_init', function() {
 
 				return intelligent_code_assistant_execute_ask_code_ability(
 					array(
-						'code' => isset( $params['code'] )
-							? (string) $params['code']
-							: '',
-
-						'language' => isset( $params['language'] )
-							? (string) $params['language']
-							: 'code',
-
-						'filename' => isset( $params['filename'] )
-							? (string) $params['filename']
-							: '',
-
-						'title' => isset( $params['title'] )
-							? (string) $params['title']
-							: '',
-
-						'question' => isset( $params['question'] )
-							? (string) $params['question']
-							: '',
+						'code' => isset( $params['code'] ) ? (string) $params['code'] : '',
+						'language' => isset( $params['language'] ) ? (string) $params['language'] : 'code',
+						'filename' => isset( $params['filename'] ) ? (string) $params['filename'] : '',
+						'title' => isset( $params['title'] ) ? (string) $params['title'] : '',
+						'tutorialTitle' => isset( $params['tutorialTitle'] ) ? (string) $params['tutorialTitle'] : '',
+						'tutorialContext' => isset( $params['tutorialContext'] ) ? (string) $params['tutorialContext'] : '',
+						'question' => isset( $params['question'] ) ? (string) $params['question'] : '',
 					)
 				);
 			},
@@ -1089,20 +1092,12 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_check_understanding_
 			'additionalProperties' => false,
 		);
 
-		$context = "Language: {$language}";
-
-		if ( '' !== $title ) {
-			$context .= "\nTitle: {$title}";
-		}
-
-		if ( '' !== $filename ) {
-			$context .= "\nFilename: {$filename}";
-		}
+		$context = intelligent_code_assistant_build_tutorial_context_prompt( $args );
 
 		$prompt = <<<PROMPT
 You are creating a short knowledge-check question for a reader following a technical tutorial.
 
-Use only the supplied code and context to create one multiple-choice question that tests whether the reader understands an important concept demonstrated by the example.
+Use only the supplied code and tutorial context to create one multiple-choice question that tests whether the reader understands an important concept demonstrated by the example.
 
 Context:
 {$context}
@@ -1115,11 +1110,12 @@ Requirements:
 - Only one answer must be correct.
 - correctAnswer must be the zero-based array index of the correct option: 0, 1, or 2.
 - Make the incorrect answers plausible, but clearly incorrect when the code is understood.
-- Test understanding rather than trivial syntax recognition.
+- Test understanding of the concept as it is being used in this tutorial, not trivial syntax recognition.
+- Treat the supplied code as authoritative.
+- Use tutorial context only to focus the question; do not invent facts that are not supplied.
 - Keep the question concise.
 - Keep each option concise.
 - Provide a short explanation of why the correct answer is correct.
-- Do not rely on information that cannot be inferred from the supplied code or context.
 PROMPT;
 
 		try {
@@ -1194,21 +1190,12 @@ add_action( 'rest_api_init', function() {
 
 				return intelligent_code_assistant_execute_check_understanding_ability(
 					array(
-						'code' => isset( $params['code'] )
-							? (string) $params['code']
-							: '',
-
-						'language' => isset( $params['language'] )
-							? (string) $params['language']
-							: 'code',
-
-						'filename' => isset( $params['filename'] )
-							? (string) $params['filename']
-							: '',
-
-						'title' => isset( $params['title'] )
-							? (string) $params['title']
-							: '',
+						'code' => isset( $params['code'] ) ? (string) $params['code'] : '',
+						'language' => isset( $params['language'] ) ? (string) $params['language'] : 'code',
+						'filename' => isset( $params['filename'] ) ? (string) $params['filename'] : '',
+						'title' => isset( $params['title'] ) ? (string) $params['title'] : '',
+						'tutorialTitle' => isset( $params['tutorialTitle'] ) ? (string) $params['tutorialTitle'] : '',
+						'tutorialContext' => isset( $params['tutorialContext'] ) ? (string) $params['tutorialContext'] : '',
 					)
 				);
 			},

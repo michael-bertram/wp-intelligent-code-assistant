@@ -58,11 +58,27 @@ function getTutorialTitle() {
 }
 
 /**
+ * Return useful tutorial text from an element in document order.
+ *
+ * @param {Element} element Element to inspect.
+ * @return {Element[]} Heading and paragraph candidates.
+ */
+function getTutorialTextCandidates(element) {
+  if (element.matches('h2, h3, h4, p')) {
+    return [element];
+  }
+
+  return Array.from(element.querySelectorAll('h2, h3, h4, p'));
+}
+
+/**
  * Collect a deliberately small amount of nearby article content.
  *
- * We walk backwards from the current code block and stop once the nearest
- * section heading is found. This keeps the prompt focused rather than sending
- * the entire article to the model.
+ * Start with previous siblings of the active block. If the block is nested in
+ * a Group, Column or another layout wrapper, progressively climb the DOM and
+ * inspect the wrapper's previous siblings too. Stop at the nearest section
+ * heading so the model receives the current lesson context rather than the
+ * entire article.
  *
  * @param {Element|null} block Current code block element.
  * @return {string} Focused section context.
@@ -73,33 +89,47 @@ function getFocusedTutorialContext(block) {
   }
 
   const fragments = [];
-  let sibling = block.previousElementSibling;
+  let current = block;
   let inspected = 0;
   let foundHeading = false;
 
-  while (sibling && inspected < 8 && !foundHeading) {
-    const candidates = sibling.matches('h2, h3, h4, p')
-      ? [sibling]
-      : Array.from(sibling.querySelectorAll('h2, h3, h4, p'));
+  while (current && inspected < 12 && !foundHeading) {
+    let sibling = current.previousElementSibling;
 
-    for (let index = candidates.length - 1; index >= 0; index -= 1) {
-      const candidate = candidates[index];
-      const text = candidate.textContent?.replace(/\s+/g, ' ').trim();
+    while (sibling && inspected < 12 && !foundHeading) {
+      const candidates = getTutorialTextCandidates(sibling);
 
-      if (!text) {
-        continue;
+      for (let index = candidates.length - 1; index >= 0; index -= 1) {
+        const candidate = candidates[index];
+        const text = candidate.textContent?.replace(/\s+/g, ' ').trim();
+
+        if (!text) {
+          continue;
+        }
+
+        fragments.unshift(text);
+
+        if (/^H[2-4]$/.test(candidate.tagName)) {
+          foundHeading = true;
+          break;
+        }
       }
 
-      fragments.unshift(text);
-
-      if (/^H[2-4]$/.test(candidate.tagName)) {
-        foundHeading = true;
-        break;
-      }
+      sibling = sibling.previousElementSibling;
+      inspected += 1;
     }
 
-    sibling = sibling.previousElementSibling;
-    inspected += 1;
+    if (foundHeading) {
+      break;
+    }
+
+    const parent = current.parentElement;
+
+    if (!parent || parent.matches('article, main, body')) {
+      break;
+    }
+
+    current = parent;
   }
 
   return fragments.join('\n').slice(0, 1200);

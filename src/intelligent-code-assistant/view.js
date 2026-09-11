@@ -263,6 +263,13 @@ const { state } = store('wpe', {
 
       const lines = (context.rawCodeText || '').split('\n');
       const selectedLineNumber = Number(context.selectedLineNumber);
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.EXPLAIN_LINE,
+        context,
+        { lineNumber: selectedLineNumber }
+      );
+
       const start = Math.max(1, selectedLineNumber - 2);
       const end = Math.min(lines.length, selectedLineNumber + 2);
 

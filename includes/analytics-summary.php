@@ -48,7 +48,7 @@ function intelligent_code_assistant_get_analytics_summary( $post_id ) {
 		),
 		'questions'         => array(),
 		'completionActions' => array(
-			'markedComplete' => 0,
+			'markedComplete'   => 0,
 			'markedIncomplete' => 0,
 		),
 	);
@@ -194,3 +194,47 @@ function intelligent_code_assistant_get_analytics_summary( $post_id ) {
 
 	return $summary;
 }
+
+/**
+ * Expose deterministic analytics facts to editors of the requested post.
+ */
+add_action(
+	'rest_api_init',
+	function () {
+		register_rest_route(
+			'intelligent-code-assistant/v1',
+			'/analytics-summary',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => function ( WP_REST_Request $request ) {
+					$post_id = absint( $request->get_param( 'postId' ) );
+
+					if ( ! $post_id || ! get_post( $post_id ) ) {
+						return new WP_Error(
+							'invalid_post',
+							__( 'A valid post ID is required.', 'intelligent-code-assistant' ),
+							array( 'status' => 400 )
+						);
+					}
+
+					return rest_ensure_response(
+						intelligent_code_assistant_get_analytics_summary( $post_id )
+					);
+				},
+				'permission_callback' => function ( WP_REST_Request $request ) {
+					$post_id = absint( $request->get_param( 'postId' ) );
+
+					return $post_id > 0 && current_user_can( 'edit_post', $post_id );
+				},
+				'args'                => array(
+					'postId' => array(
+						'required'          => true,
+						'type'              => 'integer',
+						'minimum'           => 1,
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
+	}
+);

@@ -23,6 +23,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiError, setAiError] = useState(null);
+    const [isEditingContext, setIsEditingContext] = useState(false);
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
 
@@ -108,6 +109,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     }, [clientId]);
 
     const characterCount = cleanRawText.replace(/\r/g, '').length;
+    const effectiveTutorialContext = tutorialContextOverride || derivedTutorialContext;
 
     const isLineHighlighted = (lineNumber, highlightExpression) => {
         if (!highlightExpression) return false;
@@ -123,8 +125,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         return false;
     };
 
+    const normalizeCodeForDetection = (code) => code
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#0*39;|&apos;/gi, "'")
+        .replace(/&amp;/gi, '&');
+
     const detectCodeLanguage = (code) => {
-        const trimmedCode = code.trim();
+        const trimmedCode = normalizeCodeForDetection(code.trim());
         if (!trimmedCode) return '';
 
         if (
@@ -139,7 +148,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             }
         }
 
-        if (/^\s*<(!doctype\s+html|html|[a-z][\w-]*)(\s|>)/i.test(trimmedCode)) return 'HTML';
+        if (/^\s*(?:<!doctype\s+html|<!--|<\/?[a-z][\w:-]*(?:\s[^<>]*?)?>)/i.test(trimmedCode)) return 'HTML';
 
         if (
             /<\?php|\bnamespace\s+[A-Za-z_\\]|\$[A-Za-z_]\w*|->|::|\b(add_action|add_filter|wp_register_ability|register_block_type)\s*\(/i.test(trimmedCode)
@@ -275,26 +284,67 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                                 </p>
                             )}
 
-                            <TextControl
-                                label={__('Tutorial title', 'intelligent-code-assistant')}
-                                value={tutorialTitle}
-                                disabled
-                                help={__('Derived from the current post title. Edit the post title to change this value.', 'intelligent-code-assistant')}
-                            />
+                            <div style={{ marginTop: '16px' }}>
+                                <strong style={{ display: 'block', marginBottom: '6px' }}>
+                                    {__('Tutorial title', 'intelligent-code-assistant')}
+                                </strong>
+                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', marginBottom: '14px' }}>
+                                    {tutorialTitle || __('No tutorial title detected.', 'intelligent-code-assistant')}
+                                </div>
 
-                            <TextareaControl
-                                label={__('Detected tutorial context', 'intelligent-code-assistant')}
-                                value={derivedTutorialContext}
-                                disabled
-                                help={__('Derived from the nearest heading and paragraphs before this code block.', 'intelligent-code-assistant')}
-                            />
+                                <strong style={{ display: 'block', marginBottom: '6px' }}>
+                                    {__('Tutorial context', 'intelligent-code-assistant')}
+                                </strong>
+                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', whiteSpace: 'pre-wrap', marginBottom: '10px' }}>
+                                    {effectiveTutorialContext || __('No nearby tutorial context detected.', 'intelligent-code-assistant')}
+                                </div>
 
-                            <TextareaControl
-                                label={__('Context override', 'intelligent-code-assistant')}
-                                value={tutorialContextOverride || ''}
-                                onChange={(value) => setAttributes({ tutorialContextOverride: value })}
-                                help={__('Optional. When set, this replaces the automatically detected tutorial context for this code block.', 'intelligent-code-assistant')}
-                            />
+                                {!isEditingContext && (
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => setIsEditingContext(true)}
+                                        style={{ marginBottom: '8px' }}
+                                    >
+                                        {__('Edit context', 'intelligent-code-assistant')}
+                                    </Button>
+                                )}
+
+                                {isEditingContext && (
+                                    <>
+                                        <TextareaControl
+                                            label={__('Edit tutorial context', 'intelligent-code-assistant')}
+                                            value={tutorialContextOverride || derivedTutorialContext}
+                                            onChange={(value) => setAttributes({ tutorialContextOverride: value })}
+                                            help={__('This custom context will replace the automatically detected context for this code block.', 'intelligent-code-assistant')}
+                                        />
+                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                            <Button
+                                                variant="primary"
+                                                onClick={() => setIsEditingContext(false)}
+                                            >
+                                                {__('Done', 'intelligent-code-assistant')}
+                                            </Button>
+                                            {tutorialContextOverride && (
+                                                <Button
+                                                    variant="tertiary"
+                                                    onClick={() => {
+                                                        setAttributes({ tutorialContextOverride: '' });
+                                                        setIsEditingContext(false);
+                                                    }}
+                                                >
+                                                    {__('Use detected context', 'intelligent-code-assistant')}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+
+                                <p style={{ marginTop: '6px', color: '#646970', fontSize: '12px' }}>
+                                    {tutorialContextOverride
+                                        ? __('Using custom context for this code block.', 'intelligent-code-assistant')
+                                        : __('Using context detected from the nearest heading and paragraphs.', 'intelligent-code-assistant')}
+                                </p>
+                            </div>
                         </>
                     )}
                 </PanelBody>
@@ -396,7 +446,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                                     const lineNum = index + 1;
                                     const highlighted = isLineHighlighted(lineNum, highlightLines);
                                     return (
-                                        <span key={index} className={highlighted ? 'is-highlighted' : ''}>
+                                        <span
+                                            key={index}
+                                            className={highlighted ? 'is-highlighted' : ''}
+                                        >
                                             {lineNum}
                                         </span>
                                     );

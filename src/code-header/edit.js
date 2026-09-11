@@ -1,6 +1,7 @@
 import { useBlockProps, RichText } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useSelect, useDispatch } from '@wordpress/data';
+import { useEffect } from '@wordpress/element';
 
 export default function Edit({ attributes, setAttributes, clientId }) {
     const { updateBlockAttributes } = useDispatch('core/block-editor');
@@ -17,6 +18,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         };
     }, [clientId]);
 
+    useEffect(() => {
+        if (filename && filename !== attributes.content) {
+            setAttributes({ content: filename });
+        }
+    }, [filename, attributes.content, setAttributes]);
+
     const blockProps = useBlockProps({
         className: 'task-title'
     });
@@ -26,7 +33,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             updateBlockAttributes(parentId, { filename: value });
         }
 
-        // Keep the legacy child content in sync for existing blocks and fallbacks.
         setAttributes({ content: value });
     };
 

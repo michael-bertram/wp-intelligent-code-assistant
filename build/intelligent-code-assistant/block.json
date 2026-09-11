@@ -21,7 +21,15 @@
     },
     "codeLanguage": {
       "type": "string",
-      "default": "PHP"
+      "default": ""
+    },
+    "filename": {
+      "type": "string",
+      "default": ""
+    },
+    "highlightLines": {
+      "type": "string",
+      "default": ""
     },
     "isDarkMode": {
       "type": "boolean",
@@ -47,11 +55,7 @@
       "type": "boolean",
       "default": false
     },
-    "tutorialTitle": {
-      "type": "string",
-      "default": ""
-    },
-    "tutorialContext": {
+    "tutorialContextOverride": {
       "type": "string",
       "default": ""
     }

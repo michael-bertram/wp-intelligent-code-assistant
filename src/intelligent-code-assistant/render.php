@@ -47,6 +47,9 @@ foreach ( $inner_blocks as $inner_block ) {
 }
 
 $code_title = trim( wp_strip_all_tags( $title_html ) );
+if ( '' === $filename && '' !== $code_title ) {
+    $filename = $code_title;
+}
 
 $character_count = 0;
 $line_count       = 1;
@@ -126,6 +129,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'lineExplanationError'     => '',
 			'activeCodeText'           => $raw_code_text,
 			'rawCodeText'              => $raw_code_text,
+    		'postId'          			=> get_the_ID(),
 			'codeLanguage'             => $code_lang,
 			'codeFilename'             => $filename,
 			'codeTitle'                => $code_title,

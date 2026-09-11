@@ -1227,3 +1227,116 @@ add_action( 'rest_api_init', function() {
 		)
 	);
 } );
+
+function intelligent_code_assistant_create_analytics_table() {
+	global $wpdb;
+
+	$table_name      = $wpdb->prefix . 'ica_analytics';
+	$charset_collate = $wpdb->get_charset_collate();
+
+	$sql = "CREATE TABLE {$table_name} (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		post_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		block_id varchar(191) NOT NULL DEFAULT '',
+		event_type varchar(50) NOT NULL DEFAULT '',
+		filename varchar(191) NOT NULL DEFAULT '',
+		language varchar(50) NOT NULL DEFAULT '',
+		metadata longtext NULL,
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY post_id (post_id),
+		KEY block_id (block_id),
+		KEY event_type (event_type),
+		KEY created_at (created_at)
+	) {$charset_collate};";
+
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+	dbDelta( $sql );
+}
+
+register_activation_hook(
+	__FILE__,
+	'intelligent_code_assistant_create_analytics_table'
+);
+
+add_action(
+	'rest_api_init',
+	function () {
+		register_rest_route(
+			'intelligent-code-assistant/v1',
+			'/analytics-event',
+			array(
+				'methods'             => 'POST',
+				'callback'            => 'intelligent_code_assistant_record_analytics_event',
+				'permission_callback' => '__return_true',
+			)
+		);
+	}
+);
+
+function intelligent_code_assistant_record_analytics_event( WP_REST_Request $request ) {
+	global $wpdb;
+
+	$table_name = $wpdb->prefix . 'ica_analytics';
+
+	$event_type = sanitize_key( $request->get_param( 'event' ) );
+	$block_id   = sanitize_text_field( $request->get_param( 'blockId' ) );
+	$post_id    = absint( $request->get_param( 'postId' ) );
+	$filename   = sanitize_file_name( $request->get_param( 'filename' ) );
+	$language   = sanitize_text_field( $request->get_param( 'language' ) );
+	$metadata   = $request->get_param( 'metadata' );
+
+	$allowed_events = array(
+		'explain_code',
+		'explain_line',
+		'ask_question',
+		'knowledge_check',
+		'mark_complete',
+		'copy_code',
+	);
+
+	if ( ! in_array( $event_type, $allowed_events, true ) ) {
+		return new WP_Error(
+			'invalid_analytics_event',
+			__( 'Invalid analytics event.', 'intelligent-code-assistant' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	$inserted = $wpdb->insert(
+		$table_name,
+		array(
+			'post_id'    => $post_id,
+			'block_id'   => $block_id,
+			'event_type' => $event_type,
+			'filename'   => $filename,
+			'language'   => $language,
+			'metadata'   => wp_json_encode( is_array( $metadata ) ? $metadata : array() ),
+			'created_at' => current_time( 'mysql' ),
+		),
+		array(
+			'%d',
+			'%s',
+			'%s',
+			'%s',
+			'%s',
+			'%s',
+			'%s',
+		)
+	);
+
+	if ( false === $inserted ) {
+		return new WP_Error(
+			'analytics_insert_failed',
+			__( 'Unable to record analytics event.', 'intelligent-code-assistant' ),
+			array( 'status' => 500 )
+		);
+	}
+
+	return rest_ensure_response(
+		array(
+			'success' => true,
+		)
+	);
+}

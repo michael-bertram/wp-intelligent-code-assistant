@@ -10,6 +10,11 @@ import {
   requestAICapability,
 } from './ai-context';
 
+import {
+    ANALYTICS_EVENTS,
+    recordAnalyticsEvent,
+} from './analytics';
+
 const STORAGE_KEY = 'wpe_tasks';
 
 function getAIErrorMessage(response) {
@@ -461,6 +466,11 @@ const { state } = store('wpe', {
         }
 
         context.isCopied = true;
+        console.log('analytics context', context);
+        recordAnalyticsEvent(
+      ANALYTICS_EVENTS.COPY_CODE,
+      context
+      );
         setTimeout(() => {
           context.isCopied = false;
         }, 2000);

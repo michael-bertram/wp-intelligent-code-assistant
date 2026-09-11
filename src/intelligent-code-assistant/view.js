@@ -177,6 +177,12 @@ const { state } = store('wpe', {
         [context.id]: context.isComplete,
       };
 
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.MARK_COMPLETE,
+        context,
+        { status: context.isComplete }
+      );
+
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
       } catch (err) {

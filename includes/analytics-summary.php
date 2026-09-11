@@ -167,37 +167,17 @@ function intelligent_code_assistant_get_analytics_summary( $post_id ) {
 		);
 	}
 
-	$summary['blocks']         = array_values( $blocks );
+	$summary['blocks']          = array_values( $blocks );
 	$summary['explainedLines'] = array_values( $explained_lines );
 	$summary['questions']      = array_values( $questions );
 
-	usort(
-		$summary['blocks'],
-		static function ( $a, $b ) {
-			return $b['interactions'] <=> $a['interactions'];
-		}
-	);
-
-	usort(
-		$summary['explainedLines'],
-		static function ( $a, $b ) {
-			return $b['count'] <=> $a['count'];
-		}
-	);
-
-	usort(
-		$summary['questions'],
-		static function ( $a, $b ) {
-			return $b['count'] <=> $a['count'];
-		}
-	);
+	usort( $summary['blocks'], static function ( $a, $b ) { return $b['interactions'] <=> $a['interactions']; } );
+	usort( $summary['explainedLines'], static function ( $a, $b ) { return $b['count'] <=> $a['count']; } );
+	usort( $summary['questions'], static function ( $a, $b ) { return $b['count'] <=> $a['count']; } );
 
 	return $summary;
 }
 
-/**
- * Expose deterministic analytics facts to editors of the requested post.
- */
 add_action(
 	'rest_api_init',
 	function () {
@@ -205,32 +185,23 @@ add_action(
 			'intelligent-code-assistant/v1',
 			'/analytics-summary',
 			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => function ( WP_REST_Request $request ) {
+				'methods' => WP_REST_Server::READABLE,
+				'callback' => function ( WP_REST_Request $request ) {
 					$post_id = absint( $request->get_param( 'postId' ) );
-
 					if ( ! $post_id || ! get_post( $post_id ) ) {
-						return new WP_Error(
-							'invalid_post',
-							__( 'A valid post ID is required.', 'intelligent-code-assistant' ),
-							array( 'status' => 400 )
-						);
+						return new WP_Error( 'invalid_post', __( 'A valid post ID is required.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
 					}
-
-					return rest_ensure_response(
-						intelligent_code_assistant_get_analytics_summary( $post_id )
-					);
+					return rest_ensure_response( intelligent_code_assistant_get_analytics_summary( $post_id ) );
 				},
 				'permission_callback' => function ( WP_REST_Request $request ) {
 					$post_id = absint( $request->get_param( 'postId' ) );
-
 					return $post_id > 0 && current_user_can( 'edit_post', $post_id );
 				},
-				'args'                => array(
+				'args' => array(
 					'postId' => array(
-						'required'          => true,
-						'type'              => 'integer',
-						'minimum'           => 1,
+						'required' => true,
+						'type' => 'integer',
+						'minimum' => 1,
 						'sanitize_callback' => 'absint',
 					),
 				),
@@ -240,3 +211,4 @@ add_action(
 );
 
 require_once __DIR__ . '/analytics-dashboard.php';
+require_once __DIR__ . '/reader-insights-admin.php';

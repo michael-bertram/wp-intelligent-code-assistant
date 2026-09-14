@@ -140,14 +140,14 @@
 			const data = await response.json();
 
 			if ( ! response.ok ) {
-				throw new Error( data?.message || config.i18n?.error || 'Unable to generate AI insights.' );
+				throw new Error( config.i18n?.error || 'AI insights are currently unavailable. Please try again later.' );
 			}
 
 			renderInsights( data );
 			button.textContent = config.i18n?.regenerate || 'Regenerate insights';
 			status.textContent = 'Generated from current analytics';
 		} catch ( error ) {
-			showError( error?.message || config.i18n?.error || 'Unable to generate AI insights. Please try again.' );
+			showError( config.i18n?.error || 'AI insights are currently unavailable. Please try again later.' );
 			status.textContent = '';
 		} finally {
 			status.classList.remove( 'is-loading' );

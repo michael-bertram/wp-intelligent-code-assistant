@@ -209,15 +209,28 @@ add_filter(
 			return $response;
 		}
 
-		$response = rest_ensure_response( $response );
-		$status   = (int) $response->get_status();
+		$response   = rest_ensure_response( $response );
+		$status     = (int) $response->get_status();
+		$data       = $response->get_data();
+		$error_code = is_array( $data ) && isset( $data['code'] ) ? sanitize_key( $data['code'] ) : '';
 
 		if ( $status >= 200 && $status < 300 ) {
 			set_transient( 'ica_public_ai_capability_status', 'available', DAY_IN_SECONDS );
 			return $response;
 		}
 
-		if ( in_array( $status, array( 401, 403 ), true ) ) {
+		$local_errors = array(
+			'ai_cross_site_request_blocked',
+			'ai_invalid_request',
+			'ai_request_too_large',
+			'ai_rate_limited',
+		);
+
+		if ( in_array( $error_code, $local_errors, true ) ) {
+			return $response;
+		}
+
+		if ( 401 === $status || 403 === $status || 'prompt_client_error' === $error_code ) {
 			set_transient( 'ica_public_ai_capability_status', 'auth_rejected', DAY_IN_SECONDS );
 
 			return new WP_REST_Response(

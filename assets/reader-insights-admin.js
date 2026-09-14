@@ -64,6 +64,9 @@
 					: `Failed${ generation.errorCode ? ` — ${ escapeHtml( generation.errorCode ) }` : '' }${ generation.status ? ` (${ escapeHtml( generation.status ) })` : '' }`
 				: 'Not run';
 
+			const providerLabel = generation.providerName || generation.providerId || '';
+			const modelLabel = generation.modelName || generation.modelId || '';
+
 			return `
 				<section class="ica-insight-card" style="margin-top:16px;">
 					<h3>${ escapeHtml( title ) }</h3>
@@ -72,6 +75,13 @@
 						&nbsp; · &nbsp;<strong>AI Client:</strong> ${ data?.aiClientAvailable ? 'Available' : 'Unavailable' }
 						&nbsp; · &nbsp;<strong>Generation test:</strong> ${ generationResult }
 					</p>
+					${ providerLabel || modelLabel ? `
+						<p>
+							${ providerLabel ? `<strong>Resolved provider:</strong> ${ escapeHtml( providerLabel ) }${ generation.providerId && generation.providerName ? ` (<code>${ escapeHtml( generation.providerId ) }</code>)` : '' }` : '' }
+							${ providerLabel && modelLabel ? '&nbsp; · &nbsp;' : '' }
+							${ modelLabel ? `<strong>Resolved model:</strong> ${ escapeHtml( modelLabel ) }${ generation.modelId && generation.modelName ? ` (<code>${ escapeHtml( generation.modelId ) }</code>)` : '' }` : '' }
+						</p>
+					` : '<p><strong>Resolved provider/model:</strong> unavailable because generation did not return a result.</p>' }
 					${ generation.exceptionClass ? `<p><strong>Exception class:</strong> <code>${ escapeHtml( generation.exceptionClass ) }</code></p>` : '' }
 					<div style="overflow-x:auto;">
 						<table class="widefat striped">

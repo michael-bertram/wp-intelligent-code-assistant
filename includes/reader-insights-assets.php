@@ -40,10 +40,15 @@ add_action(
 				'endpoint' => rest_url( 'intelligent-code-assistant/v1/analyze-reader-insights' ),
 				'nonce'    => wp_create_nonce( 'wp_rest' ),
 				'i18n'     => array(
-					'generate'   => __( 'Generate AI insights', 'intelligent-code-assistant' ),
-					'regenerate' => __( 'Regenerate insights', 'intelligent-code-assistant' ),
-					'generating' => __( 'Generating insights…', 'intelligent-code-assistant' ),
-					'error'      => __( 'AI insights are currently unavailable. Please try again later.', 'intelligent-code-assistant' ),
+					'generate'       => __( 'Generate AI insights', 'intelligent-code-assistant' ),
+					'regenerate'     => __( 'Regenerate insights', 'intelligent-code-assistant' ),
+					'generating'     => __( 'Generating insights…', 'intelligent-code-assistant' ),
+					'generated'      => __( 'Generated from current analytics', 'intelligent-code-assistant' ),
+					'error'          => __( 'AI insights are currently unavailable. Please try again later.', 'intelligent-code-assistant' ),
+					'intro'          => __( 'Use the deterministic reader data above as context for an AI-assisted editorial interpretation. The suggestions remain evidence-based and are for the author to review.', 'intelligent-code-assistant' ),
+					'frictionPoints' => __( 'Potential friction points', 'intelligent-code-assistant' ),
+					'recommendations'=> __( 'Recommendations', 'intelligent-code-assistant' ),
+					'suggestedFaqs'  => __( 'Suggested FAQs', 'intelligent-code-assistant' ),
 				),
 			)
 		);

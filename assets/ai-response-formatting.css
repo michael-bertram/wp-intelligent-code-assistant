@@ -1,0 +1,17 @@
+.ica-ai-semantic-list {
+	list-style: disc;
+	margin: 0.75rem 0;
+	padding-inline-start: 1.4rem;
+}
+
+.ica-ai-semantic-list li {
+	margin: 0.35rem 0;
+}
+
+.ica-ai-structured-response > p {
+	margin: 0 0 0.75rem;
+}
+
+.ica-ai-structured-response > p:last-child {
+	margin-bottom: 0;
+}

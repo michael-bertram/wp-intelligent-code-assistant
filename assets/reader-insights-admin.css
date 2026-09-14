@@ -175,14 +175,25 @@ body.toplevel_page_intelligent-code-assistant-reader-insights .ica-insight-card 
 }
 
 body.toplevel_page_intelligent-code-assistant-reader-insights .ica-insight-card ul {
+	list-style: disc outside;
 	margin: 0;
-	padding-left: 20px;
+	padding-left: 24px;
 }
 
 body.toplevel_page_intelligent-code-assistant-reader-insights .ica-insight-card li {
-	margin-bottom: 8px;
+	display: list-item;
+	margin: 0 0 12px;
+	padding-left: 2px;
 	color: #334155;
 	line-height: 1.5;
+}
+
+body.toplevel_page_intelligent-code-assistant-reader-insights .ica-insight-card li:last-child {
+	margin-bottom: 0;
+}
+
+body.toplevel_page_intelligent-code-assistant-reader-insights .ica-insight-card li::marker {
+	color: #64748b;
 }
 
 body.toplevel_page_intelligent-code-assistant-reader-insights .ica-ai-status {

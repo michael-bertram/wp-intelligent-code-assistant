@@ -3,8 +3,9 @@
  * Temporary AI connector diagnostics for Stage 7 debugging.
  *
  * This file intentionally reports only connector metadata, credential source,
- * and generation success/error codes. It never exposes API keys, tokens,
- * Authorization headers, generated text, or raw provider error messages.
+ * resolved provider/model identifiers, and generation success/error codes. It
+ * never exposes API keys, tokens, Authorization headers, generated text, or raw
+ * provider error messages.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -61,6 +62,55 @@ function intelligent_code_assistant_get_connector_key_source( $connector_id, arr
 }
 
 /**
+ * Safely extract resolved provider/model metadata from an AI generation result.
+ *
+ * @param mixed $result Generative AI result object.
+ * @return array Safe metadata only.
+ */
+function intelligent_code_assistant_get_ai_result_metadata( $result ) {
+	$metadata = array(
+		'providerId'   => '',
+		'providerName' => '',
+		'modelId'      => '',
+		'modelName'    => '',
+	);
+
+	if ( ! is_object( $result ) ) {
+		return $metadata;
+	}
+
+	try {
+		if ( method_exists( $result, 'getProviderMetadata' ) ) {
+			$provider = $result->getProviderMetadata();
+			if ( is_object( $provider ) ) {
+				if ( method_exists( $provider, 'getId' ) ) {
+					$metadata['providerId'] = sanitize_text_field( (string) $provider->getId() );
+				}
+				if ( method_exists( $provider, 'getName' ) ) {
+					$metadata['providerName'] = sanitize_text_field( (string) $provider->getName() );
+				}
+			}
+		}
+
+		if ( method_exists( $result, 'getModelMetadata' ) ) {
+			$model = $result->getModelMetadata();
+			if ( is_object( $model ) ) {
+				if ( method_exists( $model, 'getId' ) ) {
+					$metadata['modelId'] = sanitize_text_field( (string) $model->getId() );
+				}
+				if ( method_exists( $model, 'getName' ) ) {
+					$metadata['modelName'] = sanitize_text_field( (string) $model->getName() );
+				}
+			}
+		}
+	} catch ( Throwable $error ) {
+		// Metadata is diagnostic-only. A metadata read must never break the test.
+	}
+
+	return $metadata;
+}
+
+/**
  * Build a safe diagnostic snapshot for the current request context.
  *
  * @param bool $run_generation_test Whether to execute a minimal text-generation request.
@@ -74,8 +124,12 @@ function intelligent_code_assistant_get_ai_diagnostics( $run_generation_test = t
 		'connectorsApi'     => function_exists( 'wp_get_connectors' ),
 		'connectors'        => array(),
 		'generationTest'    => array(
-			'ran'     => false,
-			'success' => false,
+			'ran'          => false,
+			'success'      => false,
+			'providerId'   => '',
+			'providerName' => '',
+			'modelId'      => '',
+			'modelName'    => '',
 		),
 	);
 
@@ -93,12 +147,12 @@ function intelligent_code_assistant_get_ai_diagnostics( $run_generation_test = t
 			$key_source     = intelligent_code_assistant_get_connector_key_source( $connector_id, $connector );
 
 			$diagnostics['connectors'][] = array(
-				'id'             => sanitize_key( $connector_id ),
-				'name'           => isset( $connector['name'] ) ? sanitize_text_field( $connector['name'] ) : sanitize_key( $connector_id ),
-				'type'           => isset( $connector['type'] ) ? sanitize_key( $connector['type'] ) : '',
-				'authMethod'     => isset( $authentication['method'] ) ? sanitize_key( $authentication['method'] ) : '',
+				'id'               => sanitize_key( $connector_id ),
+				'name'             => isset( $connector['name'] ) ? sanitize_text_field( $connector['name'] ) : sanitize_key( $connector_id ),
+				'type'             => isset( $connector['type'] ) ? sanitize_key( $connector['type'] ) : '',
+				'authMethod'       => isset( $authentication['method'] ) ? sanitize_key( $authentication['method'] ) : '',
 				'credentialSource' => $key_source,
-				'hasCredential'  => in_array( $key_source, array( 'env', 'constant', 'database', 'not_required' ), true ),
+				'hasCredential'    => in_array( $key_source, array( 'env', 'constant', 'database', 'not_required' ), true ),
 			);
 		}
 	}
@@ -110,7 +164,7 @@ function intelligent_code_assistant_get_ai_diagnostics( $run_generation_test = t
 	$diagnostics['generationTest']['ran'] = true;
 
 	try {
-		$result = wp_ai_client_prompt( 'Reply with exactly: OK' )->generate_text();
+		$result = wp_ai_client_prompt( 'Reply with exactly: OK' )->generate_text_result();
 
 		if ( is_wp_error( $result ) ) {
 			$error_data = $result->get_error_data();
@@ -122,7 +176,14 @@ function intelligent_code_assistant_get_ai_diagnostics( $run_generation_test = t
 			return $diagnostics;
 		}
 
-		$diagnostics['generationTest']['success'] = is_string( $result ) && '' !== trim( $result );
+		$result_metadata = intelligent_code_assistant_get_ai_result_metadata( $result );
+		$diagnostics['generationTest'] = array_merge( $diagnostics['generationTest'], $result_metadata );
+
+		$text = '';
+		if ( is_object( $result ) && method_exists( $result, 'toText' ) ) {
+			$text = (string) $result->toText();
+		}
+		$diagnostics['generationTest']['success'] = '' !== trim( $text );
 	} catch ( Throwable $error ) {
 		$diagnostics['generationTest']['errorCode']      = 'diagnostic_exception';
 		$diagnostics['generationTest']['status']         = 500;

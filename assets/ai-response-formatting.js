@@ -42,6 +42,7 @@
 	function createList( items ) {
 		const list = document.createElement( 'ul' );
 		list.className = 'ica-ai-semantic-list';
+		list.dataset.icaGeneratedList = 'true';
 
 		items.forEach( ( item ) => {
 			const listItem = document.createElement( 'li' );
@@ -52,34 +53,41 @@
 		return list;
 	}
 
+	function removeGeneratedSiblingList( element ) {
+		const sibling = element.nextElementSibling;
+		if ( sibling?.dataset?.icaGeneratedList === 'true' ) {
+			sibling.remove();
+		}
+	}
+
 	function formatTextElement( element ) {
 		if ( ! element || element.closest( '.ica-ai-semantic-list' ) ) {
 			return;
 		}
 
 		const source = element.textContent || '';
-		if ( ! source.trim() || element.dataset.icaFormattedSource === source ) {
+		if ( ! source.trim() ) {
+			removeGeneratedSiblingList( element );
+			delete element.dataset.icaRenderedText;
 			return;
 		}
+
+		if ( element.dataset.icaRenderedText === source ) {
+			return;
+		}
+
+		removeGeneratedSiblingList( element );
 
 		const { paragraphs, items } = splitStructuredText( source );
 		if ( ! items.length ) {
-			element.dataset.icaFormattedSource = source;
+			element.dataset.icaRenderedText = source;
 			return;
 		}
 
-		const wrapper = document.createElement( 'div' );
-		wrapper.className = 'ica-ai-structured-response';
-		wrapper.dataset.icaFormattedSource = source;
-
-		paragraphs.forEach( ( paragraph ) => {
-			const paragraphElement = document.createElement( 'p' );
-			paragraphElement.textContent = paragraph;
-			wrapper.appendChild( paragraphElement );
-		} );
-
-		wrapper.appendChild( createList( items ) );
-		element.replaceWith( wrapper );
+		const paragraphText = paragraphs.join( ' ' );
+		element.textContent = paragraphText;
+		element.dataset.icaRenderedText = paragraphText;
+		element.insertAdjacentElement( 'afterend', createList( items ) );
 	}
 
 	function formatExplainCodeList( container ) {

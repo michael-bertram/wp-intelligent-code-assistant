@@ -27,7 +27,7 @@
 
 	const intro = panel.querySelector( 'p' );
 	if ( intro ) {
-		intro.textContent = 'Use the deterministic reader data above as context for an AI-assisted editorial interpretation. The suggestions remain evidence-based and are for the author to review.';
+		intro.textContent = config.i18n?.intro || 'Use the deterministic reader data above as context for an AI-assisted editorial interpretation. The suggestions remain evidence-based and are for the author to review.';
 	}
 
 	const button = panel.querySelector( 'button' );
@@ -56,11 +56,14 @@
 	const status = document.createElement( 'span' );
 	status.className = 'ica-ai-status';
 	status.setAttribute( 'aria-live', 'polite' );
+	status.setAttribute( 'role', 'status' );
 	header.insertAdjacentElement( 'afterend', status );
 
 	const results = document.createElement( 'div' );
 	results.className = 'ica-ai-results';
 	results.hidden = true;
+	results.setAttribute( 'aria-live', 'polite' );
+	results.setAttribute( 'aria-busy', 'false' );
 	panel.appendChild( results );
 
 	const escapeHtml = ( value ) => {
@@ -97,16 +100,18 @@
 		`;
 		results.hidden = false;
 		results.classList.add( 'is-loading' );
+		results.setAttribute( 'aria-busy', 'true' );
 	};
 
 	const renderInsights = ( data ) => {
 		const cards = [
-			renderList( 'Potential friction points', data.frictionPoints ),
-			renderList( 'Recommendations', data.recommendations ),
-			renderList( 'Suggested FAQs', data.suggestedFaqs ),
+			renderList( config.i18n?.frictionPoints || 'Potential friction points', data.frictionPoints ),
+			renderList( config.i18n?.recommendations || 'Recommendations', data.recommendations ),
+			renderList( config.i18n?.suggestedFaqs || 'Suggested FAQs', data.suggestedFaqs ),
 		].filter( Boolean ).join( '' );
 
 		results.classList.remove( 'is-loading' );
+		results.setAttribute( 'aria-busy', 'false' );
 		results.innerHTML = `
 			<div class="ica-ai-summary">${ escapeHtml( data.summary || '' ) }</div>
 			${ cards ? `<div class="ica-insight-grid">${ cards }</div>` : '' }
@@ -116,12 +121,14 @@
 
 	const showError = ( message ) => {
 		results.classList.remove( 'is-loading' );
-		results.innerHTML = `<div class="ica-ai-error">${ escapeHtml( message ) }</div>`;
+		results.setAttribute( 'aria-busy', 'false' );
+		results.innerHTML = `<div class="ica-ai-error" role="alert">${ escapeHtml( message ) }</div>`;
 		results.hidden = false;
 	};
 
 	button.addEventListener( 'click', async () => {
 		button.disabled = true;
+		button.setAttribute( 'aria-disabled', 'true' );
 		status.classList.add( 'is-loading' );
 		status.textContent = config.i18n?.generating || 'Generating insights…';
 		renderLoading();
@@ -145,13 +152,15 @@
 
 			renderInsights( data );
 			button.textContent = config.i18n?.regenerate || 'Regenerate insights';
-			status.textContent = 'Generated from current analytics';
+			status.textContent = config.i18n?.generated || 'Generated from current analytics';
 		} catch ( error ) {
 			showError( config.i18n?.error || 'AI insights are currently unavailable. Please try again later.' );
 			status.textContent = '';
 		} finally {
 			status.classList.remove( 'is-loading' );
 			button.disabled = false;
+			button.removeAttribute( 'aria-disabled' );
+			results.setAttribute( 'aria-busy', 'false' );
 		}
 	} );
 }() );

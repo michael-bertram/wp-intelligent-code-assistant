@@ -43,7 +43,7 @@ add_action(
 					'generate'   => __( 'Generate AI insights', 'intelligent-code-assistant' ),
 					'regenerate' => __( 'Regenerate insights', 'intelligent-code-assistant' ),
 					'generating' => __( 'Generating insights…', 'intelligent-code-assistant' ),
-					'error'      => __( 'Unable to generate AI insights. Please try again.', 'intelligent-code-assistant' ),
+					'error'      => __( 'AI insights are currently unavailable. Please try again later.', 'intelligent-code-assistant' ),
 				),
 			)
 		);

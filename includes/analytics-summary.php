@@ -89,14 +89,25 @@ function intelligent_code_assistant_get_analytics_summary( $post_id ) {
 		$block_id = isset( $row['block_id'] ) ? sanitize_text_field( $row['block_id'] ) : '';
 
 		if ( '' !== $block_id ) {
+			$row_filename = isset( $row['filename'] ) ? sanitize_file_name( $row['filename'] ) : '';
+			$row_language = isset( $row['language'] ) ? sanitize_text_field( $row['language'] ) : '';
+
 			if ( ! isset( $blocks[ $block_id ] ) ) {
 				$blocks[ $block_id ] = array(
 					'blockId'      => $block_id,
-					'filename'     => isset( $row['filename'] ) ? sanitize_file_name( $row['filename'] ) : '',
-					'language'     => isset( $row['language'] ) ? sanitize_text_field( $row['language'] ) : '',
+					'filename'     => $row_filename,
+					'language'     => $row_language,
 					'interactions' => 0,
 					'events'       => $events,
 				);
+			} else {
+				if ( '' === $blocks[ $block_id ]['filename'] && '' !== $row_filename ) {
+					$blocks[ $block_id ]['filename'] = $row_filename;
+				}
+
+				if ( '' === $blocks[ $block_id ]['language'] && '' !== $row_language ) {
+					$blocks[ $block_id ]['language'] = $row_language;
+				}
 			}
 
 			$blocks[ $block_id ]['interactions']++;

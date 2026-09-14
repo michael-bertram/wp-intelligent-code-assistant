@@ -221,8 +221,8 @@ add_action(
 	}
 );
 
+require_once __DIR__ . '/public-ai-hardening.php';
 require_once __DIR__ . '/analytics-dashboard.php';
 require_once __DIR__ . '/reader-insights-admin.php';
 require_once __DIR__ . '/reader-insights-ai.php';
-require_once __DIR__ . '/ai-diagnostics.php';
 require_once __DIR__ . '/reader-insights-assets.php';

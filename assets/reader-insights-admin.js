@@ -39,9 +39,24 @@
 	button.textContent = config.i18n?.generate || 'Generate AI insights';
 	button.classList.add( 'ica-generate-insights' );
 
+	const header = document.createElement( 'div' );
+	header.className = 'ica-ai-panel-header';
+
+	const headingCopy = document.createElement( 'div' );
+	headingCopy.className = 'ica-ai-panel-copy';
+
+	aiHeading.insertAdjacentElement( 'beforebegin', header );
+	headingCopy.appendChild( aiHeading );
+	if ( intro ) {
+		headingCopy.appendChild( intro );
+	}
+	header.appendChild( headingCopy );
+	header.appendChild( button );
+
 	const status = document.createElement( 'span' );
 	status.className = 'ica-ai-status';
-	button.insertAdjacentElement( 'afterend', status );
+	status.setAttribute( 'aria-live', 'polite' );
+	header.insertAdjacentElement( 'afterend', status );
 
 	const results = document.createElement( 'div' );
 	results.className = 'ica-ai-results';
@@ -67,6 +82,23 @@
 		`;
 	};
 
+	const renderLoading = () => {
+		results.innerHTML = `
+			<div class="ica-ai-shimmer" aria-hidden="true">
+				<div class="ica-shimmer-line ica-shimmer-line--wide"></div>
+				<div class="ica-shimmer-line"></div>
+				<div class="ica-shimmer-line ica-shimmer-line--short"></div>
+				<div class="ica-shimmer-grid">
+					<div class="ica-shimmer-card"></div>
+					<div class="ica-shimmer-card"></div>
+					<div class="ica-shimmer-card"></div>
+				</div>
+			</div>
+		`;
+		results.hidden = false;
+		results.classList.add( 'is-loading' );
+	};
+
 	const renderInsights = ( data ) => {
 		const cards = [
 			renderList( 'Potential friction points', data.frictionPoints ),
@@ -74,6 +106,7 @@
 			renderList( 'Suggested FAQs', data.suggestedFaqs ),
 		].filter( Boolean ).join( '' );
 
+		results.classList.remove( 'is-loading' );
 		results.innerHTML = `
 			<div class="ica-ai-summary">${ escapeHtml( data.summary || '' ) }</div>
 			${ cards ? `<div class="ica-insight-grid">${ cards }</div>` : '' }
@@ -82,6 +115,7 @@
 	};
 
 	const showError = ( message ) => {
+		results.classList.remove( 'is-loading' );
 		results.innerHTML = `<div class="ica-ai-error">${ escapeHtml( message ) }</div>`;
 		results.hidden = false;
 	};
@@ -90,7 +124,7 @@
 		button.disabled = true;
 		status.classList.add( 'is-loading' );
 		status.textContent = config.i18n?.generating || 'Generating insights…';
-		results.hidden = true;
+		renderLoading();
 
 		try {
 			const response = await fetch( config.endpoint, {

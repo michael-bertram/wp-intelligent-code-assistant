@@ -8,11 +8,139 @@
 		return;
 	}
 
+	const escapeHtml = ( value ) => {
+		const div = document.createElement( 'div' );
+		div.textContent = String( value ?? '' );
+		return div.innerHTML;
+	};
+
 	wrap.querySelectorAll( 'div[style*="background:#fff"]' ).forEach( ( card ) => {
 		if ( card.querySelector( 'strong' ) && card.querySelector( 'span' ) ) {
 			card.classList.add( 'ica-stat-card' );
 		}
 	} );
+
+	const diagnosticConfig = config.diagnostics || {};
+	if ( diagnosticConfig.adminEndpoint && diagnosticConfig.anonymousEndpoint && diagnosticConfig.token ) {
+		const diagnosticPanel = document.createElement( 'section' );
+		diagnosticPanel.className = 'ica-ai-panel ica-diagnostics-panel';
+		diagnosticPanel.style.marginTop = '24px';
+		diagnosticPanel.innerHTML = `
+			<div class="ica-ai-panel-header">
+				<div class="ica-ai-panel-copy">
+					<h2>${ escapeHtml( config.i18n?.diagnosticsTitle || 'Temporary AI Diagnostics' ) }</h2>
+					<p>${ escapeHtml( config.i18n?.diagnosticsIntro || 'Compares the authenticated admin request with a deliberately anonymous request. No API keys, tokens, Authorization headers, generated content, or raw provider messages are shown.' ) }</p>
+				</div>
+				<button type="button" class="button button-secondary ica-run-diagnostics">${ escapeHtml( config.i18n?.runDiagnostics || 'Run diagnostics' ) }</button>
+			</div>
+			<div class="ica-diagnostics-status" role="status" aria-live="polite"></div>
+			<div class="ica-diagnostics-results" aria-live="polite"></div>
+		`;
+		wrap.appendChild( diagnosticPanel );
+
+		const diagnosticButton = diagnosticPanel.querySelector( '.ica-run-diagnostics' );
+		const diagnosticStatus = diagnosticPanel.querySelector( '.ica-diagnostics-status' );
+		const diagnosticResults = diagnosticPanel.querySelector( '.ica-diagnostics-results' );
+
+		const renderDiagnosticContext = ( title, data ) => {
+			const connectors = Array.isArray( data?.connectors ) ? data.connectors : [];
+			const generation = data?.generationTest || {};
+
+			const connectorRows = connectors.length
+				? connectors.map( ( connector ) => `
+					<tr>
+						<td>${ escapeHtml( connector.name || connector.id ) }</td>
+						<td><code>${ escapeHtml( connector.id ) }</code></td>
+						<td>${ escapeHtml( connector.authMethod || '—' ) }</td>
+						<td>${ escapeHtml( connector.credentialSource || 'none' ) }</td>
+						<td>${ connector.hasCredential ? 'Yes' : 'No' }</td>
+					</tr>
+				` ).join( '' )
+				: '<tr><td colspan="5">No connectors reported.</td></tr>';
+
+			const generationResult = generation.ran
+				? generation.success
+					? 'Success'
+					: `Failed${ generation.errorCode ? ` — ${ escapeHtml( generation.errorCode ) }` : '' }${ generation.status ? ` (${ escapeHtml( generation.status ) })` : '' }`
+				: 'Not run';
+
+			return `
+				<section class="ica-insight-card" style="margin-top:16px;">
+					<h3>${ escapeHtml( title ) }</h3>
+					<p>
+						<strong>Logged in:</strong> ${ data?.loggedIn ? 'Yes' : 'No' }
+						&nbsp; · &nbsp;<strong>AI Client:</strong> ${ data?.aiClientAvailable ? 'Available' : 'Unavailable' }
+						&nbsp; · &nbsp;<strong>Generation test:</strong> ${ generationResult }
+					</p>
+					${ generation.exceptionClass ? `<p><strong>Exception class:</strong> <code>${ escapeHtml( generation.exceptionClass ) }</code></p>` : '' }
+					<div style="overflow-x:auto;">
+						<table class="widefat striped">
+							<thead>
+								<tr>
+									<th>Connector</th>
+									<th>ID</th>
+									<th>Auth</th>
+									<th>Credential source</th>
+									<th>Credential available</th>
+								</tr>
+							</thead>
+							<tbody>${ connectorRows }</tbody>
+						</table>
+					</div>
+				</section>
+			`;
+		};
+
+		diagnosticButton.addEventListener( 'click', async () => {
+			diagnosticButton.disabled = true;
+			diagnosticButton.setAttribute( 'aria-disabled', 'true' );
+			diagnosticStatus.textContent = config.i18n?.runningDiagnostics || 'Running diagnostics…';
+			diagnosticResults.innerHTML = '';
+
+			try {
+				const anonymousUrl = new URL( diagnosticConfig.anonymousEndpoint, window.location.origin );
+				anonymousUrl.searchParams.set( 'token', diagnosticConfig.token );
+
+				const [ adminResponse, anonymousResponse ] = await Promise.all( [
+					fetch( diagnosticConfig.adminEndpoint, {
+						method: 'GET',
+						credentials: 'same-origin',
+						headers: {
+							'X-WP-Nonce': config.nonce,
+						},
+					} ),
+					fetch( anonymousUrl.toString(), {
+						method: 'GET',
+						credentials: 'omit',
+						cache: 'no-store',
+					} ),
+				] );
+
+				if ( ! adminResponse.ok || ! anonymousResponse.ok ) {
+					throw new Error( 'diagnostics_failed' );
+				}
+
+				const [ adminData, anonymousData ] = await Promise.all( [
+					adminResponse.json(),
+					anonymousResponse.json(),
+				] );
+
+				diagnosticResults.innerHTML = `
+					<div class="ica-insight-grid">
+						${ renderDiagnosticContext( config.i18n?.adminContext || 'Authenticated admin request', adminData ) }
+						${ renderDiagnosticContext( config.i18n?.anonymousContext || 'Anonymous frontend-style request', anonymousData ) }
+					</div>
+				`;
+				diagnosticStatus.textContent = '';
+			} catch ( error ) {
+				diagnosticResults.innerHTML = `<div class="ica-ai-error" role="alert">${ escapeHtml( config.i18n?.diagnosticsFailed || 'Diagnostics could not be completed.' ) }</div>`;
+				diagnosticStatus.textContent = '';
+			} finally {
+				diagnosticButton.disabled = false;
+				diagnosticButton.removeAttribute( 'aria-disabled' );
+			}
+		} );
+	}
 
 	const aiHeading = Array.from( wrap.querySelectorAll( 'h2' ) ).find(
 		( heading ) => heading.textContent.trim().toLowerCase() === 'ai editorial insights'
@@ -65,12 +193,6 @@
 	results.setAttribute( 'aria-live', 'polite' );
 	results.setAttribute( 'aria-busy', 'false' );
 	panel.appendChild( results );
-
-	const escapeHtml = ( value ) => {
-		const div = document.createElement( 'div' );
-		div.textContent = String( value || '' );
-		return div.innerHTML;
-	};
 
 	const renderList = ( title, items ) => {
 		if ( ! Array.isArray( items ) || items.length === 0 ) {

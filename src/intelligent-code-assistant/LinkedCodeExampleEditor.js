@@ -1,5 +1,5 @@
 import { __ } from '@wordpress/i18n';
-import { BlockEditorProvider, BlockList, BlockTools } from '@wordpress/block-editor';
+import { BlockEditorProvider, BlockList } from '@wordpress/block-editor';
 import { Button, Notice, Spinner } from '@wordpress/components';
 import { useDispatch } from '@wordpress/data';
 import { useEntityBlockEditor } from '@wordpress/core-data';
@@ -12,6 +12,11 @@ import CodeExampleEditorContext from './CodeExampleEditorContext';
  * The article block remains a lightweight reference. This nested block editor
  * is backed directly by the Code Example post's content entity property, so it
  * uses the real Intelligent Code Assistant block editor and controls.
+ *
+ * Deliberately avoid BlockTools here. A second BlockTools scope creates a
+ * second editor toolbar/selection surface inside the post editor, which makes
+ * the reference feel like a block inside a block and prevents reliable canvas
+ * reselection. The host post editor already supplies the editing tools.
  */
 export default function LinkedCodeExampleEditor({ codeExampleId }) {
     const [blocks, onInput, onChange] = useEntityBlockEditor(
@@ -53,7 +58,7 @@ export default function LinkedCodeExampleEditor({ codeExampleId }) {
     if (!blocks) return <Spinner />;
 
     return (
-        <div className="ica-linked-code-example-editor">
+        <>
             {saveError && (
                 <Notice status="error" isDismissible={false}>
                     {saveError}
@@ -62,16 +67,14 @@ export default function LinkedCodeExampleEditor({ codeExampleId }) {
 
             <CodeExampleEditorContext.Provider value={true}>
                 <BlockEditorProvider value={blocks} onInput={onInput} onChange={handleChange}>
-                    <BlockTools>
-                        <BlockList />
-                    </BlockTools>
+                    <BlockList />
                 </BlockEditorProvider>
             </CodeExampleEditorContext.Provider>
 
             {isSaving && (
-                <div className="ica-code-example-saving" aria-live="polite">
-                    <Spinner /> {__('Saving Code Example…', 'intelligent-code-assistant')}
-                </div>
+                <span className="ica-code-example-saving screen-reader-text" aria-live="polite">
+                    {__('Saving Code Example…', 'intelligent-code-assistant')}
+                </span>
             )}
 
             {saveError && (
@@ -79,6 +82,6 @@ export default function LinkedCodeExampleEditor({ codeExampleId }) {
                     {__('Try saving again', 'intelligent-code-assistant')}
                 </Button>
             )}
-        </div>
+        </>
     );
 }

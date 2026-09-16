@@ -16,6 +16,10 @@ import { CanonicalCodeExampleContext } from './canonical-editor-context';
  */
 export default function CanonicalCodeExampleEditor({ codeExampleId }) {
     const entityId = Number(codeExampleId || 0);
+
+    // Keep every hook at the top level and execute the same hook sequence on
+    // every render. The entity can move from resolving to resolved without
+    // changing React's hook order.
     const [blocks, onInput, onChange] = useEntityBlockEditor(
         'postType',
         'ica_code_example',

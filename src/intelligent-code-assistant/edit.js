@@ -5,6 +5,7 @@ import { useSelect, useDispatch } from '@wordpress/data';
 import { useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import ReaderInsightsPanel from './ReaderInsightsPanel';
+import CodeExampleChooser from './CodeExampleChooser';
 import './editor.scss';
 
 export default function Edit({ attributes, setAttributes, clientId }) {
@@ -35,11 +36,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         headerBlockId,
         tutorialTitle,
         derivedTutorialContext,
-        codeExamples,
+        currentPostType,
+        currentPostId,
     } = useSelect((select) => {
         const { getBlockOrder, getBlock } = select('core/block-editor');
         const editorStore = select('core/editor');
-        const coreStore = select('core');
         const innerBlockIds = getBlockOrder(clientId);
 
         let contentBlock = null;
@@ -53,12 +54,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         }
 
         const postTitle = editorStore?.getEditedPostAttribute?.('title') || '';
-        const availableCodeExamples = coreStore?.getEntityRecords?.('postType', 'ica_code_example', {
-            per_page: 100,
-            orderby: 'title',
-            order: 'asc',
-            status: ['publish', 'draft', 'pending', 'private'],
-        }) || [];
+        const postType = editorStore?.getCurrentPostType?.() || '';
+        const postId = Number(editorStore?.getCurrentPostId?.() || 0);
         const topLevelIds = getBlockOrder();
         const currentIndex = topLevelIds.indexOf(clientId);
         const contextFragments = [];
@@ -72,64 +69,43 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                     const rawContent = block.attributes?.content || '';
                     const text = rawContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
-                    if (text) {
-                        contextFragments.unshift(text);
-                    }
-
-                    if (block.name === 'core/heading') {
-                        break;
-                    }
+                    if (text) contextFragments.unshift(text);
+                    if (block.name === 'core/heading') break;
                 }
             }
         }
 
         const contextResult = contextFragments.join('\n').slice(0, 1200);
-
-        if (!contentBlock) {
-            return {
-                cleanRawText: '',
-                lineCount: 1,
-                headerBlockId: headerBlock?.clientId || null,
-                tutorialTitle: postTitle,
-                derivedTutorialContext: contextResult,
-                codeExamples: availableCodeExamples,
-            };
-        }
-
-        const rawContent = contentBlock.attributes?.content ||
-                             contentBlock.attributes?.code ||
-                             contentBlock.attributes?.value ||
-                             '';
-
+        const rawContent = contentBlock?.attributes?.content ||
+            contentBlock?.attributes?.code ||
+            contentBlock?.attributes?.value || '';
         const textWithNewlines = rawContent
             .replace(/<br\s*\/?>/gi, '\n')
             .replace(/<\/p><p>/gi, '\n')
             .replace(/<\/div><div>/gi, '\n');
-
         const cleanText = textWithNewlines.replace(/<[^>]*>/g, '');
-        const linesArray = cleanText.split('\n');
-        const calculatedLines = cleanText.trim() ? linesArray.length : 1;
 
         return {
             cleanRawText: cleanText,
-            lineCount: calculatedLines,
+            lineCount: cleanText.trim() ? cleanText.split('\n').length : 1,
             headerBlockId: headerBlock?.clientId || null,
             tutorialTitle: postTitle,
             derivedTutorialContext: contextResult,
-            codeExamples: availableCodeExamples,
+            currentPostType: postType,
+            currentPostId: postId,
         };
     }, [clientId]);
 
+    const isCanonicalCodeExample = currentPostType === 'ica_code_example';
+    const hasLegacyLocalContent = Boolean(cleanRawText.trim());
+    const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLegacyLocalContent;
+
+    if (isCanonicalCodeExample && currentPostId > 0 && Number(codeExampleId || 0) !== currentPostId) {
+        setAttributes({ codeExampleId: currentPostId });
+    }
+
     const characterCount = cleanRawText.replace(/\r/g, '').length;
     const effectiveTutorialContext = tutorialContextOverride || derivedTutorialContext;
-    const selectedCodeExample = codeExamples.find((example) => example.id === Number(codeExampleId || 0));
-    const codeExampleOptions = [
-        { label: __('Standalone code (not linked)', 'intelligent-code-assistant'), value: '0' },
-        ...codeExamples.map((example) => ({
-            label: example.title?.rendered || `${__('Code Example', 'intelligent-code-assistant')} #${example.id}`,
-            value: String(example.id),
-        })),
-    ];
 
     const isLineHighlighted = (lineNumber, highlightExpression) => {
         if (!highlightExpression) return false;
@@ -156,36 +132,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         const trimmedCode = normalizeCodeForDetection(code.trim());
         if (!trimmedCode) return '';
 
-        if (
-            (trimmedCode.startsWith('{') && trimmedCode.endsWith('}')) ||
-            (trimmedCode.startsWith('[') && trimmedCode.endsWith(']'))
-        ) {
+        if ((trimmedCode.startsWith('{') && trimmedCode.endsWith('}')) || (trimmedCode.startsWith('[') && trimmedCode.endsWith(']'))) {
             try {
                 JSON.parse(trimmedCode);
                 return 'JSON';
-            } catch (error) {
-                // Continue with the remaining language checks.
-            }
+            } catch (error) {}
         }
 
         if (/^\s*(?:<!doctype\s+html|<!--|<\/?[a-z][\w:-]*(?:\s[^<>]*?)?>)/i.test(trimmedCode)) return 'HTML';
-
-        if (
-            /<\?php|\bnamespace\s+[A-Za-z_\\]|\$[A-Za-z_]\w*|->|::|\b(add_action|add_filter|wp_register_ability|register_block_type)\s*\(/i.test(trimmedCode)
-        ) {
-            return 'PHP';
-        }
-
-        if (
-            /\b(import|export|const|let|var|async|await|function)\b|=>|\bconsole\.|\bdocument\.|\bwindow\.|\bJSON\./.test(trimmedCode)
-        ) {
-            return 'JS';
-        }
-
+        if (/<\?php|\bnamespace\s+[A-Za-z_\\]|\$[A-Za-z_]\w*|->|::|\b(add_action|add_filter|wp_register_ability|register_block_type)\s*\(/i.test(trimmedCode)) return 'PHP';
+        if (/\b(import|export|const|let|var|async|await|function)\b|=>|\bconsole\.|\bdocument\.|\bwindow\.|\bJSON\./.test(trimmedCode)) return 'JS';
         if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/im.test(trimmedCode)) return 'SQL';
         if (/^\s*#!.*\b(bash|sh)\b/m.test(trimmedCode) || /^\s*(echo|cd|pwd|mkdir|chmod|curl|grep)\s+/m.test(trimmedCode)) return 'Bash';
         if (/([.#]?[A-Za-z][\w-]*|\*)\s*(?:,[^{]+)?\{[^}]*:[^}]*;?\s*\}/s.test(trimmedCode)) return 'CSS';
-
         return '';
     };
 
@@ -197,26 +156,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
         setIsAnalyzing(true);
         setAiError(null);
-
-        const requestData = {
-            code: cleanRawText,
-        };
+        const requestData = { code: cleanRawText };
 
         try {
             let response;
             try {
-                response = await apiFetch({
-                    path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run',
-                    method: 'POST',
-                    data: requestData,
-                });
+                response = await apiFetch({ path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run', method: 'POST', data: requestData });
             } catch (routeErr) {
                 if (routeErr.code === 'rest_no_route' || routeErr.status === 404) {
-                    response = await apiFetch({
-                        path: '/intelligent-code-assistant/v1/auto-fill-metadata',
-                        method: 'POST',
-                        data: requestData,
-                    });
+                    response = await apiFetch({ path: '/intelligent-code-assistant/v1/auto-fill-metadata', method: 'POST', data: requestData });
                 } else {
                     throw routeErr;
                 }
@@ -233,17 +181,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                 showLineNumbers: response.showLineNumbers ?? showLineNumbers,
             });
 
-            if (headerBlockId && response.title) {
-                updateBlockAttributes(headerBlockId, {
-                    title: response.title,
-                });
-            }
+            if (headerBlockId && response.title) updateBlockAttributes(headerBlockId, { title: response.title });
         } catch (err) {
             const rawMessage = err.message || __('Failed to auto-fill metadata.', 'intelligent-code-assistant');
-            const cleanMessage = rawMessage.includes('<p>')
-                ? __('Server error occurred during execution. Check WP debug log.', 'intelligent-code-assistant')
-                : rawMessage;
-            setAiError(cleanMessage);
+            setAiError(rawMessage.includes('<p>') ? __('Server error occurred during execution. Check WP debug log.', 'intelligent-code-assistant') : rawMessage);
         } finally {
             setIsAnalyzing(false);
         }
@@ -251,11 +192,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
     const blockProps = useBlockProps({
         className: `wp-block-wpe-intelligent-code-assistant-editor ${isDarkMode ? 'dark-theme' : ''} ${isCompact ? 'is-compact' : ''} ${showLineNumbers ? 'has-line-numbers' : ''}`,
-        style: {
-            '--editor-code-font-size': fontSize,
-            '--panel-max-height': maxHeight,
-        },
+        style: { '--editor-code-font-size': fontSize, '--panel-max-height': maxHeight },
     });
+
+    if (needsCodeExample) {
+        return (
+            <div {...blockProps}>
+                <CodeExampleChooser onSelect={(id) => setAttributes({ codeExampleId: Number(id) })} />
+            </div>
+        );
+    }
 
     const maxHeightOptions = [
         { label: __('No Limit (Scroll disabled)', 'intelligent-code-assistant'), value: 'none' },
@@ -263,7 +209,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         { label: __('Medium (400px)', 'intelligent-code-assistant'), value: '400px' },
         { label: __('Tall (600px)', 'intelligent-code-assistant'), value: '600px' },
     ];
-
     const fontSizeOptions = [
         { label: __('Small (12px)', 'intelligent-code-assistant'), value: '12px' },
         { label: __('Normal (14px)', 'intelligent-code-assistant'), value: '14px' },
@@ -274,240 +219,64 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     return (
         <>
             <InspectorControls>
-                <PanelBody title={__('Code Example', 'intelligent-code-assistant')} initialOpen={true}>
-                    <SelectControl
-                        label={__('Code Example identity', 'intelligent-code-assistant')}
-                        value={String(codeExampleId || 0)}
-                        options={codeExampleOptions}
-                        onChange={(value) => setAttributes({ codeExampleId: Number(value) })}
-                        help={__('Link this block to a Code Example so interactions can be analysed across articles. The code in this article remains its own snapshot.', 'intelligent-code-assistant')}
-                    />
-                    {Number(codeExampleId || 0) > 0 && (
-                        <p style={{ marginTop: '8px', color: '#646970', fontSize: '12px' }}>
-                            {selectedCodeExample
-                                ? `${__('Linked to', 'intelligent-code-assistant')}: ${selectedCodeExample.title?.rendered || `#${codeExampleId}`} (#${codeExampleId})`
-                                : `${__('Linked Code Example', 'intelligent-code-assistant')} #${codeExampleId}`}
-                        </p>
-                    )}
-                </PanelBody>
-
                 <PanelBody title={__('AI Features', 'intelligent-code-assistant')} initialOpen={true}>
-                    <ToggleControl
-                        label={__('Enable AI Features', 'intelligent-code-assistant')}
-                        checked={enableAIAssistant}
-                        onChange={(value) => setAttributes({ enableAIAssistant: value })}
-                        help={
-                            enableAIAssistant
-                                ? __('AI-powered authoring tools and reader assistance are enabled for this code block.', 'intelligent-code-assistant')
-                                : __('Enable AI features for authoring assistance and the frontend AI Assistant.', 'intelligent-code-assistant')
-                        }
-                    />
-
+                    <ToggleControl label={__('Enable AI Features', 'intelligent-code-assistant')} checked={enableAIAssistant} onChange={(value) => setAttributes({ enableAIAssistant: value })} />
                     {enableAIAssistant && (
                         <>
-                            <Button
-                                variant="secondary"
-                                isBusy={isAnalyzing}
-                                disabled={isAnalyzing || !cleanRawText.trim()}
-                                onClick={handleAutoFill}
-                                style={{ width: '100%', justifyContent: 'center', marginBottom: '12px' }}
-                            >
+                            <Button variant="secondary" isBusy={isAnalyzing} disabled={isAnalyzing || !cleanRawText.trim()} onClick={handleAutoFill} style={{ width: '100%', justifyContent: 'center', marginBottom: '12px' }}>
                                 {isAnalyzing ? <Spinner /> : __('Auto-Fill Code Details', 'intelligent-code-assistant')}
                             </Button>
-
-                            {aiError && (
-                                <p style={{ color: '#cc1818', fontSize: '12px', marginBottom: '12px' }}>
-                                    {aiError}
-                                </p>
-                            )}
-
+                            {aiError && <p style={{ color: '#cc1818', fontSize: '12px', marginBottom: '12px' }}>{aiError}</p>}
                             <div style={{ marginTop: '16px' }}>
-                                <strong style={{ display: 'block', marginBottom: '6px' }}>
-                                    {__('Tutorial title', 'intelligent-code-assistant')}
-                                </strong>
-                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', marginBottom: '14px' }}>
-                                    {tutorialTitle || __('No tutorial title detected.', 'intelligent-code-assistant')}
-                                </div>
-
-                                <strong style={{ display: 'block', marginBottom: '6px' }}>
-                                    {__('Tutorial context', 'intelligent-code-assistant')}
-                                </strong>
-                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', whiteSpace: 'pre-wrap', marginBottom: '10px' }}>
-                                    {effectiveTutorialContext || __('No nearby tutorial context detected.', 'intelligent-code-assistant')}
-                                </div>
-
-                                {!isEditingContext && (
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => setIsEditingContext(true)}
-                                        style={{ marginBottom: '8px' }}
-                                    >
-                                        {__('Edit context', 'intelligent-code-assistant')}
-                                    </Button>
-                                )}
-
+                                <strong style={{ display: 'block', marginBottom: '6px' }}>{__('Tutorial title', 'intelligent-code-assistant')}</strong>
+                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', marginBottom: '14px' }}>{tutorialTitle || __('No tutorial title detected.', 'intelligent-code-assistant')}</div>
+                                <strong style={{ display: 'block', marginBottom: '6px' }}>{__('Tutorial context', 'intelligent-code-assistant')}</strong>
+                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', whiteSpace: 'pre-wrap', marginBottom: '10px' }}>{effectiveTutorialContext || __('No nearby tutorial context detected.', 'intelligent-code-assistant')}</div>
+                                {!isEditingContext && <Button variant="secondary" onClick={() => setIsEditingContext(true)}>{__('Edit context', 'intelligent-code-assistant')}</Button>}
                                 {isEditingContext && (
                                     <>
-                                        <TextareaControl
-                                            label={__('Edit tutorial context', 'intelligent-code-assistant')}
-                                            value={tutorialContextOverride || derivedTutorialContext}
-                                            onChange={(value) => setAttributes({ tutorialContextOverride: value })}
-                                            help={__('This custom context will replace the automatically detected context for this code block.', 'intelligent-code-assistant')}
-                                        />
-                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                            <Button
-                                                variant="primary"
-                                                onClick={() => setIsEditingContext(false)}
-                                            >
-                                                {__('Done', 'intelligent-code-assistant')}
-                                            </Button>
-                                            {tutorialContextOverride && (
-                                                <Button
-                                                    variant="tertiary"
-                                                    onClick={() => {
-                                                        setAttributes({ tutorialContextOverride: '' });
-                                                        setIsEditingContext(false);
-                                                    }}
-                                                >
-                                                    {__('Use detected context', 'intelligent-code-assistant')}
-                                                </Button>
-                                            )}
-                                        </div>
+                                        <TextareaControl label={__('Edit tutorial context', 'intelligent-code-assistant')} value={tutorialContextOverride || derivedTutorialContext} onChange={(value) => setAttributes({ tutorialContextOverride: value })} />
+                                        <Button variant="primary" onClick={() => setIsEditingContext(false)}>{__('Done', 'intelligent-code-assistant')}</Button>
                                     </>
                                 )}
-
-                                <p style={{ marginTop: '6px', color: '#646970', fontSize: '12px' }}>
-                                    {tutorialContextOverride
-                                        ? __('Using custom context for this code block.', 'intelligent-code-assistant')
-                                        : __('Using context detected from the nearest heading and paragraphs.', 'intelligent-code-assistant')}
-                                </p>
                             </div>
                         </>
                     )}
                 </PanelBody>
-
                 <ReaderInsightsPanel />
-
                 <PanelBody title={__('Code Display Settings', 'intelligent-code-assistant')} initialOpen={false}>
-                    <TextControl
-                        label={__('Filename / Label', 'intelligent-code-assistant')}
-                        value={filename || ''}
-                        onChange={(value) => setAttributes({ filename: value })}
-                        help={__('Filename shown with the code example. AI can suggest this when AI Features are enabled.', 'intelligent-code-assistant')}
-                    />
-                    <TextControl
-                        label={__('Highlight Lines (e.g., 3, 5-8)', 'intelligent-code-assistant')}
-                        value={highlightLines || ''}
-                        onChange={(value) => setAttributes({ highlightLines: value })}
-                        help={__('Comma-separated line numbers or ranges to highlight.', 'intelligent-code-assistant')}
-                    />
-                    <ToggleControl
-                        label={__('Show Language Badge', 'intelligent-code-assistant')}
-                        checked={showLanguageBadge}
-                        onChange={(value) => setAttributes({ showLanguageBadge: value })}
-                    />
-                    {showLanguageBadge && (
-                        <SelectControl
-                            label={__('Code Language', 'intelligent-code-assistant')}
-                            value={codeLanguage || ''}
-                            options={[
-                                { label: __('Auto / Not set', 'intelligent-code-assistant'), value: '' },
-                                { label: 'PHP', value: 'PHP' },
-                                { label: 'JavaScript', value: 'JS' },
-                                { label: 'CSS', value: 'CSS' },
-                                { label: 'HTML', value: 'HTML' },
-                                { label: 'JSON', value: 'JSON' },
-                                { label: 'SQL', value: 'SQL' },
-                                { label: 'Bash', value: 'Bash' },
-                            ]}
-                            onChange={(value) => setAttributes({ codeLanguage: value })}
-                        />
-                    )}
-                    <ToggleControl
-                        label={__('Show Line Numbers', 'intelligent-code-assistant')}
-                        checked={showLineNumbers}
-                        onChange={(value) => {
-                            if (value && isCompact) {
-                                setAttributes({ showLineNumbers: value, isCompact: false });
-                            } else {
-                                setAttributes({ showLineNumbers: value });
-                            }
-                        }}
-                    />
+                    <TextControl label={__('Filename / Label', 'intelligent-code-assistant')} value={filename || ''} onChange={(value) => setAttributes({ filename: value })} />
+                    <TextControl label={__('Highlight Lines (e.g., 3, 5-8)', 'intelligent-code-assistant')} value={highlightLines || ''} onChange={(value) => setAttributes({ highlightLines: value })} />
+                    <ToggleControl label={__('Show Language Badge', 'intelligent-code-assistant')} checked={showLanguageBadge} onChange={(value) => setAttributes({ showLanguageBadge: value })} />
+                    {showLanguageBadge && <SelectControl label={__('Code Language', 'intelligent-code-assistant')} value={codeLanguage || ''} options={[{ label: __('Auto / Not set', 'intelligent-code-assistant'), value: '' }, { label: 'PHP', value: 'PHP' }, { label: 'JavaScript', value: 'JS' }, { label: 'CSS', value: 'CSS' }, { label: 'HTML', value: 'HTML' }, { label: 'JSON', value: 'JSON' }, { label: 'SQL', value: 'SQL' }, { label: 'Bash', value: 'Bash' }]} onChange={(value) => setAttributes({ codeLanguage: value })} />}
+                    <ToggleControl label={__('Show Line Numbers', 'intelligent-code-assistant')} checked={showLineNumbers} onChange={(value) => setAttributes({ showLineNumbers: value, ...(value && isCompact ? { isCompact: false } : {}) })} />
                 </PanelBody>
-
                 <PanelBody title={__('Design & Layout', 'intelligent-code-assistant')} initialOpen={false}>
-                    <ToggleControl
-                        label={__('Use Dark Theme', 'intelligent-code-assistant')}
-                        checked={isDarkMode}
-                        onChange={(value) => setAttributes({ isDarkMode: value })}
-                    />
-                    <ToggleControl
-                        label={__('Compact Spacing Layout', 'intelligent-code-assistant')}
-                        checked={isCompact}
-                        disabled={showLineNumbers}
-                        onChange={(value) => setAttributes({ isCompact: value })}
-                        help={showLineNumbers ? __('Compact mode is disabled when line numbers are enabled.', 'intelligent-code-assistant') : ''}
-                    />
-                    <SelectControl
-                        label={__('Max Panel Height', 'intelligent-code-assistant')}
-                        value={maxHeight}
-                        options={maxHeightOptions}
-                        onChange={(value) => setAttributes({ maxHeight: value })}
-                    />
-                    <SelectControl
-                        label={__('Code Font Size', 'intelligent-code-assistant')}
-                        value={fontSize}
-                        options={fontSizeOptions}
-                        onChange={(value) => setAttributes({ fontSize: value })}
-                    />
+                    <ToggleControl label={__('Use Dark Theme', 'intelligent-code-assistant')} checked={isDarkMode} onChange={(value) => setAttributes({ isDarkMode: value })} />
+                    <ToggleControl label={__('Compact Spacing Layout', 'intelligent-code-assistant')} checked={isCompact} disabled={showLineNumbers} onChange={(value) => setAttributes({ isCompact: value })} />
+                    <SelectControl label={__('Max Panel Height', 'intelligent-code-assistant')} value={maxHeight} options={maxHeightOptions} onChange={(value) => setAttributes({ maxHeight: value })} />
+                    <SelectControl label={__('Code Font Size', 'intelligent-code-assistant')} value={fontSize} options={fontSizeOptions} onChange={(value) => setAttributes({ fontSize: value })} />
                 </PanelBody>
             </InspectorControls>
 
             <div {...blockProps}>
                 <div className="editor-combined-container">
-                    {showLanguageBadge && codeLanguage && (
-                        <span className={`code-badge lang-${codeLanguage.toLowerCase()}`}>
-                            {codeLanguage}
-                        </span>
-                    )}
-
+                    {showLanguageBadge && codeLanguage && <span className={`code-badge lang-${codeLanguage.toLowerCase()}`}>{codeLanguage}</span>}
                     <div className="editor-inner-blocks-wrapper">
-                        <InnerBlocks
-                            allowedBlocks={['wpe/code-header', 'wpe/code-content']}
-                            template={[['wpe/code-header', {}], ['wpe/code-content', {}]]}
-                            templateLock="all"
-                        />
-
+                        <InnerBlocks allowedBlocks={['wpe/code-header', 'wpe/code-content']} template={[[ 'wpe/code-header', {} ], [ 'wpe/code-content', {} ]]} templateLock="all" />
                         {showLineNumbers && (
                             <div className="line-numbers-gutter" aria-hidden="true">
                                 {Array.from({ length: lineCount }).map((_, index) => {
                                     const lineNum = index + 1;
-                                    const highlighted = isLineHighlighted(lineNum, highlightLines);
-                                    return (
-                                        <span
-                                            key={index}
-                                            className={highlighted ? 'is-highlighted' : ''}
-                                        >
-                                            {lineNum}
-                                        </span>
-                                    );
+                                    return <span key={index} className={isLineHighlighted(lineNum, highlightLines) ? 'is-highlighted' : ''}>{lineNum}</span>;
                                 })}
                             </div>
                         )}
                     </div>
-
                     <div className="code-footer">
                         <div className="code-analytics-meta">
-                            {filename && (
-                                <>
-                                    <span className="code-filename">{filename}</span>
-                                    <span className="meta-divider">•</span>
-                                </>
-                            )}
-                            <span>{lineCount} {lineCount === 1 ? 'line' : 'lines'}</span>
-                            <span className="meta-divider">•</span>
-                            <span>{characterCount.toLocaleString()} chars</span>
+                            {filename && <><span className="code-filename">{filename}</span><span className="meta-divider">•</span></>}
+                            <span>{lineCount} {lineCount === 1 ? 'line' : 'lines'}</span><span className="meta-divider">•</span><span>{characterCount.toLocaleString()} chars</span>
                         </div>
                     </div>
                 </div>

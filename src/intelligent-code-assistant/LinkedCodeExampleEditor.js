@@ -7,16 +7,40 @@ import { useEffect, useRef, useState } from '@wordpress/element';
 import CodeExampleEditorContext from './CodeExampleEditorContext';
 
 /**
+ * Runs inside the entity-backed BlockEditorProvider, so block-editor dispatches
+ * target the canonical Code Example editor rather than the embedding article.
+ * Clicking anywhere in the Code Example selects its root Intelligent Code
+ * Assistant block after Gutenberg has processed the click. This makes the
+ * canonical block's InspectorControls reliably appear from the whole surface.
+ */
+function CanonicalSelectionSurface({ rootClientId, children }) {
+    const { selectBlock } = useDispatch('core/block-editor');
+
+    const selectCanonicalBlock = () => {
+        if (!rootClientId) return;
+
+        window.requestAnimationFrame(() => {
+            selectBlock(rootClientId);
+        });
+    };
+
+    return (
+        <div
+            className="ica-canonical-selection-surface"
+            onMouseDownCapture={selectCanonicalBlock}
+            onFocusCapture={selectCanonicalBlock}
+        >
+            {children}
+        </div>
+    );
+}
+
+/**
  * Edit a canonical Code Example entity from inside an article.
  *
- * The article block remains a lightweight reference. This nested block editor
- * is backed directly by the Code Example post's content entity property, so it
- * uses the real Intelligent Code Assistant block editor and controls.
- *
- * Deliberately avoid BlockTools here. A second BlockTools scope creates a
- * second editor toolbar/selection surface inside the post editor, which makes
- * the reference feel like a block inside a block and prevents reliable canvas
- * reselection. The host post editor already supplies the editing tools.
+ * The article stores only the Code Example relationship. The nested editor is
+ * backed directly by the Code Example post's content entity property, so the
+ * code, attributes and InspectorControls all belong to the canonical block.
  */
 export default function LinkedCodeExampleEditor({ codeExampleId }) {
     const [blocks, onInput, onChange] = useEntityBlockEditor(
@@ -57,6 +81,9 @@ export default function LinkedCodeExampleEditor({ codeExampleId }) {
 
     if (!blocks) return <Spinner />;
 
+    const canonicalBlock = blocks.find((block) => block.name === 'wpe/intelligent-code-assistant') || blocks[0];
+    const rootClientId = canonicalBlock?.clientId || '';
+
     return (
         <>
             {saveError && (
@@ -67,7 +94,9 @@ export default function LinkedCodeExampleEditor({ codeExampleId }) {
 
             <CodeExampleEditorContext.Provider value={true}>
                 <BlockEditorProvider value={blocks} onInput={onInput} onChange={handleChange}>
-                    <BlockList />
+                    <CanonicalSelectionSurface rootClientId={rootClientId}>
+                        <BlockList />
+                    </CanonicalSelectionSurface>
                 </BlockEditorProvider>
             </CodeExampleEditorContext.Provider>
 

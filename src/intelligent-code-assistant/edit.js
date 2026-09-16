@@ -1,8 +1,9 @@
 import { __ } from '@wordpress/i18n';
-import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl } from '@wordpress/components';
+import { useBlockProps, InnerBlocks, InspectorControls, BlockPreview } from '@wordpress/block-editor';
+import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl, Notice } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { useState } from '@wordpress/element';
+import { parse } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import CodeExampleChooser from './CodeExampleChooser';
 import './editor.scss';
@@ -26,6 +27,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiError, setAiError] = useState(null);
     const [isEditingContext, setIsEditingContext] = useState(false);
+    const [isChangingCodeExample, setIsChangingCodeExample] = useState(false);
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
 
@@ -37,9 +39,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         derivedTutorialContext,
         currentPostType,
         currentPostId,
+        linkedCodeExample,
+        isResolvingCodeExample,
     } = useSelect((select) => {
         const { getBlockOrder, getBlock } = select('core/block-editor');
         const editorStore = select('core/editor');
+        const coreStore = select('core');
         const innerBlockIds = getBlockOrder(clientId);
 
         let contentBlock = null;
@@ -55,6 +60,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         const postTitle = editorStore?.getEditedPostAttribute?.('title') || '';
         const postType = editorStore?.getCurrentPostType?.() || '';
         const postId = Number(editorStore?.getCurrentPostId?.() || 0);
+        const linkedId = Number(codeExampleId || 0);
+        const linkedRecord = linkedId > 0 && postType !== 'ica_code_example'
+            ? coreStore.getEntityRecord('postType', 'ica_code_example', linkedId)
+            : null;
+        const resolving = linkedId > 0 && postType !== 'ica_code_example'
+            ? coreStore.isResolving('getEntityRecord', ['postType', 'ica_code_example', linkedId])
+            : false;
         const topLevelIds = getBlockOrder();
         const currentIndex = topLevelIds.indexOf(clientId);
         const contextFragments = [];
@@ -67,7 +79,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                 if (block.name === 'core/paragraph' || block.name === 'core/heading') {
                     const rawContent = block.attributes?.content || '';
                     const text = rawContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-
                     if (text) contextFragments.unshift(text);
                     if (block.name === 'core/heading') break;
                 }
@@ -75,9 +86,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         }
 
         const contextResult = contextFragments.join('\n').slice(0, 1200);
-        const rawContent = contentBlock?.attributes?.content ||
-            contentBlock?.attributes?.code ||
-            contentBlock?.attributes?.value || '';
+        const rawContent = contentBlock?.attributes?.content || contentBlock?.attributes?.code || contentBlock?.attributes?.value || '';
         const textWithNewlines = rawContent
             .replace(/<br\s*\/?>/gi, '\n')
             .replace(/<\/p><p>/gi, '\n')
@@ -92,12 +101,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             derivedTutorialContext: contextResult,
             currentPostType: postType,
             currentPostId: postId,
+            linkedCodeExample: linkedRecord,
+            isResolvingCodeExample: resolving,
         };
-    }, [clientId]);
+    }, [clientId, codeExampleId]);
 
     const isCanonicalCodeExample = currentPostType === 'ica_code_example';
     const hasLegacyLocalContent = Boolean(cleanRawText.trim());
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLegacyLocalContent;
+    const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;
 
     if (isCanonicalCodeExample && currentPostId > 0 && Number(codeExampleId || 0) !== currentPostId) {
         setAttributes({ codeExampleId: currentPostId });
@@ -113,31 +125,21 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             const parts = range.split('-').map((n) => parseInt(n.trim(), 10));
             if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
                 if (lineNumber >= parts[0] && lineNumber <= parts[1]) return true;
-            } else if (parts.length === 1 && !isNaN(parts[0])) {
-                if (lineNumber === parts[0]) return true;
-            }
+            } else if (parts.length === 1 && !isNaN(parts[0]) && lineNumber === parts[0]) return true;
         }
         return false;
     };
 
     const normalizeCodeForDetection = (code) => code
-        .replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>')
-        .replace(/&quot;/gi, '"')
-        .replace(/&#0*39;|&apos;/gi, "'")
-        .replace(/&amp;/gi, '&');
+        .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"')
+        .replace(/&#0*39;|&apos;/gi, "'").replace(/&amp;/gi, '&');
 
     const detectCodeLanguage = (code) => {
         const trimmedCode = normalizeCodeForDetection(code.trim());
         if (!trimmedCode) return '';
-
         if ((trimmedCode.startsWith('{') && trimmedCode.endsWith('}')) || (trimmedCode.startsWith('[') && trimmedCode.endsWith(']'))) {
-            try {
-                JSON.parse(trimmedCode);
-                return 'JSON';
-            } catch (error) {}
+            try { JSON.parse(trimmedCode); return 'JSON'; } catch (error) {}
         }
-
         if (/^\s*(?:<!doctype\s+html|<!--|<\/?[a-z][\w:-]*(?:\s[^<>]*?)?>)/i.test(trimmedCode)) return 'HTML';
         if (/<\?php|\bnamespace\s+[A-Za-z_\\]|\$[A-Za-z_]\w*|->|::|\b(add_action|add_filter|wp_register_ability|register_block_type)\s*\(/i.test(trimmedCode)) return 'PHP';
         if (/\b(import|export|const|let|var|async|await|function)\b|=>|\bconsole\.|\bdocument\.|\bwindow\.|\bJSON\./.test(trimmedCode)) return 'JS';
@@ -152,34 +154,25 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             setAiError(__('Please enter some code into the block first.', 'intelligent-code-assistant'));
             return;
         }
-
         setIsAnalyzing(true);
         setAiError(null);
-        const requestData = { code: cleanRawText };
-
         try {
             let response;
             try {
-                response = await apiFetch({ path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run', method: 'POST', data: requestData });
+                response = await apiFetch({ path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run', method: 'POST', data: { code: cleanRawText } });
             } catch (routeErr) {
                 if (routeErr.code === 'rest_no_route' || routeErr.status === 404) {
-                    response = await apiFetch({ path: '/intelligent-code-assistant/v1/auto-fill-metadata', method: 'POST', data: requestData });
-                } else {
-                    throw routeErr;
-                }
+                    response = await apiFetch({ path: '/intelligent-code-assistant/v1/auto-fill-metadata', method: 'POST', data: { code: cleanRawText } });
+                } else throw routeErr;
             }
-
             const detectedLanguage = detectCodeLanguage(cleanRawText);
             const responseLanguage = response.codeLanguage || '';
-            const nextLanguage = detectedLanguage || (responseLanguage !== 'PHP' ? responseLanguage : '');
-
             setAttributes({
-                codeLanguage: nextLanguage,
+                codeLanguage: detectedLanguage || (responseLanguage !== 'PHP' ? responseLanguage : ''),
                 filename: response.filename || filename,
                 highlightLines: response.highlightLines ?? highlightLines,
                 showLineNumbers: response.showLineNumbers ?? showLineNumbers,
             });
-
             if (headerBlockId && response.title) updateBlockAttributes(headerBlockId, { title: response.title });
         } catch (err) {
             const rawMessage = err.message || __('Failed to auto-fill metadata.', 'intelligent-code-assistant');
@@ -194,10 +187,51 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         style: { '--editor-code-font-size': fontSize, '--panel-max-height': maxHeight },
     });
 
-    if (needsCodeExample) {
+    if (needsCodeExample || (isLinkedReference && isChangingCodeExample)) {
         return (
             <div {...blockProps}>
-                <CodeExampleChooser onSelect={(id) => setAttributes({ codeExampleId: Number(id) })} />
+                <CodeExampleChooser onSelect={(id) => {
+                    setAttributes({ codeExampleId: Number(id) });
+                    setIsChangingCodeExample(false);
+                }} />
+            </div>
+        );
+    }
+
+    if (isLinkedReference) {
+        let previewBlocks = [];
+        const rawCanonicalContent = linkedCodeExample?.content?.raw || linkedCodeExample?.content?.rendered || '';
+        if (rawCanonicalContent) {
+            previewBlocks = parse(rawCanonicalContent)
+                .filter((previewBlock) => previewBlock.name === 'wpe/intelligent-code-assistant')
+                .map((previewBlock) => ({
+                    ...previewBlock,
+                    attributes: { ...previewBlock.attributes, codeExampleId: 0 },
+                }));
+        }
+
+        return (
+            <div {...blockProps}>
+                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                    <strong>
+                        {linkedCodeExample?.title?.rendered || `${__('Code Example', 'intelligent-code-assistant')} #${codeExampleId}`}
+                    </strong>
+                    <Button variant="secondary" onClick={() => setIsChangingCodeExample(true)}>
+                        {__('Change Code Example', 'intelligent-code-assistant')}
+                    </Button>
+                </div>
+                {isResolvingCodeExample && <Spinner />}
+                {!isResolvingCodeExample && previewBlocks.length > 0 && <BlockPreview blocks={previewBlocks} viewportWidth={900} />}
+                {!isResolvingCodeExample && !linkedCodeExample && (
+                    <Notice status="warning" isDismissible={false}>
+                        {__('The selected Code Example could not be loaded.', 'intelligent-code-assistant')}
+                    </Notice>
+                )}
+                {!isResolvingCodeExample && linkedCodeExample && previewBlocks.length === 0 && (
+                    <Notice status="warning" isDismissible={false}>
+                        {__('This Code Example does not contain an Intelligent Code Assistant block yet.', 'intelligent-code-assistant')}
+                    </Notice>
+                )}
             </div>
         );
     }
@@ -232,12 +266,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                                 <strong style={{ display: 'block', marginBottom: '6px' }}>{__('Tutorial context', 'intelligent-code-assistant')}</strong>
                                 <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', whiteSpace: 'pre-wrap', marginBottom: '10px' }}>{effectiveTutorialContext || __('No nearby tutorial context detected.', 'intelligent-code-assistant')}</div>
                                 {!isEditingContext && <Button variant="secondary" onClick={() => setIsEditingContext(true)}>{__('Edit context', 'intelligent-code-assistant')}</Button>}
-                                {isEditingContext && (
-                                    <>
-                                        <TextareaControl label={__('Edit tutorial context', 'intelligent-code-assistant')} value={tutorialContextOverride || derivedTutorialContext} onChange={(value) => setAttributes({ tutorialContextOverride: value })} />
-                                        <Button variant="primary" onClick={() => setIsEditingContext(false)}>{__('Done', 'intelligent-code-assistant')}</Button>
-                                    </>
-                                )}
+                                {isEditingContext && <><TextareaControl label={__('Edit tutorial context', 'intelligent-code-assistant')} value={tutorialContextOverride || derivedTutorialContext} onChange={(value) => setAttributes({ tutorialContextOverride: value })} /><Button variant="primary" onClick={() => setIsEditingContext(false)}>{__('Done', 'intelligent-code-assistant')}</Button></>}
                             </div>
                         </>
                     )}
@@ -256,27 +285,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                     <SelectControl label={__('Code Font Size', 'intelligent-code-assistant')} value={fontSize} options={fontSizeOptions} onChange={(value) => setAttributes({ fontSize: value })} />
                 </PanelBody>
             </InspectorControls>
-
             <div {...blockProps}>
                 <div className="editor-combined-container">
                     {showLanguageBadge && codeLanguage && <span className={`code-badge lang-${codeLanguage.toLowerCase()}`}>{codeLanguage}</span>}
                     <div className="editor-inner-blocks-wrapper">
                         <InnerBlocks allowedBlocks={['wpe/code-header', 'wpe/code-content']} template={[[ 'wpe/code-header', {} ], [ 'wpe/code-content', {} ]]} templateLock="all" />
-                        {showLineNumbers && (
-                            <div className="line-numbers-gutter" aria-hidden="true">
-                                {Array.from({ length: lineCount }).map((_, index) => {
-                                    const lineNum = index + 1;
-                                    return <span key={index} className={isLineHighlighted(lineNum, highlightLines) ? 'is-highlighted' : ''}>{lineNum}</span>;
-                                })}
-                            </div>
-                        )}
+                        {showLineNumbers && <div className="line-numbers-gutter" aria-hidden="true">{Array.from({ length: lineCount }).map((_, index) => { const lineNum = index + 1; return <span key={index} className={isLineHighlighted(lineNum, highlightLines) ? 'is-highlighted' : ''}>{lineNum}</span>; })}</div>}
                     </div>
-                    <div className="code-footer">
-                        <div className="code-analytics-meta">
-                            {filename && <><span className="code-filename">{filename}</span><span className="meta-divider">•</span></>}
-                            <span>{lineCount} {lineCount === 1 ? 'line' : 'lines'}</span><span className="meta-divider">•</span><span>{characterCount.toLocaleString()} chars</span>
-                        </div>
-                    </div>
+                    <div className="code-footer"><div className="code-analytics-meta">{filename && <><span className="code-filename">{filename}</span><span className="meta-divider">•</span></>}<span>{lineCount} {lineCount === 1 ? 'line' : 'lines'}</span><span className="meta-divider">•</span><span>{characterCount.toLocaleString()} chars</span></div></div>
                 </div>
             </div>
         </>

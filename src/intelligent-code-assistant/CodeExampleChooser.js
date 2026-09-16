@@ -3,6 +3,16 @@ import { Button, SelectControl, Spinner, TextControl } from '@wordpress/componen
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useState } from '@wordpress/element';
 
+const EMPTY_CODE_EXAMPLE_CONTENT = `<!-- wp:wpe/intelligent-code-assistant -->
+<div class="wp-block-wpe-intelligent-code-assistant task-block"><!-- wp:wpe/code-header -->
+<div class="wp-block-wpe-code-header task-title"></div>
+<!-- /wp:wpe/code-header -->
+
+<!-- wp:wpe/code-content -->
+<div class="wp-block-wpe-code-content"></div>
+<!-- /wp:wpe/code-content --></div>
+<!-- /wp:wpe/intelligent-code-assistant -->`;
+
 export default function CodeExampleChooser({ onSelect }) {
     const [selectedId, setSelectedId] = useState('');
     const [newTitle, setNewTitle] = useState('');
@@ -43,7 +53,7 @@ export default function CodeExampleChooser({ onSelect }) {
             const record = await saveEntityRecord('postType', 'ica_code_example', {
                 title,
                 status: 'draft',
-                content: '<!-- wp:wpe/intelligent-code-assistant /-->',
+                content: EMPTY_CODE_EXAMPLE_CONTENT,
             });
 
             if (!record?.id) {

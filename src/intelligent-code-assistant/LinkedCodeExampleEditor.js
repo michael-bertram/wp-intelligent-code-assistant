@@ -4,6 +4,7 @@ import { Button, Notice, Spinner } from '@wordpress/components';
 import { useDispatch } from '@wordpress/data';
 import { useEntityBlockEditor } from '@wordpress/core-data';
 import { useEffect, useRef, useState } from '@wordpress/element';
+import CodeExampleEditorContext from './CodeExampleEditorContext';
 
 /**
  * Edit a canonical Code Example entity from inside an article.
@@ -59,11 +60,13 @@ export default function LinkedCodeExampleEditor({ codeExampleId }) {
                 </Notice>
             )}
 
-            <BlockEditorProvider value={blocks} onInput={onInput} onChange={handleChange}>
-                <BlockTools>
-                    <BlockList />
-                </BlockTools>
-            </BlockEditorProvider>
+            <CodeExampleEditorContext.Provider value={true}>
+                <BlockEditorProvider value={blocks} onInput={onInput} onChange={handleChange}>
+                    <BlockTools>
+                        <BlockList />
+                    </BlockTools>
+                </BlockEditorProvider>
+            </CodeExampleEditorContext.Provider>
 
             {isSaving && (
                 <div className="ica-code-example-saving" aria-live="polite">

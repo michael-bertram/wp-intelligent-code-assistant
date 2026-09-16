@@ -47,7 +47,14 @@ function intelligent_code_assistant_register_code_example_post_type() {
 			'capability_type'     => 'post',
 			'map_meta_cap'        => true,
 			'template'            => array(
-				array( 'wpe/intelligent-code-assistant' ),
+				array(
+					'wpe/intelligent-code-assistant',
+					array(),
+					array(
+						array( 'wpe/code-header' ),
+						array( 'wpe/code-content' ),
+					),
+				),
 			),
 			'template_lock'       => 'all',
 		)
@@ -92,9 +99,6 @@ add_action( 'init', 'intelligent_code_assistant_register_code_example_meta' );
 /**
  * Keep the canonical block inside a Code Example aware of its owning post.
  *
- * This is additive and only fills an empty codeExampleId, so existing content
- * and deliberately linked blocks are not rewritten unexpectedly.
- *
  * @param int     $post_id Post ID.
  * @param WP_Post $post    Post object.
  * @param bool    $update  Whether this is an update.
@@ -127,6 +131,79 @@ function intelligent_code_assistant_bind_canonical_code_example_block( $post_id,
 	add_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10, 3 );
 }
 add_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10, 3 );
+
+/**
+ * Find the canonical Intelligent Code Assistant block for a Code Example.
+ *
+ * @param int $code_example_id Code Example post ID.
+ * @return array|null Parsed canonical block, or null when unavailable.
+ */
+function intelligent_code_assistant_get_canonical_block( $code_example_id ) {
+	$code_example = get_post( $code_example_id );
+	if ( ! $code_example || 'ica_code_example' !== $code_example->post_type ) {
+		return null;
+	}
+
+	foreach ( parse_blocks( $code_example->post_content ) as $candidate ) {
+		if ( 'wpe/intelligent-code-assistant' === ( $candidate['blockName'] ?? '' ) ) {
+			return $candidate;
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Resolve an article reference to the canonical Code Example before rendering.
+ *
+ * The Code Example owns code/configuration and inner blocks. The embedding
+ * article keeps only instance-specific context and its semantic relationship.
+ * This means the normal render.php receives the same structure it would receive
+ * if the canonical block had been placed directly in the article.
+ *
+ * @param array $parsed_block Parsed block data.
+ * @return array
+ */
+function intelligent_code_assistant_resolve_code_example_reference( $parsed_block ) {
+	if ( 'wpe/intelligent-code-assistant' !== ( $parsed_block['blockName'] ?? '' ) ) {
+		return $parsed_block;
+	}
+
+	$code_example_id = absint( $parsed_block['attrs']['codeExampleId'] ?? 0 );
+	if ( ! $code_example_id ) {
+		return $parsed_block;
+	}
+
+	$current_post_id = get_the_ID();
+	if ( $current_post_id === $code_example_id && 'ica_code_example' === get_post_type( $current_post_id ) ) {
+		return $parsed_block;
+	}
+
+	$canonical = intelligent_code_assistant_get_canonical_block( $code_example_id );
+	if ( ! $canonical ) {
+		return $parsed_block;
+	}
+
+	$instance_attributes = $parsed_block['attrs'] ?? array();
+	$canonical_attrs      = $canonical['attrs'] ?? array();
+
+	// These values belong to the article instance rather than the canonical code.
+	foreach ( array( 'id', 'tutorialContextOverride' ) as $instance_key ) {
+		if ( array_key_exists( $instance_key, $instance_attributes ) ) {
+			$canonical_attrs[ $instance_key ] = $instance_attributes[ $instance_key ];
+		}
+	}
+
+	$canonical_attrs['codeExampleId'] = $code_example_id;
+
+	$parsed_block['attrs']        = $canonical_attrs;
+	$parsed_block['innerBlocks']  = $canonical['innerBlocks'] ?? array();
+	$parsed_block['innerHTML']    = $canonical['innerHTML'] ?? '';
+	$parsed_block['innerContent'] = $canonical['innerContent'] ?? array();
+
+	return $parsed_block;
+}
+add_filter( 'render_block_data', 'intelligent_code_assistant_resolve_code_example_reference', 10, 1 );
 
 /**
  * Upgrade the analytics table with a stable Code Example relationship.

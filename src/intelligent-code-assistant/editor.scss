@@ -2,6 +2,34 @@
 @import url('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
 
 /* ==========================================================================
+   LINKED CODE EXAMPLE REFERENCE
+   The article reference must remain a real Gutenberg block for selection, but
+   it should be visually transparent. The canonical ICA block supplies the
+   visible card, border, spacing and content.
+   ========================================================================== */
+.ica-code-example-reference {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+    overflow: visible !important;
+}
+
+.ica-code-example-reference > .block-editor-block-list__layout,
+.ica-code-example-reference > .block-editor-block-list__layout > .block-editor-block-list__block,
+.ica-code-example-reference > .block-editor-block-list__layout > .wp-block {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+}
+
+/* ==========================================================================
    BACKEND EDITOR PANEL EXCLUSIVE SEAMLESS LAYOUTS
    ========================================================================== */
 .wp-block-wpe-intelligent-code-assistant-editor {

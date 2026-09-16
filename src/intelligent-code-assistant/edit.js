@@ -1,10 +1,12 @@
 import { __ } from '@wordpress/i18n';
 import { useBlockProps, InnerBlocks, InspectorControls, BlockControls } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl, Notice, ToolbarButton } from '@wordpress/components';
+import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl, ToolbarButton } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
-import { useState, RawHTML } from '@wordpress/element';
+import { useContext, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import CodeExampleChooser from './CodeExampleChooser';
+import CanonicalCodeExampleEditor from './CanonicalCodeExampleEditor';
+import { CanonicalCodeExampleContext } from './canonical-editor-context';
 import './editor.scss';
 
 export default function Edit({ attributes, setAttributes, clientId }) {
@@ -23,6 +25,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         tutorialContextOverride,
     } = attributes;
 
+    const isEditingCanonicalEntity = useContext(CanonicalCodeExampleContext);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiError, setAiError] = useState(null);
     const [isEditingContext, setIsEditingContext] = useState(false);
@@ -38,12 +41,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         derivedTutorialContext,
         currentPostType,
         currentPostId,
-        linkedCodeExample,
-        isResolvingCodeExample,
     } = useSelect((select) => {
         const { getBlockOrder, getBlock } = select('core/block-editor');
         const editorStore = select('core/editor');
-        const coreStore = select('core');
         const innerBlockIds = getBlockOrder(clientId);
 
         let contentBlock = null;
@@ -59,13 +59,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         const postTitle = editorStore?.getEditedPostAttribute?.('title') || '';
         const postType = editorStore?.getCurrentPostType?.() || '';
         const postId = Number(editorStore?.getCurrentPostId?.() || 0);
-        const linkedId = Number(codeExampleId || 0);
-        const linkedRecord = linkedId > 0 && postType !== 'ica_code_example'
-            ? coreStore.getEntityRecord('postType', 'ica_code_example', linkedId)
-            : null;
-        const resolving = linkedId > 0 && postType !== 'ica_code_example'
-            ? coreStore.isResolving('getEntityRecord', ['postType', 'ica_code_example', linkedId])
-            : false;
         const topLevelIds = getBlockOrder();
         const currentIndex = topLevelIds.indexOf(clientId);
         const contextFragments = [];
@@ -99,17 +92,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             derivedTutorialContext: contextResult,
             currentPostType: postType,
             currentPostId: postId,
-            linkedCodeExample: linkedRecord,
-            isResolvingCodeExample: resolving,
         };
     }, [clientId, codeExampleId]);
 
-    const isCanonicalCodeExample = currentPostType === 'ica_code_example';
+    const isCanonicalCodeExample = currentPostType === 'ica_code_example' || isEditingCanonicalEntity;
     const hasLegacyLocalContent = Boolean(cleanRawText.trim());
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLegacyLocalContent;
     const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;
 
-    if (isCanonicalCodeExample && currentPostId > 0 && Number(codeExampleId || 0) !== currentPostId) {
+    if (currentPostType === 'ica_code_example' && currentPostId > 0 && Number(codeExampleId || 0) !== currentPostId) {
         setAttributes({ codeExampleId: currentPostId });
     }
 
@@ -197,8 +188,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     }
 
     if (isLinkedReference) {
-        const renderedCanonicalContent = linkedCodeExample?.content?.rendered || '';
-
         return (
             <>
                 <BlockControls>
@@ -207,18 +196,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                     </ToolbarButton>
                 </BlockControls>
                 <div {...blockProps}>
-                    {isResolvingCodeExample && <Spinner />}
-                    {!isResolvingCodeExample && renderedCanonicalContent && <RawHTML>{renderedCanonicalContent}</RawHTML>}
-                    {!isResolvingCodeExample && !linkedCodeExample && (
-                        <Notice status="warning" isDismissible={false}>
-                            {__('The selected Code Example could not be loaded.', 'intelligent-code-assistant')}
-                        </Notice>
-                    )}
-                    {!isResolvingCodeExample && linkedCodeExample && !renderedCanonicalContent && (
-                        <Notice status="warning" isDismissible={false}>
-                            {__('This Code Example does not contain renderable content yet.', 'intelligent-code-assistant')}
-                        </Notice>
-                    )}
+                    <CanonicalCodeExampleEditor codeExampleId={codeExampleId} />
                 </div>
             </>
         );

@@ -4,7 +4,6 @@ import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, 
 import { useSelect, useDispatch } from '@wordpress/data';
 import { useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import ReaderInsightsPanel from './ReaderInsightsPanel';
 import CodeExampleChooser from './CodeExampleChooser';
 import './editor.scss';
 
@@ -243,7 +242,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                         </>
                     )}
                 </PanelBody>
-                <ReaderInsightsPanel />
                 <PanelBody title={__('Code Display Settings', 'intelligent-code-assistant')} initialOpen={false}>
                     <TextControl label={__('Filename / Label', 'intelligent-code-assistant')} value={filename || ''} onChange={(value) => setAttributes({ filename: value })} />
                     <TextControl label={__('Highlight Lines (e.g., 3, 5-8)', 'intelligent-code-assistant')} value={highlightLines || ''} onChange={(value) => setAttributes({ highlightLines: value })} />

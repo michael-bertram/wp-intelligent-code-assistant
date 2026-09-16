@@ -1,9 +1,6 @@
 <?php
 /**
- * Code Example content type.
- *
- * Gives reusable code examples a stable semantic identity that can later be
- * linked to Intelligent Code Assistant blocks and analytics events.
+ * Code Example content type and analytics identity support.
  *
  * @package IntelligentCodeAssistant
  */
@@ -12,26 +9,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/**
- * Register the Code Example custom post type.
- */
+/** Register the Code Example custom post type. */
 function intelligent_code_assistant_register_code_example_post_type() {
 	$labels = array(
-		'name'                  => __( 'Code Examples', 'intelligent-code-assistant' ),
-		'singular_name'         => __( 'Code Example', 'intelligent-code-assistant' ),
-		'menu_name'             => __( 'Code Examples', 'intelligent-code-assistant' ),
-		'name_admin_bar'        => __( 'Code Example', 'intelligent-code-assistant' ),
-		'add_new'               => __( 'Add New', 'intelligent-code-assistant' ),
-		'add_new_item'          => __( 'Add New Code Example', 'intelligent-code-assistant' ),
-		'new_item'              => __( 'New Code Example', 'intelligent-code-assistant' ),
-		'edit_item'             => __( 'Edit Code Example', 'intelligent-code-assistant' ),
-		'view_item'             => __( 'View Code Example', 'intelligent-code-assistant' ),
-		'all_items'             => __( 'All Code Examples', 'intelligent-code-assistant' ),
-		'search_items'          => __( 'Search Code Examples', 'intelligent-code-assistant' ),
-		'not_found'             => __( 'No code examples found.', 'intelligent-code-assistant' ),
-		'not_found_in_trash'    => __( 'No code examples found in Trash.', 'intelligent-code-assistant' ),
-		'item_published'        => __( 'Code example published.', 'intelligent-code-assistant' ),
-		'item_updated'          => __( 'Code example updated.', 'intelligent-code-assistant' ),
+		'name'               => __( 'Code Examples', 'intelligent-code-assistant' ),
+		'singular_name'      => __( 'Code Example', 'intelligent-code-assistant' ),
+		'menu_name'          => __( 'Code Examples', 'intelligent-code-assistant' ),
+		'name_admin_bar'     => __( 'Code Example', 'intelligent-code-assistant' ),
+		'add_new'            => __( 'Add New', 'intelligent-code-assistant' ),
+		'add_new_item'       => __( 'Add New Code Example', 'intelligent-code-assistant' ),
+		'new_item'           => __( 'New Code Example', 'intelligent-code-assistant' ),
+		'edit_item'          => __( 'Edit Code Example', 'intelligent-code-assistant' ),
+		'view_item'          => __( 'View Code Example', 'intelligent-code-assistant' ),
+		'all_items'          => __( 'All Code Examples', 'intelligent-code-assistant' ),
+		'search_items'       => __( 'Search Code Examples', 'intelligent-code-assistant' ),
+		'not_found'          => __( 'No code examples found.', 'intelligent-code-assistant' ),
+		'not_found_in_trash' => __( 'No code examples found in Trash.', 'intelligent-code-assistant' ),
+		'item_published'     => __( 'Code example published.', 'intelligent-code-assistant' ),
+		'item_updated'       => __( 'Code example updated.', 'intelligent-code-assistant' ),
 	);
 
 	register_post_type(
@@ -56,9 +51,7 @@ function intelligent_code_assistant_register_code_example_post_type() {
 }
 add_action( 'init', 'intelligent_code_assistant_register_code_example_post_type' );
 
-/**
- * Register structured metadata used by code examples and future analytics.
- */
+/** Register structured Code Example metadata. */
 function intelligent_code_assistant_register_code_example_meta() {
 	$auth_callback = static function() {
 		return current_user_can( 'edit_posts' );
@@ -91,3 +84,123 @@ function intelligent_code_assistant_register_code_example_meta() {
 	);
 }
 add_action( 'init', 'intelligent_code_assistant_register_code_example_meta' );
+
+/**
+ * Upgrade the analytics table with a stable Code Example relationship.
+ *
+ * dbDelta keeps this safe for existing installations as well as fresh ones.
+ */
+function intelligent_code_assistant_upgrade_code_example_analytics_schema() {
+	global $wpdb;
+
+	$schema_version = '1.1';
+	if ( get_option( 'ica_analytics_schema_version' ) === $schema_version ) {
+		return;
+	}
+
+	$table_name      = $wpdb->prefix . 'ica_analytics';
+	$charset_collate = $wpdb->get_charset_collate();
+
+	$sql = "CREATE TABLE {$table_name} (
+		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+		post_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		code_example_id bigint(20) unsigned NOT NULL DEFAULT 0,
+		block_id varchar(191) NOT NULL DEFAULT '',
+		event_type varchar(50) NOT NULL DEFAULT '',
+		filename varchar(191) NOT NULL DEFAULT '',
+		language varchar(50) NOT NULL DEFAULT '',
+		metadata longtext NULL,
+		created_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY post_id (post_id),
+		KEY code_example_id (code_example_id),
+		KEY block_id (block_id),
+		KEY event_type (event_type),
+		KEY created_at (created_at)
+	) {$charset_collate};";
+
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	dbDelta( $sql );
+	update_option( 'ica_analytics_schema_version', $schema_version, false );
+}
+add_action( 'init', 'intelligent_code_assistant_upgrade_code_example_analytics_schema', 20 );
+
+/**
+ * Record an analytics event including its optional Code Example identity.
+ *
+ * @param WP_REST_Request $request Request object.
+ * @return WP_REST_Response|WP_Error
+ */
+function intelligent_code_assistant_record_code_example_analytics_event( WP_REST_Request $request ) {
+	global $wpdb;
+
+	$table_name      = $wpdb->prefix . 'ica_analytics';
+	$event_type      = sanitize_key( $request->get_param( 'event' ) );
+	$block_id        = sanitize_text_field( $request->get_param( 'blockId' ) );
+	$post_id         = absint( $request->get_param( 'postId' ) );
+	$code_example_id = absint( $request->get_param( 'codeExampleId' ) );
+	$filename        = sanitize_file_name( $request->get_param( 'filename' ) );
+	$language        = sanitize_text_field( $request->get_param( 'language' ) );
+	$metadata        = $request->get_param( 'metadata' );
+
+	$allowed_events = array(
+		'explain_code',
+		'explain_line',
+		'ask_question',
+		'knowledge_check',
+		'mark_complete',
+		'copy_code',
+	);
+
+	if ( ! in_array( $event_type, $allowed_events, true ) ) {
+		return new WP_Error( 'invalid_analytics_event', __( 'Invalid analytics event.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+	}
+
+	if ( $code_example_id > 0 && 'ica_code_example' !== get_post_type( $code_example_id ) ) {
+		return new WP_Error( 'invalid_code_example', __( 'Invalid code example.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+	}
+
+	$inserted = $wpdb->insert(
+		$table_name,
+		array(
+			'post_id'         => $post_id,
+			'code_example_id' => $code_example_id,
+			'block_id'        => $block_id,
+			'event_type'      => $event_type,
+			'filename'        => $filename,
+			'language'        => $language,
+			'metadata'        => wp_json_encode( is_array( $metadata ) ? $metadata : array() ),
+			'created_at'      => current_time( 'mysql' ),
+		),
+		array( '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+	);
+
+	if ( false === $inserted ) {
+		return new WP_Error( 'analytics_insert_failed', __( 'Unable to record analytics event.', 'intelligent-code-assistant' ), array( 'status' => 500 ) );
+	}
+
+	return rest_ensure_response( array( 'success' => true ) );
+}
+
+/**
+ * Replace the original analytics endpoint with the Code Example-aware version.
+ *
+ * The route URL remains unchanged, so existing front-end clients remain
+ * backwards compatible. codeExampleId is optional and defaults to zero.
+ */
+add_action(
+	'rest_api_init',
+	function () {
+		register_rest_route(
+			'intelligent-code-assistant/v1',
+			'/analytics-event',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => 'intelligent_code_assistant_record_code_example_analytics_event',
+				'permission_callback' => '__return_true',
+			),
+			true
+		);
+	},
+	20
+);

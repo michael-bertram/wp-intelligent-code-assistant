@@ -25,6 +25,11 @@ export default function EditRouter(props) {
         []
     );
 
+    // useBlockProps is a hook. It must be called before any conditional return
+    // so React sees the same hook sequence when a block changes from an
+    // unlinked block into a linked Code Example reference.
+    const blockProps = useBlockProps({ className: 'ica-code-example-reference-editor' });
+
     const codeExampleId = Number(attributes.codeExampleId || 0);
     const isArticleReference = !isCanonicalProxy && currentPostType !== 'ica_code_example' && codeExampleId > 0;
 
@@ -37,8 +42,6 @@ export default function EditRouter(props) {
     if (!isArticleReference) {
         return <Edit {...props} />;
     }
-
-    const blockProps = useBlockProps({ className: 'ica-code-example-reference-editor' });
 
     if (isChangingCodeExample) {
         return (

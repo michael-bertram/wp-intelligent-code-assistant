@@ -46,6 +46,10 @@ function intelligent_code_assistant_register_code_example_post_type() {
 			'supports'            => array( 'title', 'editor', 'revisions' ),
 			'capability_type'     => 'post',
 			'map_meta_cap'        => true,
+			'template'            => array(
+				array( 'wpe/intelligent-code-assistant' ),
+			),
+			'template_lock'       => 'all',
 		)
 	);
 }
@@ -84,6 +88,45 @@ function intelligent_code_assistant_register_code_example_meta() {
 	);
 }
 add_action( 'init', 'intelligent_code_assistant_register_code_example_meta' );
+
+/**
+ * Keep the canonical block inside a Code Example aware of its owning post.
+ *
+ * This is additive and only fills an empty codeExampleId, so existing content
+ * and deliberately linked blocks are not rewritten unexpectedly.
+ *
+ * @param int     $post_id Post ID.
+ * @param WP_Post $post    Post object.
+ * @param bool    $update  Whether this is an update.
+ */
+function intelligent_code_assistant_bind_canonical_code_example_block( $post_id, $post, $update ) {
+	if ( 'ica_code_example' !== $post->post_type || wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+		return;
+	}
+
+	$blocks = parse_blocks( $post->post_content );
+	if ( 1 !== count( $blocks ) || 'wpe/intelligent-code-assistant' !== ( $blocks[0]['blockName'] ?? '' ) ) {
+		return;
+	}
+
+	$current_id = absint( $blocks[0]['attrs']['codeExampleId'] ?? 0 );
+	if ( $post_id === $current_id ) {
+		return;
+	}
+
+	$blocks[0]['attrs']['codeExampleId'] = $post_id;
+	$content                             = serialize_blocks( $blocks );
+
+	remove_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10 );
+	wp_update_post(
+		array(
+			'ID'           => $post_id,
+			'post_content' => $content,
+		)
+	);
+	add_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10, 3 );
+}
+add_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10, 3 );
 
 /**
  * Upgrade the analytics table with a stable Code Example relationship.

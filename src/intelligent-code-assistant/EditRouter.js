@@ -102,13 +102,12 @@ function CodeExampleController({ codeExampleId }) {
 
     return (
         <CodeExampleEditorContext.Provider value={true}>
-            <div {...innerBlocksProps}>
-                {saveError && (
-                    <span className="screen-reader-text" role="status">
-                        {saveError}
-                    </span>
-                )}
-            </div>
+            <div {...innerBlocksProps} />
+            {saveError && (
+                <span className="screen-reader-text" role="status">
+                    {saveError}
+                </span>
+            )}
         </CodeExampleEditorContext.Provider>
     );
 }

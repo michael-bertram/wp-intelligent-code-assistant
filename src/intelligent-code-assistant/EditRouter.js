@@ -1,10 +1,6 @@
-import { __ } from '@wordpress/i18n';
-import { BlockControls, useBlockProps } from '@wordpress/block-editor';
-import { ToolbarButton } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
-import { useContext, useState } from '@wordpress/element';
+import { useContext } from '@wordpress/element';
 import Edit from './edit';
-import CodeExampleChooser from './CodeExampleChooser';
 import LinkedCodeExampleEditor from './LinkedCodeExampleEditor';
 import CodeExampleEditorContext from './CodeExampleEditorContext';
 
@@ -12,23 +8,17 @@ import CodeExampleEditorContext from './CodeExampleEditorContext';
  * Route article references into the canonical Code Example editor.
  *
  * A normal article block stores only codeExampleId. When selected, this router
- * mounts a block editor backed by that Code Example entity. The canonical ICA
- * block therefore uses its real edit component, InspectorControls and inner
- * blocks exactly as it does on the Code Example post type screen.
+ * mounts a block editor backed by that Code Example entity. The reference
+ * itself is intentionally visually transparent: the author should experience
+ * the canonical Intelligent Code Assistant, not a wrapper around it.
  */
 export default function EditRouter(props) {
-    const { attributes, setAttributes } = props;
-    const [isChangingCodeExample, setIsChangingCodeExample] = useState(false);
+    const { attributes } = props;
     const isCanonicalProxy = useContext(CodeExampleEditorContext);
     const currentPostType = useSelect(
         (select) => select('core/editor')?.getCurrentPostType?.() || '',
         []
     );
-
-    // useBlockProps is a hook. It must be called before any conditional return
-    // so React sees the same hook sequence when a block changes from an
-    // unlinked block into a linked Code Example reference.
-    const blockProps = useBlockProps({ className: 'ica-code-example-reference-editor' });
 
     const codeExampleId = Number(attributes.codeExampleId || 0);
     const isArticleReference = !isCanonicalProxy && currentPostType !== 'ica_code_example' && codeExampleId > 0;
@@ -43,29 +33,5 @@ export default function EditRouter(props) {
         return <Edit {...props} />;
     }
 
-    if (isChangingCodeExample) {
-        return (
-            <div {...blockProps}>
-                <CodeExampleChooser
-                    onSelect={(id) => {
-                        setAttributes({ codeExampleId: Number(id) });
-                        setIsChangingCodeExample(false);
-                    }}
-                />
-            </div>
-        );
-    }
-
-    return (
-        <>
-            <BlockControls>
-                <ToolbarButton onClick={() => setIsChangingCodeExample(true)}>
-                    {__('Change Code Example', 'intelligent-code-assistant')}
-                </ToolbarButton>
-            </BlockControls>
-            <div {...blockProps}>
-                <LinkedCodeExampleEditor codeExampleId={codeExampleId} />
-            </div>
-        </>
-    );
+    return <LinkedCodeExampleEditor codeExampleId={codeExampleId} />;
 }

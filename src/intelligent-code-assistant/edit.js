@@ -1,9 +1,8 @@
 import { __ } from '@wordpress/i18n';
-import { useBlockProps, InnerBlocks, InspectorControls, BlockPreview } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl, Notice } from '@wordpress/components';
+import { useBlockProps, InnerBlocks, InspectorControls, BlockControls } from '@wordpress/block-editor';
+import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl, Notice, ToolbarButton } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
-import { useState } from '@wordpress/element';
-import { parse } from '@wordpress/blocks';
+import { useState, RawHTML } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import CodeExampleChooser from './CodeExampleChooser';
 import './editor.scss';
@@ -75,7 +74,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             for (let index = currentIndex - 1, inspected = 0; index >= 0 && inspected < 8; index -= 1, inspected += 1) {
                 const block = getBlock(topLevelIds[index]);
                 if (!block) continue;
-
                 if (block.name === 'core/paragraph' || block.name === 'core/heading') {
                     const rawContent = block.attributes?.content || '';
                     const text = rawContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -199,40 +197,30 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     }
 
     if (isLinkedReference) {
-        let previewBlocks = [];
-        const rawCanonicalContent = linkedCodeExample?.content?.raw || linkedCodeExample?.content?.rendered || '';
-        if (rawCanonicalContent) {
-            previewBlocks = parse(rawCanonicalContent)
-                .filter((previewBlock) => previewBlock.name === 'wpe/intelligent-code-assistant')
-                .map((previewBlock) => ({
-                    ...previewBlock,
-                    attributes: { ...previewBlock.attributes, codeExampleId: 0 },
-                }));
-        }
+        const renderedCanonicalContent = linkedCodeExample?.content?.rendered || '';
 
         return (
-            <div {...blockProps}>
-                <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                    <strong>
-                        {linkedCodeExample?.title?.rendered || `${__('Code Example', 'intelligent-code-assistant')} #${codeExampleId}`}
-                    </strong>
-                    <Button variant="secondary" onClick={() => setIsChangingCodeExample(true)}>
+            <>
+                <BlockControls>
+                    <ToolbarButton onClick={() => setIsChangingCodeExample(true)}>
                         {__('Change Code Example', 'intelligent-code-assistant')}
-                    </Button>
+                    </ToolbarButton>
+                </BlockControls>
+                <div {...blockProps}>
+                    {isResolvingCodeExample && <Spinner />}
+                    {!isResolvingCodeExample && renderedCanonicalContent && <RawHTML>{renderedCanonicalContent}</RawHTML>}
+                    {!isResolvingCodeExample && !linkedCodeExample && (
+                        <Notice status="warning" isDismissible={false}>
+                            {__('The selected Code Example could not be loaded.', 'intelligent-code-assistant')}
+                        </Notice>
+                    )}
+                    {!isResolvingCodeExample && linkedCodeExample && !renderedCanonicalContent && (
+                        <Notice status="warning" isDismissible={false}>
+                            {__('This Code Example does not contain renderable content yet.', 'intelligent-code-assistant')}
+                        </Notice>
+                    )}
                 </div>
-                {isResolvingCodeExample && <Spinner />}
-                {!isResolvingCodeExample && previewBlocks.length > 0 && <BlockPreview blocks={previewBlocks} viewportWidth={900} />}
-                {!isResolvingCodeExample && !linkedCodeExample && (
-                    <Notice status="warning" isDismissible={false}>
-                        {__('The selected Code Example could not be loaded.', 'intelligent-code-assistant')}
-                    </Notice>
-                )}
-                {!isResolvingCodeExample && linkedCodeExample && previewBlocks.length === 0 && (
-                    <Notice status="warning" isDismissible={false}>
-                        {__('This Code Example does not contain an Intelligent Code Assistant block yet.', 'intelligent-code-assistant')}
-                    </Notice>
-                )}
-            </div>
+            </>
         );
     }
 

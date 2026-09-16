@@ -9,6 +9,7 @@ import './editor.scss';
 
 export default function Edit({ attributes, setAttributes, clientId }) {
     const {
+        codeExampleId,
         showLanguageBadge,
         codeLanguage,
         filename,
@@ -34,9 +35,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         headerBlockId,
         tutorialTitle,
         derivedTutorialContext,
+        codeExamples,
     } = useSelect((select) => {
         const { getBlockOrder, getBlock } = select('core/block-editor');
         const editorStore = select('core/editor');
+        const coreStore = select('core');
         const innerBlockIds = getBlockOrder(clientId);
 
         let contentBlock = null;
@@ -50,6 +53,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         }
 
         const postTitle = editorStore?.getEditedPostAttribute?.('title') || '';
+        const availableCodeExamples = coreStore?.getEntityRecords?.('postType', 'ica_code_example', {
+            per_page: 100,
+            orderby: 'title',
+            order: 'asc',
+            status: ['publish', 'draft', 'pending', 'private'],
+        }) || [];
         const topLevelIds = getBlockOrder();
         const currentIndex = topLevelIds.indexOf(clientId);
         const contextFragments = [];
@@ -83,6 +92,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                 headerBlockId: headerBlock?.clientId || null,
                 tutorialTitle: postTitle,
                 derivedTutorialContext: contextResult,
+                codeExamples: availableCodeExamples,
             };
         }
 
@@ -106,11 +116,20 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             headerBlockId: headerBlock?.clientId || null,
             tutorialTitle: postTitle,
             derivedTutorialContext: contextResult,
+            codeExamples: availableCodeExamples,
         };
     }, [clientId]);
 
     const characterCount = cleanRawText.replace(/\r/g, '').length;
     const effectiveTutorialContext = tutorialContextOverride || derivedTutorialContext;
+    const selectedCodeExample = codeExamples.find((example) => example.id === Number(codeExampleId || 0));
+    const codeExampleOptions = [
+        { label: __('Standalone code (not linked)', 'intelligent-code-assistant'), value: '0' },
+        ...codeExamples.map((example) => ({
+            label: example.title?.rendered || `${__('Code Example', 'intelligent-code-assistant')} #${example.id}`,
+            value: String(example.id),
+        })),
+    ];
 
     const isLineHighlighted = (lineNumber, highlightExpression) => {
         if (!highlightExpression) return false;
@@ -255,6 +274,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
     return (
         <>
             <InspectorControls>
+                <PanelBody title={__('Code Example', 'intelligent-code-assistant')} initialOpen={true}>
+                    <SelectControl
+                        label={__('Code Example identity', 'intelligent-code-assistant')}
+                        value={String(codeExampleId || 0)}
+                        options={codeExampleOptions}
+                        onChange={(value) => setAttributes({ codeExampleId: Number(value) })}
+                        help={__('Link this block to a Code Example so interactions can be analysed across articles. The code in this article remains its own snapshot.', 'intelligent-code-assistant')}
+                    />
+                    {Number(codeExampleId || 0) > 0 && (
+                        <p style={{ marginTop: '8px', color: '#646970', fontSize: '12px' }}>
+                            {selectedCodeExample
+                                ? `${__('Linked to', 'intelligent-code-assistant')}: ${selectedCodeExample.title?.rendered || `#${codeExampleId}`} (#${codeExampleId})`
+                                : `${__('Linked Code Example', 'intelligent-code-assistant')} #${codeExampleId}`}
+                        </p>
+                    )}
+                </PanelBody>
+
                 <PanelBody title={__('AI Features', 'intelligent-code-assistant')} initialOpen={true}>
                     <ToggleControl
                         label={__('Enable AI Features', 'intelligent-code-assistant')}

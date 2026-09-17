@@ -56,14 +56,6 @@ const getSyncSignature = (block) => {
     return JSON.stringify(simplify(block));
 };
 
-/**
- * Edit a linked Code Example through the article ICA itself.
- *
- * Core-data resolves the entity with context=edit so the proxy receives raw
- * post_content, including Gutenberg block comments. Keeping the query in the
- * normal core-data selector also means newly created/selected entities can be
- * hydrated from the same store the chooser has just populated.
- */
 function CodeExampleProxy({ codeExampleId, editProps }) {
     const entityId = Number(codeExampleId || 0);
     const { clientId, attributes } = editProps;
@@ -189,11 +181,7 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
 
         saveTimer.current = window.setTimeout(async () => {
             try {
-                await saveEditedEntityRecord(
-                    'postType',
-                    'ica_code_example',
-                    entityId
-                );
+                await saveEditedEntityRecord('postType', 'ica_code_example', entityId);
             } catch (error) {
                 setSaveError(
                     error?.message ||
@@ -231,10 +219,7 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
         <>
             <Edit
                 {...editProps}
-                attributes={{
-                    ...editProps.attributes,
-                    codeExampleId: 0,
-                }}
+                isCodeExampleProxy={true}
             />
             {saveError && (
                 <span className="screen-reader-text" role="status">

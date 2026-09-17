@@ -3,6 +3,7 @@ import { Button, Spinner, TextControl } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useMemo, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
+import './code-example-browser.scss';
 
 const EMPTY_CODE_EXAMPLE_CONTENT = `<!-- wp:wpe/intelligent-code-assistant -->
 <div class="wp-block-wpe-intelligent-code-assistant task-block"><!-- wp:wpe/code-header -->

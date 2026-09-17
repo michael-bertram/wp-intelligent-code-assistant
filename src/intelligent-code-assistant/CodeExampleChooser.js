@@ -2,6 +2,7 @@ import { __ } from '@wordpress/i18n';
 import { Button, SelectControl, Spinner, TextControl } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useState } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
 
 const EMPTY_CODE_EXAMPLE_CONTENT = `<!-- wp:wpe/intelligent-code-assistant -->
 <div class="wp-block-wpe-intelligent-code-assistant task-block"><!-- wp:wpe/code-header -->
@@ -18,6 +19,7 @@ export default function CodeExampleChooser({ onSelect }) {
     const [selectedId, setSelectedId] = useState('');
     const [newTitle, setNewTitle] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [isSelecting, setIsSelecting] = useState(false);
     const [error, setError] = useState('');
 
     const codeExamples = useSelect(
@@ -45,6 +47,10 @@ export default function CodeExampleChooser({ onSelect }) {
         setError('');
     };
 
+    const resolveCodeExample = async (id) => apiFetch({
+        path: `/wp/v2/ica_code_example/${Number(id)}?context=edit`,
+    });
+
     const createCodeExample = async () => {
         const title = newTitle.trim();
         if (!title) {
@@ -66,11 +72,31 @@ export default function CodeExampleChooser({ onSelect }) {
                 throw new Error(__('The Code Example could not be created.', 'intelligent-code-assistant'));
             }
 
-            onSelect(record.id);
+            const resolvedRecord = await resolveCodeExample(record.id);
+            onSelect(record.id, resolvedRecord);
         } catch (err) {
             setError(err?.message || __('The Code Example could not be created.', 'intelligent-code-assistant'));
         } finally {
             setIsCreating(false);
+        }
+    };
+
+    const useExistingCodeExample = async () => {
+        const id = Number(selectedId || 0);
+        if (!id) {
+            return;
+        }
+
+        setIsSelecting(true);
+        setError('');
+
+        try {
+            const record = await resolveCodeExample(id);
+            onSelect(id, record);
+        } catch (err) {
+            setError(err?.message || __('The Code Example could not be loaded.', 'intelligent-code-assistant'));
+        } finally {
+            setIsSelecting(false);
         }
     };
 
@@ -136,10 +162,11 @@ export default function CodeExampleChooser({ onSelect }) {
                         />
                         <Button
                             variant="primary"
-                            onClick={() => onSelect(Number(selectedId))}
-                            disabled={!selectedId}
+                            onClick={useExistingCodeExample}
+                            disabled={!selectedId || isSelecting}
+                            isBusy={isSelecting}
                         >
-                            {__('Use Code Example', 'intelligent-code-assistant')}
+                            {isSelecting ? <Spinner /> : __('Use Code Example', 'intelligent-code-assistant')}
                         </Button>
                     </>
                 )}

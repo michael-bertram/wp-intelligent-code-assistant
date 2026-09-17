@@ -200,7 +200,7 @@ add_filter(
 
 /**
  * Normalize provider failures and remember whether anonymous generation is
- * currently unavailable so editors can see a useful warning in Reader Insights.
+ * recently unavailable so editors can see a short-lived warning in Reader Insights.
  */
 add_filter(
 	'rest_post_dispatch',
@@ -215,7 +215,7 @@ add_filter(
 		$error_code = is_array( $data ) && isset( $data['code'] ) ? sanitize_key( $data['code'] ) : '';
 
 		if ( $status >= 200 && $status < 300 ) {
-			set_transient( 'ica_public_ai_capability_status', 'available', DAY_IN_SECONDS );
+			delete_transient( 'ica_public_ai_capability_status' );
 			return $response;
 		}
 
@@ -231,7 +231,7 @@ add_filter(
 		}
 
 		if ( 401 === $status || 403 === $status || 'prompt_client_error' === $error_code ) {
-			set_transient( 'ica_public_ai_capability_status', 'auth_rejected', DAY_IN_SECONDS );
+			set_transient( 'ica_public_ai_capability_status', 'auth_rejected', 15 * MINUTE_IN_SECONDS );
 
 			return new WP_REST_Response(
 				array(
@@ -273,7 +273,8 @@ add_filter(
 
 /**
  * Surface a concise editorial warning when the latest anonymous generation
- * attempt was rejected by the configured provider.
+ * attempt was rejected by the configured provider. The warning expires quickly
+ * and a subsequent successful public request clears it immediately.
  */
 add_action(
 	'admin_notices',

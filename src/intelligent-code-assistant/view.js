@@ -622,6 +622,29 @@ const { state } = store('wpe', {
       }
 
       const { ref: blockElement } = getElement();
+
+      const assistantButton = blockElement?.querySelector('.ai-assistant-button');
+      if (assistantButton && !assistantButton.dataset.attentionBound) {
+        assistantButton.dataset.attentionBound = 'true';
+
+        if ('IntersectionObserver' in window) {
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) {
+                return;
+              }
+
+              assistantButton.classList.add('is-attention-ready');
+              observer.disconnect();
+            });
+          }, { threshold: 0.7 });
+
+          observer.observe(assistantButton);
+        } else {
+          assistantButton.classList.add('is-attention-ready');
+        }
+      }
+
       const panel = blockElement?.querySelector('.panel-content');
 
       if (!panel || panel.dataset.lineSelectionBound) {

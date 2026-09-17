@@ -174,3 +174,79 @@
 		}
 	}
 }
+
+
+/* Final interaction polish: personality on the reader assistant, never at the expense of accessibility. */
+.wp-block-wpe-intelligent-code-assistant-editor,
+.wp-block-wpe-intelligent-code-assistant {
+	.ai-assistant-trigger,
+	.ai-assistant-button,
+	.ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button {
+		transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease, color .18s ease;
+
+		&:hover:not(:disabled) {
+			transform: translateY(-2px);
+			box-shadow: 0 7px 16px rgba(15, 23, 42, .10) !important;
+		}
+
+		&:active:not(:disabled) {
+			transform: translateY(0);
+		}
+	}
+
+	.ai-assistant-drawer {
+		transform-origin: bottom right;
+		animation: ai-assistant-arrive .28s ease-out;
+
+		.explanation-text,
+		.line-explanation-content,
+		.ask-code-response,
+		.understanding-check-result,
+		.understanding-check-explanation {
+			animation: ai-assistant-answer .28s ease-out;
+		}
+	}
+
+	.panel-content .code-lines .code-line.is-selected {
+		animation: ai-selected-line .34s ease-out;
+	}
+
+	.copy-button.copied,
+	.is-copied {
+		animation: ai-assistant-confirm .26s ease-out;
+	}
+}
+
+@keyframes ai-assistant-arrive {
+	from { opacity: 0; transform: translateY(6px) scale(.99); }
+	to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes ai-assistant-answer {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ai-assistant-confirm {
+	0% { transform: scale(.92); }
+	65% { transform: scale(1.06); }
+	100% { transform: scale(1); }
+}
+@keyframes ai-selected-line {
+	0% { box-shadow: inset 0 0 0 999px rgba(37,99,235,.05); }
+	100% { box-shadow: inset 0 0 0 999px rgba(37,99,235,0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wp-block-wpe-intelligent-code-assistant-editor,
+	.wp-block-wpe-intelligent-code-assistant {
+		.ai-assistant-drawer,
+		.ai-assistant-trigger,
+		.ai-assistant-button,
+		.ai-assistant-drawer *,
+		.panel-content .code-lines .code-line,
+		.copy-button {
+			animation: none !important;
+			transition-duration: .001ms !important;
+			transform: none !important;
+		}
+	}
+}

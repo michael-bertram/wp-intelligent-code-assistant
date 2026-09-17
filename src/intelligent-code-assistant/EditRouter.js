@@ -7,15 +7,52 @@ import {
 import { Spinner } from '@wordpress/components';
 import { useEntityBlockEditor, useEntityRecord } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useContext, useEffect, useRef, useState } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
 import Edit from './edit';
-import CodeExampleEditorContext from './CodeExampleEditorContext';
+
+/**
+ * Give the composite Intelligent Code Assistant the same first-click behaviour
+ * as a normal Gutenberg block. Its header/code blocks are implementation
+ * details, so the first click anywhere on the surface selects the ICA root and
+ * exposes its InspectorControls. Once selected, subsequent clicks can still
+ * reach the inner editable blocks.
+ */
+function SelectionProxy({ clientId, children }) {
+    const { selectBlock } = useDispatch('core/block-editor');
+    const isSelected = useSelect(
+        (select) => select('core/block-editor').isBlockSelected(clientId),
+        [clientId]
+    );
+
+    const selectRootOnFirstClick = (event) => {
+        if (isSelected) {
+            return;
+        }
+
+        selectBlock(clientId);
+
+        // Do not let the same pointer action immediately replace the root
+        // selection with one of the ICA's implementation-detail inner blocks.
+        // The next click is allowed through normally for code/header editing.
+        event.stopPropagation();
+    };
+
+    return (
+        <div
+            className="ica-selection-proxy"
+            style={{ display: 'contents' }}
+            onMouseDownCapture={selectRootOnFirstClick}
+        >
+            {children}
+        </div>
+    );
+}
 
 /**
  * A linked Code Example behaves like Gutenberg's own synced-pattern controller:
  * the article block stays in the article, while its displayed children belong
  * to the Code Example entity. This keeps one block-editor store and therefore
- * one selection model, one InspectorControls surface and normal canvas clicks.
+ * one selection model and one InspectorControls surface.
  */
 function CodeExampleController({ codeExampleId }) {
     const entityId = Number(codeExampleId || 0);
@@ -101,43 +138,65 @@ function CodeExampleController({ codeExampleId }) {
     }
 
     return (
-        <CodeExampleEditorContext.Provider value={true}>
+        <>
             <div {...innerBlocksProps} />
             {saveError && (
                 <span className="screen-reader-text" role="status">
                     {saveError}
                 </span>
             )}
-        </CodeExampleEditorContext.Provider>
+        </>
     );
 }
 
 /**
  * Route normal/legacy blocks to the standard editor and linked article blocks
  * to the Code Example inner-block controller.
+ *
+ * The canonical child is detected from Gutenberg's actual block hierarchy,
+ * rather than React context. Controlled entity blocks are rendered by the host
+ * block-editor store, so React context from the controller is not a reliable
+ * way to identify them.
  */
 export default function EditRouter(props) {
-    const { attributes } = props;
-    const isCanonicalChild = useContext(CodeExampleEditorContext);
+    const { attributes, clientId } = props;
     const currentPostType = useSelect(
         (select) => select('core/editor')?.getCurrentPostType?.() || '',
         []
     );
 
+    const parentBlock = useSelect((select) => {
+        const blockEditor = select('core/block-editor');
+        const parentClientId = blockEditor.getBlockRootClientId(clientId);
+        return parentClientId ? blockEditor.getBlock(parentClientId) : null;
+    }, [clientId]);
+
     const codeExampleId = Number(attributes.codeExampleId || 0);
+    const parentCodeExampleId = Number(parentBlock?.attributes?.codeExampleId || 0);
+    const isCanonicalChild =
+        parentBlock?.name === 'wpe/intelligent-code-assistant' &&
+        parentCodeExampleId > 0 &&
+        parentCodeExampleId === codeExampleId;
+
     const isArticleReference =
         !isCanonicalChild &&
         currentPostType !== 'ica_code_example' &&
         codeExampleId > 0;
 
-    // A canonical ICA rendered as the controlled child of an article reference
-    // must use its normal edit UI rather than routing back into itself.
     if (isCanonicalChild) {
-        return <Edit {...props} attributes={{ ...attributes, codeExampleId: 0 }} />;
+        return (
+            <SelectionProxy clientId={clientId}>
+                <Edit {...props} attributes={{ ...attributes, codeExampleId: 0 }} />
+            </SelectionProxy>
+        );
     }
 
     if (!isArticleReference) {
-        return <Edit {...props} />;
+        return (
+            <SelectionProxy clientId={clientId}>
+                <Edit {...props} />
+            </SelectionProxy>
+        );
     }
 
     return <CodeExampleController codeExampleId={codeExampleId} />;

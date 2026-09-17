@@ -179,7 +179,6 @@
 /* Final interaction polish: personality on the reader assistant, never at the expense of accessibility. */
 .wp-block-wpe-intelligent-code-assistant-editor,
 .wp-block-wpe-intelligent-code-assistant {
-	.ai-assistant-trigger,
 	.ai-assistant-button,
 	.ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button {
 		transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease, color .18s ease;
@@ -192,6 +191,11 @@
 		&:active:not(:disabled) {
 			transform: translateY(0);
 		}
+	}
+
+	.ai-assistant-button {
+		animation: ai-assistant-nudge 2.8s ease-in-out 1s 2;
+		span[aria-hidden="true"] { animation: ai-assistant-sparkle 2.8s ease-in-out 1s 2; }
 	}
 
 	.ai-assistant-drawer {
@@ -217,6 +221,17 @@
 	}
 }
 
+@keyframes ai-assistant-nudge {
+	0%, 72%, 100% { transform: translateY(0); }
+	80% { transform: translateY(-5px); }
+	88% { transform: translateY(0); }
+	94% { transform: translateY(-2px); }
+}
+@keyframes ai-assistant-sparkle {
+	0%, 72%, 100% { transform: scale(1) rotate(0); opacity: 1; }
+	82% { transform: scale(1.22) rotate(12deg); opacity: .82; }
+	92% { transform: scale(1) rotate(0); opacity: 1; }
+}
 @keyframes ai-assistant-arrive {
 	from { opacity: 0; transform: translateY(6px) scale(.99); }
 	to { opacity: 1; transform: translateY(0) scale(1); }

@@ -250,7 +250,7 @@ add_action( 'wp_abilities_api_init', function() {
 		'description'         => __( 'Generates a concise explanation of a code snippet for a technical article reader.', 'intelligent-code-assistant' ),
 		'show_in_rest'        => true,
 		'show_in_mcp'         => true,
-		'permission_callback' => '__return_true',
+		'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 		'input_schema'        => array(
 			'type'       => 'object',
 			'properties' => array(

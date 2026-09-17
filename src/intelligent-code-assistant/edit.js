@@ -2,6 +2,7 @@ import { __ } from '@wordpress/i18n';
 import { useBlockProps, InnerBlocks, InspectorControls, BlockControls } from '@wordpress/block-editor';
 import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl, ToolbarButton } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
+import { serialize } from '@wordpress/blocks';
 import { useContext, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import CodeExampleChooser from './CodeExampleChooser';
@@ -30,10 +31,13 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     const [aiError, setAiError] = useState(null);
     const [isEditingContext, setIsEditingContext] = useState(false);
     const [isChangingCodeExample, setIsChangingCodeExample] = useState(false);
+    const [isConverting, setIsConverting] = useState(false);
+    const [conversionError, setConversionError] = useState('');
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
+    const { saveEntityRecord } = useDispatch('core');
 
-    const { cleanRawText, hasLocalBlockStructure, headerBlockId, tutorialTitle, derivedTutorialContext, currentPostType } = useSelect((select) => {
+    const { cleanRawText, hasLocalBlockStructure, headerBlockId, headerTitle, tutorialTitle, derivedTutorialContext, currentPostType, blockForConversion } = useSelect((select) => {
         const block = select('core/block-editor').getBlock(clientId);
         const headerBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-header');
         const contentBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-content');
@@ -59,15 +63,18 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             cleanRawText: rawText,
             hasLocalBlockStructure: Boolean(headerBlock || contentBlock || block?.innerBlocks?.length),
             headerBlockId: headerBlock?.clientId || null,
+            headerTitle: headerBlock?.attributes?.title || '',
             tutorialTitle: postTitle,
             derivedTutorialContext: contextResult,
             currentPostType: postType,
+            blockForConversion: block || null,
         };
     }, [clientId, codeExampleId]);
 
     const isCanonicalCodeExample = currentPostType === 'ica_code_example' || isEditingCanonicalEntity || isCodeExampleProxy;
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLocalBlockStructure;
     const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;
+    const isLegacyStandalone = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && hasLocalBlockStructure;
 
     // The canonical Code Example post owns the full ICA block and its children.
     // It must remain unlinked internally (codeExampleId = 0), otherwise save.js
@@ -145,6 +152,56 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         }
     };
 
+    const handleConvertToCodeExample = async () => {
+        if (!blockForConversion || !isLegacyStandalone || isConverting) return;
+
+        setIsConverting(true);
+        setConversionError('');
+
+        try {
+            const {
+                id: instanceId,
+                tutorialContextOverride: articleContext,
+                codeExampleId: previousCodeExampleId,
+                ...canonicalAttributes
+            } = blockForConversion.attributes || {};
+
+            canonicalAttributes.codeExampleId = 0;
+
+            const canonicalContent = serialize([{
+                ...blockForConversion,
+                attributes: canonicalAttributes,
+            }]);
+
+            const title = String(headerTitle || filename || __('Code Example', 'intelligent-code-assistant')).trim();
+            const record = await saveEntityRecord('postType', 'ica_code_example', {
+                title,
+                status: 'draft',
+                content: canonicalContent,
+                meta: {
+                    _ica_code_language: codeLanguage || '',
+                    _ica_code_filename: filename || '',
+                },
+            });
+
+            if (!record?.id) {
+                throw new Error(__('The Code Example could not be created.', 'intelligent-code-assistant'));
+            }
+
+            // Keep article-specific context on the article instance. The next save
+            // serializes this block as a lightweight reference and omits InnerBlocks.
+            setAttributes({
+                codeExampleId: Number(record.id),
+                ...(articleContext ? { tutorialContextOverride: articleContext } : {}),
+                ...(instanceId ? { id: instanceId } : {}),
+            });
+        } catch (err) {
+            setConversionError(err?.message || __('The block could not be converted to a Code Example.', 'intelligent-code-assistant'));
+        } finally {
+            setIsConverting(false);
+        }
+    };
+
     const blockProps = useBlockProps({
         className: `wp-block-wpe-intelligent-code-assistant-editor ${isDarkMode ? 'dark-theme' : ''} ${isCompact ? 'is-compact' : ''} ${showLineNumbers ? 'has-line-numbers' : ''}`,
         style: { '--editor-code-font-size': fontSize, '--panel-max-height': maxHeight },
@@ -192,6 +249,20 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     return (
         <>
             <InspectorControls>
+                {isLegacyStandalone && (
+                    <PanelBody title={__('Code Example', 'intelligent-code-assistant')} initialOpen={true}>
+                        <p>{__('This is a legacy standalone block. Convert it to reusable canonical content without losing its existing code or settings.', 'intelligent-code-assistant')}</p>
+                        <Button
+                            variant="primary"
+                            onClick={handleConvertToCodeExample}
+                            disabled={isConverting}
+                            isBusy={isConverting}
+                        >
+                            {isConverting ? <Spinner /> : __('Convert to Code Example', 'intelligent-code-assistant')}
+                        </Button>
+                        {conversionError && <p style={{ color: '#cc1818', fontSize: '12px', marginTop: '10px' }} role="alert">{conversionError}</p>}
+                    </PanelBody>
+                )}
                 <PanelBody title={__('AI Features', 'intelligent-code-assistant')} initialOpen={true}>
                     <ToggleControl label={__('Enable AI Features', 'intelligent-code-assistant')} checked={enableAIAssistant} onChange={(value) => setAttributes({ enableAIAssistant: value })} />
                     {enableAIAssistant && (

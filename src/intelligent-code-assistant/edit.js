@@ -37,7 +37,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         const block = select('core/block-editor').getBlock(clientId);
         const headerBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-header');
         const contentBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-content');
-        const rawText = contentBlock?.attributes?.content || '';
+        const rawText = contentBlock?.attributes?.code ?? contentBlock?.attributes?.content ?? '';
         const postTitle = select('core/editor')?.getEditedPostAttribute?.('title') || '';
         const postType = select('core/editor')?.getCurrentPostType?.() || '';
         const postId = Number(select('core/editor')?.getCurrentPostId?.() || 0);
@@ -67,12 +67,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         };
     }, [clientId, codeExampleId]);
 
-    // Backward compatibility is structural, not content-based. Existing ICA
-    // blocks already contain their historical code-header/code-content children,
-    // even when the code itself is empty or an older attribute shape means the
-    // current content reader cannot see its text. Only a genuinely new, empty
-    // ICA with no semantic Code Example identity and no local child structure
-    // should enter the Create/Use Code Example workflow.
     const isCanonicalCodeExample = currentPostType === 'ica_code_example' || isEditingCanonicalEntity || isCodeExampleProxy;
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLocalBlockStructure;
     const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;

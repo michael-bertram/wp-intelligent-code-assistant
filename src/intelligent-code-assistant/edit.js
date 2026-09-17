@@ -9,7 +9,7 @@ import CanonicalCodeExampleEditor from './CanonicalCodeExampleEditor';
 import { CanonicalCodeExampleContext } from './canonical-editor-context';
 import './editor.scss';
 
-export default function Edit({ attributes, setAttributes, clientId }) {
+export default function Edit({ attributes, setAttributes, clientId, isCodeExampleProxy = false }) {
     const {
         codeExampleId,
         showLanguageBadge,
@@ -33,60 +33,31 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
 
-    const {
-        cleanRawText,
-        lineCount,
-        headerBlockId,
-        tutorialTitle,
-        derivedTutorialContext,
-        currentPostType,
-        currentPostId,
-    } = useSelect((select) => {
-        const { getBlockOrder, getBlock } = select('core/block-editor');
-        const editorStore = select('core/editor');
-        const innerBlockIds = getBlockOrder(clientId);
+    const { cleanRawText, headerBlockId, tutorialTitle, derivedTutorialContext, currentPostType, currentPostId } = useSelect((select) => {
+        const block = select('core/block-editor').getBlock(clientId);
+        const headerBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-header');
+        const contentBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-content');
+        const rawText = contentBlock?.attributes?.content || '';
+        const postTitle = select('core/editor')?.getEditedPostAttribute?.('title') || '';
+        const postType = select('core/editor')?.getCurrentPostType?.() || '';
+        const postId = Number(select('core/editor')?.getCurrentPostId?.() || 0);
 
-        let contentBlock = null;
-        let headerBlock = null;
-
-        for (const id of innerBlockIds) {
-            const block = getBlock(id);
-            if (!block) continue;
-            if (block.name === 'wpe/code-content') contentBlock = block;
-            if (block.name === 'wpe/code-header') headerBlock = block;
+        const rootBlocks = select('core/block-editor').getBlocks();
+        let contextResult = '';
+        const targetIndex = rootBlocks.findIndex((rootBlock) => rootBlock.clientId === clientId);
+        if (targetIndex > -1) {
+            const nearby = rootBlocks.slice(Math.max(0, targetIndex - 3), targetIndex);
+            contextResult = nearby
+                .map((candidate) => {
+                    const attrs = candidate.attributes || {};
+                    return attrs.content || attrs.text || attrs.value || '';
+                })
+                .filter(Boolean)
+                .join('\n\n');
         }
-
-        const postTitle = editorStore?.getEditedPostAttribute?.('title') || '';
-        const postType = editorStore?.getCurrentPostType?.() || '';
-        const postId = Number(editorStore?.getCurrentPostId?.() || 0);
-        const topLevelIds = getBlockOrder();
-        const currentIndex = topLevelIds.indexOf(clientId);
-        const contextFragments = [];
-
-        if (currentIndex > 0) {
-            for (let index = currentIndex - 1, inspected = 0; index >= 0 && inspected < 8; index -= 1, inspected += 1) {
-                const block = getBlock(topLevelIds[index]);
-                if (!block) continue;
-                if (block.name === 'core/paragraph' || block.name === 'core/heading') {
-                    const rawContent = block.attributes?.content || '';
-                    const text = rawContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-                    if (text) contextFragments.unshift(text);
-                    if (block.name === 'core/heading') break;
-                }
-            }
-        }
-
-        const contextResult = contextFragments.join('\n').slice(0, 1200);
-        const rawContent = contentBlock?.attributes?.content || contentBlock?.attributes?.code || contentBlock?.attributes?.value || '';
-        const textWithNewlines = rawContent
-            .replace(/<br\s*\/?>/gi, '\n')
-            .replace(/<\/p><p>/gi, '\n')
-            .replace(/<\/div><div>/gi, '\n');
-        const cleanText = textWithNewlines.replace(/<[^>]*>/g, '');
 
         return {
-            cleanRawText: cleanText,
-            lineCount: cleanText.trim() ? cleanText.split('\n').length : 1,
+            cleanRawText: rawText,
             headerBlockId: headerBlock?.clientId || null,
             tutorialTitle: postTitle,
             derivedTutorialContext: contextResult,
@@ -95,7 +66,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         };
     }, [clientId, codeExampleId]);
 
-    const isCanonicalCodeExample = currentPostType === 'ica_code_example' || isEditingCanonicalEntity;
+    // A proxied Code Example is canonical for content/configuration purposes,
+    // while still living in the article editor for selection and tutorial context.
+    // This prevents Edit from routing the proxy back into the chooser or the old
+    // nested CanonicalCodeExampleEditor.
+    const isCanonicalCodeExample = currentPostType === 'ica_code_example' || isEditingCanonicalEntity || isCodeExampleProxy;
     const hasLegacyLocalContent = Boolean(cleanRawText.trim());
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLegacyLocalContent;
     const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;
@@ -251,14 +226,34 @@ export default function Edit({ attributes, setAttributes, clientId }) {
                     <SelectControl label={__('Code Font Size', 'intelligent-code-assistant')} value={fontSize} options={fontSizeOptions} onChange={(value) => setAttributes({ fontSize: value })} />
                 </PanelBody>
             </InspectorControls>
+
             <div {...blockProps}>
                 <div className="editor-combined-container">
                     {showLanguageBadge && codeLanguage && <span className={`code-badge lang-${codeLanguage.toLowerCase()}`}>{codeLanguage}</span>}
-                    <div className="editor-inner-blocks-wrapper">
-                        <InnerBlocks allowedBlocks={['wpe/code-header', 'wpe/code-content']} template={[[ 'wpe/code-header', {} ], [ 'wpe/code-content', {} ]]} templateLock="all" />
-                        {showLineNumbers && <div className="line-numbers-gutter" aria-hidden="true">{Array.from({ length: lineCount }).map((_, index) => { const lineNum = index + 1; return <span key={index} className={isLineHighlighted(lineNum, highlightLines) ? 'is-highlighted' : ''}>{lineNum}</span>; })}</div>}
+                    <div className="panel-scroll-container">
+                        <div className="panel-content-flex-wrapper">
+                            {showLineNumbers && (
+                                <div className="line-numbers-gutter" aria-hidden="true">
+                                    {cleanRawText.split('\n').map((_, index) => <span key={index} className={isLineHighlighted(index + 1, highlightLines) ? 'is-highlighted' : ''}>{index + 1}</span>)}
+                                </div>
+                            )}
+                            <div className="editor-inner-blocks-wrapper">
+                                <InnerBlocks
+                                    allowedBlocks={['wpe/code-header', 'wpe/code-content']}
+                                    template={[
+                                        ['wpe/code-header', {}],
+                                        ['wpe/code-content', {}],
+                                    ]}
+                                    templateLock="all"
+                                />
+                            </div>
+                        </div>
                     </div>
-                    <div className="code-footer"><div className="code-analytics-meta">{filename && <><span className="code-filename">{filename}</span><span className="meta-divider">•</span></>}<span>{lineCount} {lineCount === 1 ? 'line' : 'lines'}</span><span className="meta-divider">•</span><span>{characterCount.toLocaleString()} chars</span></div></div>
+                    <div className="code-footer">
+                        <span className="code-analytics-meta">
+                            {characterCount} {characterCount === 1 ? __('character', 'intelligent-code-assistant') : __('characters', 'intelligent-code-assistant')}
+                        </span>
+                    </div>
                 </div>
             </div>
         </>

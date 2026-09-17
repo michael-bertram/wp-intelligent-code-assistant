@@ -15,6 +15,11 @@ import Edit from './edit';
  * the article block stays in the article, while its displayed children belong
  * to the Code Example entity. This keeps one block-editor store, one selection
  * model and one InspectorControls surface.
+ *
+ * The controller also forwards the first pointer interaction directly to the
+ * canonical Intelligent Code Assistant child. Without this, Gutenberg selects
+ * the article reference controller first and the canonical ICA only on the
+ * second click, which makes its InspectorControls feel one interaction behind.
  */
 function CodeExampleController({ codeExampleId }) {
     const entityId = Number(codeExampleId || 0);
@@ -29,8 +34,36 @@ function CodeExampleController({ codeExampleId }) {
         { id: entityId }
     );
     const { saveEditedEntityRecord } = useDispatch('core');
+    const { selectBlock } = useDispatch('core/block-editor');
     const saveTimer = useRef(null);
     const [saveError, setSaveError] = useState('');
+
+    const canonicalAssistantClientId = useSelect((select) => {
+        const blockEditor = select('core/block-editor');
+        const candidateIds = (blocks || [])
+            .map((block) => block?.clientId)
+            .filter(Boolean);
+
+        for (const candidateId of candidateIds) {
+            const candidate = blockEditor.getBlock(candidateId);
+            if (candidate?.name === 'wpe/intelligent-code-assistant') {
+                return candidateId;
+            }
+        }
+
+        const fallback = (blocks || []).find(
+            (block) => block?.name === 'wpe/intelligent-code-assistant'
+        );
+
+        return fallback?.clientId || null;
+    }, [blocks]);
+
+    const isCanonicalAssistantSelected = useSelect(
+        (select) => canonicalAssistantClientId
+            ? select('core/block-editor').isBlockSelected(canonicalAssistantClientId)
+            : false,
+        [canonicalAssistantClientId]
+    );
 
     useEffect(() => () => {
         if (saveTimer.current) {
@@ -70,8 +103,23 @@ function CodeExampleController({ codeExampleId }) {
         scheduleSave();
     };
 
+    const selectCanonicalAssistant = (event) => {
+        if (!canonicalAssistantClientId || isCanonicalAssistantSelected) {
+            return;
+        }
+
+        selectBlock(canonicalAssistantClientId);
+
+        // Prevent Gutenberg from replacing the canonical ICA selection with the
+        // reference controller or an implementation-detail child during this
+        // same pointer action. Once selected, later clicks are left untouched
+        // so filename/code fields and sidebar controls work normally.
+        event.stopPropagation();
+    };
+
     const blockProps = useBlockProps({
         className: 'ica-code-example-reference',
+        onMouseDownCapture: selectCanonicalAssistant,
     });
     const innerBlocksProps = useInnerBlocksProps(blockProps, {
         value: blocks || [],
@@ -116,9 +164,7 @@ function CodeExampleController({ codeExampleId }) {
  * to the Code Example inner-block controller.
  *
  * Controlled Code Example children are identified from Gutenberg's actual
- * hierarchy. Selection itself is owned by the ICA's header/content surfaces:
- * their first click selects the author-facing ICA parent, while a second click
- * can enter the editable field. This avoids competing parent/child proxies.
+ * hierarchy. Selection itself is owned by the author-facing ICA root.
  */
 export default function EditRouter(props) {
     const { attributes, clientId } = props;

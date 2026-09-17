@@ -11,48 +11,10 @@ import { useEffect, useRef, useState } from '@wordpress/element';
 import Edit from './edit';
 
 /**
- * Give the composite Intelligent Code Assistant the same first-click behaviour
- * as a normal Gutenberg block. Its header/code blocks are implementation
- * details, so the first click anywhere on the surface selects the ICA root and
- * exposes its InspectorControls. Once selected, subsequent clicks can still
- * reach the inner editable blocks.
- */
-function SelectionProxy({ clientId, children }) {
-    const { selectBlock } = useDispatch('core/block-editor');
-    const isSelected = useSelect(
-        (select) => select('core/block-editor').isBlockSelected(clientId),
-        [clientId]
-    );
-
-    const selectRootOnFirstClick = (event) => {
-        if (isSelected) {
-            return;
-        }
-
-        selectBlock(clientId);
-
-        // Do not let the same pointer action immediately replace the root
-        // selection with one of the ICA's implementation-detail inner blocks.
-        // The next click is allowed through normally for code/header editing.
-        event.stopPropagation();
-    };
-
-    return (
-        <div
-            className="ica-selection-proxy"
-            style={{ display: 'contents' }}
-            onMouseDownCapture={selectRootOnFirstClick}
-        >
-            {children}
-        </div>
-    );
-}
-
-/**
  * A linked Code Example behaves like Gutenberg's own synced-pattern controller:
  * the article block stays in the article, while its displayed children belong
- * to the Code Example entity. This keeps one block-editor store and therefore
- * one selection model and one InspectorControls surface.
+ * to the Code Example entity. This keeps one block-editor store, one selection
+ * model and one InspectorControls surface.
  */
 function CodeExampleController({ codeExampleId }) {
     const entityId = Number(codeExampleId || 0);
@@ -153,10 +115,10 @@ function CodeExampleController({ codeExampleId }) {
  * Route normal/legacy blocks to the standard editor and linked article blocks
  * to the Code Example inner-block controller.
  *
- * The canonical child is detected from Gutenberg's actual block hierarchy,
- * rather than React context. Controlled entity blocks are rendered by the host
- * block-editor store, so React context from the controller is not a reliable
- * way to identify them.
+ * Controlled Code Example children are identified from Gutenberg's actual
+ * hierarchy. Selection itself is owned by the ICA's header/content surfaces:
+ * their first click selects the author-facing ICA parent, while a second click
+ * can enter the editable field. This avoids competing parent/child proxies.
  */
 export default function EditRouter(props) {
     const { attributes, clientId } = props;
@@ -184,19 +146,11 @@ export default function EditRouter(props) {
         codeExampleId > 0;
 
     if (isCanonicalChild) {
-        return (
-            <SelectionProxy clientId={clientId}>
-                <Edit {...props} attributes={{ ...attributes, codeExampleId: 0 }} />
-            </SelectionProxy>
-        );
+        return <Edit {...props} attributes={{ ...attributes, codeExampleId: 0 }} />;
     }
 
     if (!isArticleReference) {
-        return (
-            <SelectionProxy clientId={clientId}>
-                <Edit {...props} />
-            </SelectionProxy>
-        );
+        return <Edit {...props} />;
     }
 
     return <CodeExampleController codeExampleId={codeExampleId} />;

@@ -31,10 +31,7 @@ function intelligent_code_assistant_is_public_ai_route( $route ) {
 		return true;
 	}
 
-	return (bool) preg_match(
-		'#^/wp/v2/abilities/intelligent-code-assistant/(explain-code|explain-line|ask-code|check-understanding)/run$#',
-		$route
-	);
+	return false;
 }
 
 /**
@@ -291,8 +288,8 @@ add_action(
 		?>
 		<div class="notice notice-warning">
 			<p>
-				<strong><?php esc_html_e( 'Reader-facing AI is currently unavailable for anonymous visitors.', 'intelligent-code-assistant' ); ?></strong>
-				<?php esc_html_e( ' The configured AI provider rejected the most recent public generation request. Editorial AI for logged-in users may still continue to work.', 'intelligent-code-assistant' ); ?>
+				<strong><?php esc_html_e( 'Reader-facing AI could not complete a recent request.', 'intelligent-code-assistant' ); ?></strong>
+				<?php esc_html_e( ' The server-side AI provider or connector rejected the request. Public readers do not need to be logged in. If this continues, check the configured AI connector and its credentials.', 'intelligent-code-assistant' ); ?>
 			</p>
 		</div>
 		<?php

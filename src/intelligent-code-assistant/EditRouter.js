@@ -2,7 +2,6 @@ import { __ } from '@wordpress/i18n';
 import { Warning } from '@wordpress/block-editor';
 import { Spinner } from '@wordpress/components';
 import { createBlock, parse, serialize } from '@wordpress/blocks';
-import { useEntityRecord } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useRef, useState } from '@wordpress/element';
 import Edit from './edit';
@@ -60,21 +59,14 @@ const getSyncSignature = (block) => {
 /**
  * Edit a linked Code Example through the article ICA itself.
  *
- * The canonical entity is deliberately requested with context=edit. The normal
- * REST view representation contains rendered HTML, which no longer contains
- * the block comments required by parse(). The editor proxy needs the canonical
- * raw post_content so it can hydrate the article ICA immediately after a Code
- * Example is created or selected.
+ * Core-data resolves the entity with context=edit so the proxy receives raw
+ * post_content, including Gutenberg block comments. Keeping the query in the
+ * normal core-data selector also means newly created/selected entities can be
+ * hydrated from the same store the chooser has just populated.
  */
 function CodeExampleProxy({ codeExampleId, editProps }) {
     const entityId = Number(codeExampleId || 0);
     const { clientId, attributes } = editProps;
-    const { record, hasResolved } = useEntityRecord(
-        'postType',
-        'ica_code_example',
-        entityId,
-        { context: 'edit' }
-    );
     const { editEntityRecord, saveEditedEntityRecord } = useDispatch('core');
     const { updateBlockAttributes, replaceInnerBlocks } = useDispatch('core/block-editor');
     const [isHydrated, setIsHydrated] = useState(false);
@@ -82,6 +74,20 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
     const hydratedEntityId = useRef(0);
     const saveTimer = useRef(null);
     const lastSyncedSignature = useRef('');
+
+    const { record, isResolving } = useSelect((select) => {
+        const core = select('core');
+        const query = { context: 'edit' };
+
+        return {
+            record: entityId
+                ? core.getEntityRecord('postType', 'ica_code_example', entityId, query)
+                : null,
+            isResolving: entityId
+                ? core.isResolving('getEntityRecord', ['postType', 'ica_code_example', entityId, query])
+                : false,
+        };
+    }, [entityId]);
 
     const rawRecordContent = getRawRecordContent(record);
     const canonicalAssistant = useMemo(
@@ -205,7 +211,7 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
         saveEditedEntityRecord,
     ]);
 
-    if (!hasResolved) {
+    if (isResolving && !record) {
         return <Spinner />;
     }
 

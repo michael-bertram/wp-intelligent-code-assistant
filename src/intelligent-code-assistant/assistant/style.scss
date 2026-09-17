@@ -193,9 +193,9 @@
 		}
 	}
 
-	.ai-assistant-button {
-		animation: ai-assistant-nudge 2.8s ease-in-out 1s 2;
-		span[aria-hidden="true"] { animation: ai-assistant-sparkle 2.8s ease-in-out 1s 2; }
+	.ai-assistant-button.is-attention-ready {
+		animation: ai-assistant-nudge 1.35s ease-in-out .18s 2;
+		span[aria-hidden="true"] { animation: ai-assistant-sparkle 1.35s ease-in-out .18s 2; }
 	}
 
 	.ai-assistant-drawer {

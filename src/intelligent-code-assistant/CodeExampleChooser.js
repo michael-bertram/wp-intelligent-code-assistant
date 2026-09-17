@@ -1,7 +1,7 @@
 import { __ } from '@wordpress/i18n';
-import { Button, SelectControl, Spinner, TextControl } from '@wordpress/components';
+import { Button, Spinner, TextControl } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useState } from '@wordpress/element';
+import { useMemo, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 
 const EMPTY_CODE_EXAMPLE_CONTENT = `<!-- wp:wpe/intelligent-code-assistant -->
@@ -14,33 +14,50 @@ const EMPTY_CODE_EXAMPLE_CONTENT = `<!-- wp:wpe/intelligent-code-assistant -->
 <!-- /wp:wpe/code-content --></div>
 <!-- /wp:wpe/intelligent-code-assistant -->`;
 
+const decodeTitle = (value = '') => {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = value;
+    return textarea.value;
+};
+
 export default function CodeExampleChooser({ onSelect }) {
     const [mode, setMode] = useState('create');
-    const [selectedId, setSelectedId] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
     const [newTitle, setNewTitle] = useState('');
     const [isCreating, setIsCreating] = useState(false);
-    const [isSelecting, setIsSelecting] = useState(false);
+    const [selectingId, setSelectingId] = useState(0);
     const [error, setError] = useState('');
 
-    const codeExamples = useSelect(
-        (select) => select('core').getEntityRecords('postType', 'ica_code_example', {
+    const { codeExamples, isLoadingExamples } = useSelect((select) => {
+        const core = select('core');
+        const query = {
             per_page: 100,
             orderby: 'title',
             order: 'asc',
             status: ['publish', 'draft', 'pending', 'private'],
-        }) || [],
-        []
-    );
+        };
+
+        return {
+            codeExamples: core.getEntityRecords('postType', 'ica_code_example', query) || [],
+            isLoadingExamples: core.isResolving('getEntityRecords', ['postType', 'ica_code_example', query]),
+        };
+    }, []);
 
     const { saveEntityRecord } = useDispatch('core');
 
-    const options = [
-        { label: __('Choose a Code Example…', 'intelligent-code-assistant'), value: '' },
-        ...codeExamples.map((example) => ({
-            label: example.title?.rendered || `${__('Code Example', 'intelligent-code-assistant')} #${example.id}`,
-            value: String(example.id),
-        })),
-    ];
+    const filteredExamples = useMemo(() => {
+        const search = searchTerm.trim().toLowerCase();
+        if (!search) {
+            return codeExamples;
+        }
+
+        return codeExamples.filter((example) => {
+            const title = decodeTitle(example.title?.rendered || '').toLowerCase();
+            const language = String(example.meta?._ica_code_language || '').toLowerCase();
+            const filename = String(example.meta?._ica_code_filename || '').toLowerCase();
+            return title.includes(search) || language.includes(search) || filename.includes(search);
+        });
+    }, [codeExamples, searchTerm]);
 
     const switchMode = (nextMode) => {
         setMode(nextMode);
@@ -81,22 +98,22 @@ export default function CodeExampleChooser({ onSelect }) {
         }
     };
 
-    const useExistingCodeExample = async () => {
-        const id = Number(selectedId || 0);
-        if (!id) {
+    const useExistingCodeExample = async (id) => {
+        const exampleId = Number(id || 0);
+        if (!exampleId || selectingId) {
             return;
         }
 
-        setIsSelecting(true);
+        setSelectingId(exampleId);
         setError('');
 
         try {
-            const record = await resolveCodeExample(id);
-            onSelect(id, record);
+            const record = await resolveCodeExample(exampleId);
+            onSelect(exampleId, record);
         } catch (err) {
             setError(err?.message || __('The Code Example could not be loaded.', 'intelligent-code-assistant'));
         } finally {
-            setIsSelecting(false);
+            setSelectingId(0);
         }
     };
 
@@ -124,7 +141,7 @@ export default function CodeExampleChooser({ onSelect }) {
                     aria-pressed={mode === 'existing'}
                 >
                     <span className="ica-code-example-chooser__mode-title">{__('Use existing', 'intelligent-code-assistant')}</span>
-                    <span className="ica-code-example-chooser__mode-description">{__('Reuse an example', 'intelligent-code-assistant')}</span>
+                    <span className="ica-code-example-chooser__mode-description">{__('Search your library', 'intelligent-code-assistant')}</span>
                 </Button>
             </div>
 
@@ -153,22 +170,53 @@ export default function CodeExampleChooser({ onSelect }) {
                         </Button>
                     </>
                 ) : (
-                    <>
-                        <SelectControl
-                            label={__('Code Example', 'intelligent-code-assistant')}
-                            value={selectedId}
-                            options={options}
-                            onChange={setSelectedId}
+                    <div className="ica-code-example-browser">
+                        <TextControl
+                            label={__('Search Code Examples', 'intelligent-code-assistant')}
+                            value={searchTerm}
+                            onChange={setSearchTerm}
+                            placeholder={__('Search by name, filename or language…', 'intelligent-code-assistant')}
                         />
-                        <Button
-                            variant="primary"
-                            onClick={useExistingCodeExample}
-                            disabled={!selectedId || isSelecting}
-                            isBusy={isSelecting}
-                        >
-                            {isSelecting ? <Spinner /> : __('Use Code Example', 'intelligent-code-assistant')}
-                        </Button>
-                    </>
+
+                        <div className="ica-code-example-browser__results" role="list" aria-label={__('Available Code Examples', 'intelligent-code-assistant')}>
+                            {isLoadingExamples && !codeExamples.length ? (
+                                <div className="ica-code-example-browser__empty"><Spinner /></div>
+                            ) : filteredExamples.length ? (
+                                filteredExamples.map((example) => {
+                                    const title = decodeTitle(example.title?.rendered || '') || `${__('Code Example', 'intelligent-code-assistant')} #${example.id}`;
+                                    const language = example.meta?._ica_code_language || '';
+                                    const filename = example.meta?._ica_code_filename || '';
+                                    const isSelecting = selectingId === Number(example.id);
+
+                                    return (
+                                        <Button
+                                            key={example.id}
+                                            className="ica-code-example-browser__item"
+                                            onClick={() => useExistingCodeExample(example.id)}
+                                            disabled={Boolean(selectingId)}
+                                            role="listitem"
+                                        >
+                                            <span className="ica-code-example-browser__item-copy">
+                                                <span className="ica-code-example-browser__title">{title}</span>
+                                                <span className="ica-code-example-browser__meta">
+                                                    {[language, filename].filter(Boolean).join(' · ') || __('Code Example', 'intelligent-code-assistant')}
+                                                </span>
+                                            </span>
+                                            <span className="ica-code-example-browser__action" aria-hidden="true">
+                                                {isSelecting ? <Spinner /> : __('Use', 'intelligent-code-assistant')}
+                                            </span>
+                                        </Button>
+                                    );
+                                })
+                            ) : (
+                                <p className="ica-code-example-browser__empty">
+                                    {searchTerm.trim()
+                                        ? __('No Code Examples match your search.', 'intelligent-code-assistant')
+                                        : __('No Code Examples are available yet.', 'intelligent-code-assistant')}
+                                </p>
+                            )}
+                        </div>
+                    </div>
                 )}
             </div>
 

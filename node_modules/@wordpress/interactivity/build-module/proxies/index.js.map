@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../src/proxies/index.ts"],
-  "sourcesContent": ["/**\n * Internal dependencies\n */\nexport { proxifyState, peek, deepMerge } from './state';\nexport { proxifyStore } from './store';\nexport { proxifyContext } from './context';\n"],
-  "mappings": ";AAGA,SAAS,cAAc,MAAM,iBAAiB;AAC9C,SAAS,oBAAoB;AAC7B,SAAS,sBAAsB;",
-  "names": []
-}

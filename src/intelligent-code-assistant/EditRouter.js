@@ -16,10 +16,10 @@ import Edit from './edit';
  * to the Code Example entity. This keeps one block-editor store, one selection
  * model and one InspectorControls surface.
  *
- * The controller also forwards the first pointer interaction directly to the
- * canonical Intelligent Code Assistant child. Without this, Gutenberg selects
- * the article reference controller first and the canonical ICA only on the
- * second click, which makes its InspectorControls feel one interaction behind.
+ * Every pointer interaction on the linked surface keeps the canonical
+ * Intelligent Code Assistant selected. The controller is an ownership detail,
+ * not an author-facing selection target, so it must never steal selection from
+ * the canonical ICA on a later click.
  */
 function CodeExampleController({ codeExampleId }) {
     const entityId = Number(codeExampleId || 0);
@@ -57,13 +57,6 @@ function CodeExampleController({ codeExampleId }) {
 
         return fallback?.clientId || null;
     }, [blocks]);
-
-    const isCanonicalAssistantSelected = useSelect(
-        (select) => canonicalAssistantClientId
-            ? select('core/block-editor').isBlockSelected(canonicalAssistantClientId)
-            : false,
-        [canonicalAssistantClientId]
-    );
 
     useEffect(() => () => {
         if (saveTimer.current) {
@@ -103,23 +96,23 @@ function CodeExampleController({ codeExampleId }) {
         scheduleSave();
     };
 
-    const selectCanonicalAssistant = (event) => {
-        if (!canonicalAssistantClientId || isCanonicalAssistantSelected) {
+    const keepCanonicalAssistantSelected = (event) => {
+        if (!canonicalAssistantClientId) {
             return;
         }
 
+        // Reassert the author-facing ICA on every pointer interaction. Gutenberg
+        // may otherwise clear/select the controlled reference on the second
+        // click. We intentionally do not preventDefault(), so RichText fields
+        // can still receive focus/caret placement and sidebar controls remain
+        // normally interactive.
         selectBlock(canonicalAssistantClientId);
-
-        // Prevent Gutenberg from replacing the canonical ICA selection with the
-        // reference controller or an implementation-detail child during this
-        // same pointer action. Once selected, later clicks are left untouched
-        // so filename/code fields and sidebar controls work normally.
         event.stopPropagation();
     };
 
     const blockProps = useBlockProps({
         className: 'ica-code-example-reference',
-        onMouseDownCapture: selectCanonicalAssistant,
+        onMouseDownCapture: keepCanonicalAssistantSelected,
     });
     const innerBlocksProps = useInnerBlocksProps(blockProps, {
         value: blocks || [],

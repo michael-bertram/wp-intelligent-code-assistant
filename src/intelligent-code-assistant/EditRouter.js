@@ -16,12 +16,9 @@ import Edit from './edit';
  * to the Code Example entity. This keeps one block-editor store, one selection
  * model and one InspectorControls surface.
  *
- * Gutenberg performs some of its block-selection work later in the pointer/
- * click lifecycle. Selecting the canonical ICA during mousedown is therefore
- * too early: Gutenberg can clear that selection again before the interaction
- * finishes. We let the normal click/focus complete, then restore the canonical
- * ICA selection on the next animation frame. That preserves RichText focus and
- * caret behaviour while keeping the ICA InspectorControls visible.
+ * Selection is deliberately left to Gutenberg. Attempts to force the canonical
+ * child selection from the controller race Gutenberg's own controlled-block
+ * selection lifecycle and can leave the editor with no selected block.
  */
 function CodeExampleController({ codeExampleId }) {
     const entityId = Number(codeExampleId || 0);
@@ -36,37 +33,12 @@ function CodeExampleController({ codeExampleId }) {
         { id: entityId }
     );
     const { saveEditedEntityRecord } = useDispatch('core');
-    const { selectBlock } = useDispatch('core/block-editor');
     const saveTimer = useRef(null);
-    const selectionFrame = useRef(null);
     const [saveError, setSaveError] = useState('');
-
-    const canonicalAssistantClientId = useSelect((select) => {
-        const blockEditor = select('core/block-editor');
-        const candidateIds = (blocks || [])
-            .map((block) => block?.clientId)
-            .filter(Boolean);
-
-        for (const candidateId of candidateIds) {
-            const candidate = blockEditor.getBlock(candidateId);
-            if (candidate?.name === 'wpe/intelligent-code-assistant') {
-                return candidateId;
-            }
-        }
-
-        const fallback = (blocks || []).find(
-            (block) => block?.name === 'wpe/intelligent-code-assistant'
-        );
-
-        return fallback?.clientId || null;
-    }, [blocks]);
 
     useEffect(() => () => {
         if (saveTimer.current) {
             window.clearTimeout(saveTimer.current);
-        }
-        if (selectionFrame.current) {
-            window.cancelAnimationFrame(selectionFrame.current);
         }
     }, []);
 
@@ -102,25 +74,8 @@ function CodeExampleController({ codeExampleId }) {
         scheduleSave();
     };
 
-    const restoreCanonicalSelection = () => {
-        if (!canonicalAssistantClientId) {
-            return;
-        }
-
-        if (selectionFrame.current) {
-            window.cancelAnimationFrame(selectionFrame.current);
-        }
-
-        selectionFrame.current = window.requestAnimationFrame(() => {
-            selectBlock(canonicalAssistantClientId);
-            selectionFrame.current = null;
-        });
-    };
-
     const blockProps = useBlockProps({
         className: 'ica-code-example-reference',
-        onClick: restoreCanonicalSelection,
-        onFocusCapture: restoreCanonicalSelection,
     });
     const innerBlocksProps = useInnerBlocksProps(blockProps, {
         value: blocks || [],
@@ -165,7 +120,8 @@ function CodeExampleController({ codeExampleId }) {
  * to the Code Example inner-block controller.
  *
  * Controlled Code Example children are identified from Gutenberg's actual
- * hierarchy. Selection itself is owned by the author-facing ICA root.
+ * hierarchy. Their header/code surfaces already implement the first-click
+ * author-facing selection behaviour used by normal ICA blocks.
  */
 export default function EditRouter(props) {
     const { attributes, clientId } = props;

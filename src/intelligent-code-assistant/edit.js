@@ -33,14 +33,13 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
 
-    const { cleanRawText, hasLocalBlockStructure, headerBlockId, tutorialTitle, derivedTutorialContext, currentPostType, currentPostId } = useSelect((select) => {
+    const { cleanRawText, hasLocalBlockStructure, headerBlockId, tutorialTitle, derivedTutorialContext, currentPostType } = useSelect((select) => {
         const block = select('core/block-editor').getBlock(clientId);
         const headerBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-header');
         const contentBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-content');
         const rawText = contentBlock?.attributes?.code ?? contentBlock?.attributes?.content ?? '';
         const postTitle = select('core/editor')?.getEditedPostAttribute?.('title') || '';
         const postType = select('core/editor')?.getCurrentPostType?.() || '';
-        const postId = Number(select('core/editor')?.getCurrentPostId?.() || 0);
 
         const rootBlocks = select('core/block-editor').getBlocks();
         let contextResult = '';
@@ -63,7 +62,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             tutorialTitle: postTitle,
             derivedTutorialContext: contextResult,
             currentPostType: postType,
-            currentPostId: postId,
         };
     }, [clientId, codeExampleId]);
 
@@ -71,8 +69,13 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLocalBlockStructure;
     const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;
 
-    if (currentPostType === 'ica_code_example' && currentPostId > 0 && Number(codeExampleId || 0) !== currentPostId) {
-        setAttributes({ codeExampleId: currentPostId });
+    // The canonical Code Example post owns the full ICA block and its children.
+    // It must remain unlinked internally (codeExampleId = 0), otherwise save.js
+    // treats it like an article reference and intentionally omits InnerBlocks.
+    // Older canonical posts may still contain their own post ID from the earlier
+    // implementation, so normalize those records as soon as they are edited.
+    if (currentPostType === 'ica_code_example' && Number(codeExampleId || 0) !== 0) {
+        setAttributes({ codeExampleId: 0 });
     }
 
     const characterCount = cleanRawText.replace(/\r/g, '').length;

@@ -333,7 +333,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'description'         => __( 'Explains a selected line of code using the surrounding snippet as context.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
 			'show_in_mcp'         => true,
-			'permission_callback' => '__return_true',
+			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 
 			'input_schema'        => array(
 				'type'       => 'object',
@@ -643,7 +643,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'description'         => __( 'Answers a reader question using the current code example as context.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
 			'show_in_mcp'         => true,
-			'permission_callback' => '__return_true',
+			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 
 			'input_schema' => array(
 				'type'       => 'object',
@@ -928,7 +928,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'description'         => __( 'Generates a short multiple-choice question based on the current code example.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
 			'show_in_mcp'         => true,
-			'permission_callback' => '__return_true',
+			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 
 			'input_schema' => array(
 				'type'       => 'object',

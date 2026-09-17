@@ -33,7 +33,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
 
-    const { cleanRawText, headerBlockId, tutorialTitle, derivedTutorialContext, currentPostType, currentPostId } = useSelect((select) => {
+    const { cleanRawText, hasLocalBlockStructure, headerBlockId, tutorialTitle, derivedTutorialContext, currentPostType, currentPostId } = useSelect((select) => {
         const block = select('core/block-editor').getBlock(clientId);
         const headerBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-header');
         const contentBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-content');
@@ -58,6 +58,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
 
         return {
             cleanRawText: rawText,
+            hasLocalBlockStructure: Boolean(headerBlock || contentBlock || block?.innerBlocks?.length),
             headerBlockId: headerBlock?.clientId || null,
             tutorialTitle: postTitle,
             derivedTutorialContext: contextResult,
@@ -66,13 +67,14 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         };
     }, [clientId, codeExampleId]);
 
-    // A proxied Code Example is canonical for content/configuration purposes,
-    // while still living in the article editor for selection and tutorial context.
-    // This prevents Edit from routing the proxy back into the chooser or the old
-    // nested CanonicalCodeExampleEditor.
+    // Backward compatibility is structural, not content-based. Existing ICA
+    // blocks already contain their historical code-header/code-content children,
+    // even when the code itself is empty or an older attribute shape means the
+    // current content reader cannot see its text. Only a genuinely new, empty
+    // ICA with no semantic Code Example identity and no local child structure
+    // should enter the Create/Use Code Example workflow.
     const isCanonicalCodeExample = currentPostType === 'ica_code_example' || isEditingCanonicalEntity || isCodeExampleProxy;
-    const hasLegacyLocalContent = Boolean(cleanRawText.trim());
-    const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLegacyLocalContent;
+    const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLocalBlockStructure;
     const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;
 
     if (currentPostType === 'ica_code_example' && currentPostId > 0 && Number(codeExampleId || 0) !== currentPostId) {

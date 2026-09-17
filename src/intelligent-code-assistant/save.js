@@ -1,12 +1,16 @@
 import { useBlockProps, InnerBlocks } from '@wordpress/block-editor';
 
 export default function Save({ attributes }) {
-  // A linked article block is a semantic reference only. Its editable mirror is
-  // populated from the Code Example entity in the editor and must not become a
-  // second persisted copy of the canonical code. render_block_data resolves the
-  // reference back to the canonical block on the front end.
+  // A linked article block persists only its normal outer block markup. The
+  // editor may temporarily mirror canonical inner blocks for authoring, but
+  // those children are intentionally omitted here so the article does not own
+  // a stale second copy of the Code Example. Keeping the wrapper preserves the
+  // markup shape expected by existing article blocks and avoids validation
+  // errors when upgrading from the previous save implementation.
   if (Number(attributes?.codeExampleId || 0) > 0) {
-    return null;
+    return (
+      <div {...useBlockProps.save({ className: 'task-block' })} />
+    );
   }
 
   // Legacy/standalone blocks keep their existing saved inner-block structure.

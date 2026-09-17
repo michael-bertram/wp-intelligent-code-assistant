@@ -166,18 +166,19 @@ export function buildAIContext(context, extras = {}) {
 }
 
 /**
- * Send a request to a WordPress AI Assistant capability.
+ * Send a reader-facing AI request through the plugin's public REST boundary.
  *
- * The direct REST route is attempted first so the block remains independent
- * of the public Abilities REST transport. The Ability route is the canonical
- * WordPress capability and acts as the fallback.
+ * Public visitors deliberately do not call the WordPress Abilities REST
+ * transport directly. The plugin endpoint is anonymous, validates and rate
+ * limits the request, then invokes the same server-side AI capability using
+ * the site's configured provider/connector credentials.
  *
  * @param {string} capability Capability slug, e.g. "explain-code".
  * @param {Object} payload Normalized AI context.
- * @return {Promise<Object|null>} Capability response or null on failure.
+ * @return {Promise<Object|null>} Capability response or normalized error.
  */
 export async function requestAICapability(capability, payload) {
-  const directResponse = await fetch(
+  const response = await fetch(
     `/wp-json/intelligent-code-assistant/v1/${capability}`,
     {
       method: 'POST',
@@ -186,66 +187,31 @@ export async function requestAICapability(capability, payload) {
     }
   ).catch(() => null);
 
-  if (directResponse) {
-    const directData = await directResponse
-      .json()
-      .catch(() => null);
-
-    if (directResponse.ok) {
-      return directData;
-    }
-
-    // The endpoint exists and WordPress returned a meaningful error.
-    // Preserve it instead of masking it with a fallback request.
-    if (directData?.code) {
-      return {
-        error: true,
-        code: directData.code,
-        message:
-          directData.message ||
-          'The AI request failed.',
-        status:
-          directData.data?.status ||
-          directResponse.status,
-      };
-    }
-  }
-
-  const abilityResponse = await fetch(
-    `/wp-json/wp/v2/abilities/intelligent-code-assistant/${capability}/run`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }
-  ).catch(() => null);
-
-  if (!abilityResponse) {
+  if (!response) {
     return null;
   }
 
-  const abilityData = await abilityResponse
-    .json()
-    .catch(() => null);
+  const data = await response.json().catch(() => null);
 
-  if (abilityResponse.ok) {
-    return abilityData;
+  if (response.ok) {
+    return data;
   }
 
-  if (abilityData?.code) {
+  if (data?.code) {
     return {
       error: true,
-      code: abilityData.code,
-      message:
-        abilityData.message ||
-        'The AI request failed.',
-      status:
-        abilityData.data?.status ||
-        abilityResponse.status,
+      code: data.code,
+      message: data.message || 'The AI request failed.',
+      status: data.data?.status || response.status,
     };
   }
 
-  return null;
+  return {
+    error: true,
+    code: 'ai_request_failed',
+    message: 'The AI request failed.',
+    status: response.status,
+  };
 }
 
 /**

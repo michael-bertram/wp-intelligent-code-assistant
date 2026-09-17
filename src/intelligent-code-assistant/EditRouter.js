@@ -6,6 +6,56 @@ import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useRef, useState } from '@wordpress/element';
 import Edit from './edit';
 
+const decodeHtml = (value = '') => {
+    if (!value || typeof document === 'undefined') return value || '';
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = value;
+    return textarea.value;
+};
+
+const getSavedInnerHtml = (block) => block?.originalContent || block?.innerHTML || '';
+
+const extractSavedValue = (block) => {
+    const html = getSavedInnerHtml(block);
+    if (!html || typeof document === 'undefined') return '';
+
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    const root = container.firstElementChild;
+    return decodeHtml(root ? root.innerHTML : html);
+};
+
+const normalizeCanonicalBlock = (block) => {
+    if (!block) return block;
+
+    const innerBlocks = (block.innerBlocks || []).map(normalizeCanonicalBlock);
+    let attributes = { ...(block.attributes || {}) };
+
+    // Historical Code Content values were saved in the block's HTML rather
+    // than a comment attribute. Gutenberg's parsed block can therefore have an
+    // empty attributes object even though originalContent still contains the
+    // code. Recover that canonical saved value before cloning the block tree.
+    if (block.name === 'wpe/code-content') {
+        const savedCode = attributes.code ?? attributes.content ?? extractSavedValue(block);
+        attributes = {
+            ...attributes,
+            code: savedCode || '',
+            content: savedCode || '',
+        };
+    }
+
+    if (block.name === 'wpe/code-header' && !attributes.content) {
+        const savedHeader = extractSavedValue(block);
+        if (savedHeader) attributes.content = savedHeader;
+    }
+
+    return {
+        ...block,
+        attributes,
+        innerBlocks,
+    };
+};
+
 const cloneBlockTree = (block) => createBlock(
     block.name,
     { ...(block.attributes || {}) },
@@ -26,9 +76,11 @@ const getCanonicalAssistant = (record) => {
         return null;
     }
 
-    return parse(rawContent).find(
+    const assistant = parse(rawContent).find(
         (block) => block?.name === 'wpe/intelligent-code-assistant'
     ) || null;
+
+    return normalizeCanonicalBlock(assistant);
 };
 
 const getSharedAttributes = (attributes = {}) => {
@@ -125,23 +177,11 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
         hydratedEntityId.current = entityId;
         lastSyncedSignature.current = '';
         setIsHydrated(true);
-    }, [
-        canonicalAssistant,
-        entityId,
-        clientId,
-        attributes,
-        updateBlockAttributes,
-        replaceInnerBlocks,
-    ]);
+    }, [canonicalAssistant, entityId, clientId, attributes, updateBlockAttributes, replaceInnerBlocks]);
 
     useEffect(() => {
-        if (!isHydrated || !localBlock || !canonicalAssistant || !localSignature) {
-            return;
-        }
-
-        if (lastSyncedSignature.current === localSignature) {
-            return;
-        }
+        if (!isHydrated || !localBlock || !canonicalAssistant || !localSignature) return;
+        if (lastSyncedSignature.current === localSignature) return;
 
         const localAttributes = localBlock.attributes || {};
         const canonicalAttributes = canonicalAssistant.attributes || {};
@@ -151,16 +191,10 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
             codeExampleId: entityId,
         };
 
-        if (Object.prototype.hasOwnProperty.call(canonicalAttributes, 'id')) {
-            nextCanonicalAttributes.id = canonicalAttributes.id;
-        } else {
-            delete nextCanonicalAttributes.id;
-        }
-        if (Object.prototype.hasOwnProperty.call(canonicalAttributes, 'tutorialContextOverride')) {
-            nextCanonicalAttributes.tutorialContextOverride = canonicalAttributes.tutorialContextOverride;
-        } else {
-            delete nextCanonicalAttributes.tutorialContextOverride;
-        }
+        if (Object.prototype.hasOwnProperty.call(canonicalAttributes, 'id')) nextCanonicalAttributes.id = canonicalAttributes.id;
+        else delete nextCanonicalAttributes.id;
+        if (Object.prototype.hasOwnProperty.call(canonicalAttributes, 'tutorialContextOverride')) nextCanonicalAttributes.tutorialContextOverride = canonicalAttributes.tutorialContextOverride;
+        else delete nextCanonicalAttributes.tutorialContextOverride;
 
         const nextCanonicalBlock = createBlock(
             'wpe/intelligent-code-assistant',
@@ -171,61 +205,30 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
 
         lastSyncedSignature.current = localSignature;
         setSaveError('');
-        editEntityRecord('postType', 'ica_code_example', entityId, {
-            content: nextContent,
-        });
+        editEntityRecord('postType', 'ica_code_example', entityId, { content: nextContent });
 
-        if (saveTimer.current) {
-            window.clearTimeout(saveTimer.current);
-        }
-
+        if (saveTimer.current) window.clearTimeout(saveTimer.current);
         saveTimer.current = window.setTimeout(async () => {
             try {
                 await saveEditedEntityRecord('postType', 'ica_code_example', entityId);
             } catch (error) {
-                setSaveError(
-                    error?.message ||
-                    __('The Code Example could not be saved.', 'intelligent-code-assistant')
-                );
+                setSaveError(error?.message || __('The Code Example could not be saved.', 'intelligent-code-assistant'));
             }
         }, 700);
-    }, [
-        isHydrated,
-        localBlock,
-        localSignature,
-        canonicalAssistant,
-        entityId,
-        editEntityRecord,
-        saveEditedEntityRecord,
-    ]);
+    }, [isHydrated, localBlock, localSignature, canonicalAssistant, entityId, editEntityRecord, saveEditedEntityRecord]);
 
-    if (isResolving && !record) {
-        return <Spinner />;
-    }
+    if (isResolving && !record) return <Spinner />;
 
     if (!record || !canonicalAssistant) {
-        return (
-            <Warning>
-                {__('The selected Code Example could not be loaded.', 'intelligent-code-assistant')}
-            </Warning>
-        );
+        return <Warning>{__('The selected Code Example could not be loaded.', 'intelligent-code-assistant')}</Warning>;
     }
 
-    if (!isHydrated) {
-        return <Spinner />;
-    }
+    if (!isHydrated) return <Spinner />;
 
     return (
         <>
-            <Edit
-                {...editProps}
-                isCodeExampleProxy={true}
-            />
-            {saveError && (
-                <span className="screen-reader-text" role="status">
-                    {saveError}
-                </span>
-            )}
+            <Edit {...editProps} isCodeExampleProxy={true} />
+            {saveError && <span className="screen-reader-text" role="status">{saveError}</span>}
         </>
     );
 }
@@ -238,18 +241,9 @@ export default function EditRouter(props) {
     );
 
     const codeExampleId = Number(attributes.codeExampleId || 0);
-    const isArticleReference =
-        currentPostType !== 'ica_code_example' &&
-        codeExampleId > 0;
+    const isArticleReference = currentPostType !== 'ica_code_example' && codeExampleId > 0;
 
-    if (!isArticleReference) {
-        return <Edit {...props} />;
-    }
+    if (!isArticleReference) return <Edit {...props} />;
 
-    return (
-        <CodeExampleProxy
-            codeExampleId={codeExampleId}
-            editProps={props}
-        />
-    );
+    return <CodeExampleProxy codeExampleId={codeExampleId} editProps={props} />;
 }

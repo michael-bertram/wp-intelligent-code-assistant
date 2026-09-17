@@ -16,10 +16,12 @@ import Edit from './edit';
  * to the Code Example entity. This keeps one block-editor store, one selection
  * model and one InspectorControls surface.
  *
- * Every pointer interaction on the linked surface keeps the canonical
- * Intelligent Code Assistant selected. The controller is an ownership detail,
- * not an author-facing selection target, so it must never steal selection from
- * the canonical ICA on a later click.
+ * Gutenberg performs some of its block-selection work later in the pointer/
+ * click lifecycle. Selecting the canonical ICA during mousedown is therefore
+ * too early: Gutenberg can clear that selection again before the interaction
+ * finishes. We let the normal click/focus complete, then restore the canonical
+ * ICA selection on the next animation frame. That preserves RichText focus and
+ * caret behaviour while keeping the ICA InspectorControls visible.
  */
 function CodeExampleController({ codeExampleId }) {
     const entityId = Number(codeExampleId || 0);
@@ -36,6 +38,7 @@ function CodeExampleController({ codeExampleId }) {
     const { saveEditedEntityRecord } = useDispatch('core');
     const { selectBlock } = useDispatch('core/block-editor');
     const saveTimer = useRef(null);
+    const selectionFrame = useRef(null);
     const [saveError, setSaveError] = useState('');
 
     const canonicalAssistantClientId = useSelect((select) => {
@@ -61,6 +64,9 @@ function CodeExampleController({ codeExampleId }) {
     useEffect(() => () => {
         if (saveTimer.current) {
             window.clearTimeout(saveTimer.current);
+        }
+        if (selectionFrame.current) {
+            window.cancelAnimationFrame(selectionFrame.current);
         }
     }, []);
 
@@ -96,23 +102,25 @@ function CodeExampleController({ codeExampleId }) {
         scheduleSave();
     };
 
-    const keepCanonicalAssistantSelected = (event) => {
+    const restoreCanonicalSelection = () => {
         if (!canonicalAssistantClientId) {
             return;
         }
 
-        // Reassert the author-facing ICA on every pointer interaction. Gutenberg
-        // may otherwise clear/select the controlled reference on the second
-        // click. We intentionally do not preventDefault(), so RichText fields
-        // can still receive focus/caret placement and sidebar controls remain
-        // normally interactive.
-        selectBlock(canonicalAssistantClientId);
-        event.stopPropagation();
+        if (selectionFrame.current) {
+            window.cancelAnimationFrame(selectionFrame.current);
+        }
+
+        selectionFrame.current = window.requestAnimationFrame(() => {
+            selectBlock(canonicalAssistantClientId);
+            selectionFrame.current = null;
+        });
     };
 
     const blockProps = useBlockProps({
         className: 'ica-code-example-reference',
-        onMouseDownCapture: keepCanonicalAssistantSelected,
+        onClick: restoreCanonicalSelection,
+        onFocusCapture: restoreCanonicalSelection,
     });
     const innerBlocksProps = useInnerBlocksProps(blockProps, {
         value: blocks || [],

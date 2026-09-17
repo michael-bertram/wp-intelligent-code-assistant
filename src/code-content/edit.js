@@ -27,6 +27,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         event.stopPropagation();
     };
 
+    // `content` was the attribute consumed by the parent ICA editor, while the
+    // Code Content block later moved to `code`. Read either representation and
+    // keep both in sync so historical blocks and canonical Code Examples use
+    // the same text immediately after parsing/hydration.
+    const codeValue = attributes.code ?? attributes.content ?? '';
+
     const blockProps = useBlockProps({
         className: 'code-content-editor plain-code-editor',
         onMouseDownCapture: selectAssistantFirst,
@@ -36,8 +42,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         <div {...blockProps}>
             <RichText
                 tagName="pre"
-                value={attributes.code}
-                onChange={(value) => setAttributes({ code: value })}
+                value={codeValue}
+                onChange={(value) => setAttributes({ code: value, content: value })}
                 placeholder={__('Add code here...', 'intelligent-code-assistant')}
                 allowedFormats={[]}
             />

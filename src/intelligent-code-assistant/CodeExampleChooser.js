@@ -14,6 +14,7 @@ const EMPTY_CODE_EXAMPLE_CONTENT = `<!-- wp:wpe/intelligent-code-assistant -->
 <!-- /wp:wpe/intelligent-code-assistant -->`;
 
 export default function CodeExampleChooser({ onSelect }) {
+    const [mode, setMode] = useState('create');
     const [selectedId, setSelectedId] = useState('');
     const [newTitle, setNewTitle] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -38,6 +39,11 @@ export default function CodeExampleChooser({ onSelect }) {
             value: String(example.id),
         })),
     ];
+
+    const switchMode = (nextMode) => {
+        setMode(nextMode);
+        setError('');
+    };
 
     const createCodeExample = async () => {
         const title = newTitle.trim();
@@ -69,44 +75,77 @@ export default function CodeExampleChooser({ onSelect }) {
     };
 
     return (
-        <div className="ica-code-example-chooser" style={{ border: '1px solid #dcdcde', padding: '24px', borderRadius: '4px' }}>
-            <h3 style={{ marginTop: 0 }}>{__('Add a Code Example', 'intelligent-code-assistant')}</h3>
-            <p>{__('Create a reusable Code Example or select one that already exists.', 'intelligent-code-assistant')}</p>
+        <div className="ica-code-example-chooser">
+            <div className="ica-code-example-chooser__intro">
+                <h3>{__('Add a Code Example', 'intelligent-code-assistant')}</h3>
+                <p>{__('Create a new example or reuse one you’ve already made.', 'intelligent-code-assistant')}</p>
+            </div>
 
-            <div style={{ marginTop: '20px' }}>
-                <TextControl
-                    label={__('New Code Example name', 'intelligent-code-assistant')}
-                    value={newTitle}
-                    onChange={setNewTitle}
-                    placeholder={__('e.g. Register a REST Route', 'intelligent-code-assistant')}
-                />
+            <div className="ica-code-example-chooser__modes" role="group" aria-label={__('Choose how to add a Code Example', 'intelligent-code-assistant')}>
                 <Button
-                    variant="primary"
-                    onClick={createCodeExample}
-                    disabled={isCreating || !newTitle.trim()}
-                    isBusy={isCreating}
+                    className={`ica-code-example-chooser__mode ${mode === 'create' ? 'is-active' : ''}`}
+                    variant={mode === 'create' ? 'primary' : 'secondary'}
+                    onClick={() => switchMode('create')}
+                    aria-pressed={mode === 'create'}
                 >
-                    {isCreating ? <Spinner /> : __('Create New Code Example', 'intelligent-code-assistant')}
+                    <span className="ica-code-example-chooser__mode-title">{__('Create new', 'intelligent-code-assistant')}</span>
+                    <span className="ica-code-example-chooser__mode-description">{__('Start from scratch', 'intelligent-code-assistant')}</span>
+                </Button>
+                <Button
+                    className={`ica-code-example-chooser__mode ${mode === 'existing' ? 'is-active' : ''}`}
+                    variant={mode === 'existing' ? 'primary' : 'secondary'}
+                    onClick={() => switchMode('existing')}
+                    aria-pressed={mode === 'existing'}
+                >
+                    <span className="ica-code-example-chooser__mode-title">{__('Use existing', 'intelligent-code-assistant')}</span>
+                    <span className="ica-code-example-chooser__mode-description">{__('Reuse an example', 'intelligent-code-assistant')}</span>
                 </Button>
             </div>
 
-            <div style={{ margin: '24px 0 12px', borderTop: '1px solid #dcdcde', paddingTop: '20px' }}>
-                <SelectControl
-                    label={__('Or select an existing Code Example', 'intelligent-code-assistant')}
-                    value={selectedId}
-                    options={options}
-                    onChange={setSelectedId}
-                />
-                <Button
-                    variant="secondary"
-                    onClick={() => onSelect(Number(selectedId))}
-                    disabled={!selectedId}
-                >
-                    {__('Use Selected Code Example', 'intelligent-code-assistant')}
-                </Button>
+            <div className="ica-code-example-chooser__form">
+                {mode === 'create' ? (
+                    <>
+                        <TextControl
+                            label={__('Name', 'intelligent-code-assistant')}
+                            value={newTitle}
+                            onChange={setNewTitle}
+                            placeholder={__('e.g. Register a REST Route', 'intelligent-code-assistant')}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' && newTitle.trim() && !isCreating) {
+                                    event.preventDefault();
+                                    createCodeExample();
+                                }
+                            }}
+                        />
+                        <Button
+                            variant="primary"
+                            onClick={createCodeExample}
+                            disabled={isCreating || !newTitle.trim()}
+                            isBusy={isCreating}
+                        >
+                            {isCreating ? <Spinner /> : __('Create Code Example', 'intelligent-code-assistant')}
+                        </Button>
+                    </>
+                ) : (
+                    <>
+                        <SelectControl
+                            label={__('Code Example', 'intelligent-code-assistant')}
+                            value={selectedId}
+                            options={options}
+                            onChange={setSelectedId}
+                        />
+                        <Button
+                            variant="primary"
+                            onClick={() => onSelect(Number(selectedId))}
+                            disabled={!selectedId}
+                        >
+                            {__('Use Code Example', 'intelligent-code-assistant')}
+                        </Button>
+                    </>
+                )}
             </div>
 
-            {error && <p role="alert" style={{ color: '#cc1818' }}>{error}</p>}
+            {error && <p className="ica-code-example-chooser__error" role="alert">{error}</p>}
         </div>
     );
 }

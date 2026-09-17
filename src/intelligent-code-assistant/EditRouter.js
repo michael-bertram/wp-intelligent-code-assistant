@@ -13,8 +13,16 @@ const cloneBlockTree = (block) => createBlock(
     (block.innerBlocks || []).map(cloneBlockTree)
 );
 
+const getRawRecordContent = (record) => {
+    if (typeof record?.content === 'string') {
+        return record.content;
+    }
+
+    return record?.content?.raw || '';
+};
+
 const getCanonicalAssistant = (record) => {
-    const rawContent = record?.content?.raw || record?.content?.rendered || '';
+    const rawContent = getRawRecordContent(record);
     if (!rawContent) {
         return null;
     }
@@ -52,10 +60,11 @@ const getSyncSignature = (block) => {
 /**
  * Edit a linked Code Example through the article ICA itself.
  *
- * This deliberately does not mount or subscribe to another block-editor store.
- * The canonical post content is parsed as data, mirrored into the normal article
- * block for editing, then serialized back to the Code Example entity. Gutenberg
- * therefore has exactly one selection surface and one InspectorControls owner.
+ * The canonical entity is deliberately requested with context=edit. The normal
+ * REST view representation contains rendered HTML, which no longer contains
+ * the block comments required by parse(). The editor proxy needs the canonical
+ * raw post_content so it can hydrate the article ICA immediately after a Code
+ * Example is created or selected.
  */
 function CodeExampleProxy({ codeExampleId, editProps }) {
     const entityId = Number(codeExampleId || 0);
@@ -63,7 +72,8 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
     const { record, hasResolved } = useEntityRecord(
         'postType',
         'ica_code_example',
-        entityId
+        entityId,
+        { context: 'edit' }
     );
     const { editEntityRecord, saveEditedEntityRecord } = useDispatch('core');
     const { updateBlockAttributes, replaceInnerBlocks } = useDispatch('core/block-editor');
@@ -73,9 +83,10 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
     const saveTimer = useRef(null);
     const lastSyncedSignature = useRef('');
 
+    const rawRecordContent = getRawRecordContent(record);
     const canonicalAssistant = useMemo(
         () => getCanonicalAssistant(record),
-        [record?.content?.raw, record?.content?.rendered]
+        [rawRecordContent]
     );
 
     const localBlock = useSelect(
@@ -142,8 +153,6 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
             codeExampleId: entityId,
         };
 
-        // The embedding article owns these values; never write them into the
-        // reusable Code Example merely because it was edited from this article.
         if (Object.prototype.hasOwnProperty.call(canonicalAttributes, 'id')) {
             nextCanonicalAttributes.id = canonicalAttributes.id;
         } else {

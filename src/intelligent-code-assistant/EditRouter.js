@@ -1,8 +1,8 @@
 import { __ } from '@wordpress/i18n';
 import { Warning } from '@wordpress/block-editor';
 import { Spinner } from '@wordpress/components';
-import { createBlock } from '@wordpress/blocks';
-import { useEntityBlockEditor, useEntityRecord } from '@wordpress/core-data';
+import { createBlock, parse, serialize } from '@wordpress/blocks';
+import { useEntityRecord } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useRef, useState } from '@wordpress/element';
 import Edit from './edit';
@@ -13,9 +13,16 @@ const cloneBlockTree = (block) => createBlock(
     (block.innerBlocks || []).map(cloneBlockTree)
 );
 
-const getCanonicalAssistant = (blocks) => (blocks || []).find(
-    (block) => block?.name === 'wpe/intelligent-code-assistant'
-) || null;
+const getCanonicalAssistant = (record) => {
+    const rawContent = record?.content?.raw || record?.content?.rendered || '';
+    if (!rawContent) {
+        return null;
+    }
+
+    return parse(rawContent).find(
+        (block) => block?.name === 'wpe/intelligent-code-assistant'
+    ) || null;
+};
 
 const getSharedAttributes = (attributes = {}) => {
     const {
@@ -43,13 +50,12 @@ const getSyncSignature = (block) => {
 };
 
 /**
- * Edit a linked Code Example through the article block itself.
+ * Edit a linked Code Example through the article ICA itself.
  *
- * The article ICA remains the only Gutenberg selection surface. Canonical Code
- * Example content is projected into that block for editing, then deterministic
- * changes are written back to the Code Example entity. This avoids controlled
- * child selection entirely: one article block, one InspectorControls owner and
- * normal Gutenberg first-click behaviour.
+ * This deliberately does not mount or subscribe to another block-editor store.
+ * The canonical post content is parsed as data, mirrored into the normal article
+ * block for editing, then serialized back to the Code Example entity. Gutenberg
+ * therefore has exactly one selection surface and one InspectorControls owner.
  */
 function CodeExampleProxy({ codeExampleId, editProps }) {
     const entityId = Number(codeExampleId || 0);
@@ -59,12 +65,7 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
         'ica_code_example',
         entityId
     );
-    const [entityBlocks, onEntityInput, onEntityChange] = useEntityBlockEditor(
-        'postType',
-        'ica_code_example',
-        { id: entityId }
-    );
-    const { saveEditedEntityRecord } = useDispatch('core');
+    const { editEntityRecord, saveEditedEntityRecord } = useDispatch('core');
     const { updateBlockAttributes, replaceInnerBlocks } = useDispatch('core/block-editor');
     const [isHydrated, setIsHydrated] = useState(false);
     const [saveError, setSaveError] = useState('');
@@ -73,8 +74,8 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
     const lastSyncedSignature = useRef('');
 
     const canonicalAssistant = useMemo(
-        () => getCanonicalAssistant(entityBlocks),
-        [entityBlocks]
+        () => getCanonicalAssistant(record),
+        [record?.content?.raw, record?.content?.rendered]
     );
 
     const localBlock = useSelect(
@@ -141,7 +142,8 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
             codeExampleId: entityId,
         };
 
-        // Article-only context must never leak back into the reusable entity.
+        // The embedding article owns these values; never write them into the
+        // reusable Code Example merely because it was edited from this article.
         if (Object.prototype.hasOwnProperty.call(canonicalAttributes, 'id')) {
             nextCanonicalAttributes.id = canonicalAttributes.id;
         } else {
@@ -158,16 +160,13 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
             nextCanonicalAttributes,
             (localBlock.innerBlocks || []).map(cloneBlockTree)
         );
-        const nextEntityBlocks = (entityBlocks || []).map((block) =>
-            block?.name === 'wpe/intelligent-code-assistant'
-                ? nextCanonicalBlock
-                : block
-        );
+        const nextContent = serialize([nextCanonicalBlock]);
 
         lastSyncedSignature.current = localSignature;
         setSaveError('');
-        onEntityInput(nextEntityBlocks);
-        onEntityChange(nextEntityBlocks);
+        editEntityRecord('postType', 'ica_code_example', entityId, {
+            content: nextContent,
+        });
 
         if (saveTimer.current) {
             window.clearTimeout(saveTimer.current);
@@ -192,23 +191,25 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
         localBlock,
         localSignature,
         canonicalAssistant,
-        entityBlocks,
         entityId,
-        onEntityInput,
-        onEntityChange,
+        editEntityRecord,
         saveEditedEntityRecord,
     ]);
 
-    if (!hasResolved || !canonicalAssistant || !isHydrated) {
+    if (!hasResolved) {
         return <Spinner />;
     }
 
-    if (!record) {
+    if (!record || !canonicalAssistant) {
         return (
             <Warning>
                 {__('The selected Code Example could not be loaded.', 'intelligent-code-assistant')}
             </Warning>
         );
+    }
+
+    if (!isHydrated) {
+        return <Spinner />;
     }
 
     return (
@@ -229,11 +230,6 @@ function CodeExampleProxy({ codeExampleId, editProps }) {
     );
 }
 
-/**
- * Keep legacy/standalone blocks unchanged. A linked article block is still the
- * normal Gutenberg block selected by the author; CodeExampleProxy only changes
- * where its editable content is loaded from and persisted to.
- */
 export default function EditRouter(props) {
     const { attributes } = props;
     const currentPostType = useSelect(

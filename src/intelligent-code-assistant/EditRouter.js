@@ -13,34 +13,47 @@ const decodeHtml = (value = '') => {
     return textarea.value;
 };
 
-const getSavedInnerHtml = (block) => block?.originalContent || block?.innerHTML || '';
-
-const extractSavedValue = (block) => {
-    const html = getSavedInnerHtml(block);
+const htmlToText = (html = '') => {
     if (!html || typeof document === 'undefined') return '';
-
     const container = document.createElement('div');
     container.innerHTML = html;
     const root = container.firstElementChild;
     return decodeHtml(root ? root.innerHTML : html);
 };
 
-const normalizeCanonicalBlock = (block) => {
+const getSavedInnerHtml = (block) => block?.originalContent || block?.innerHTML || '';
+
+const extractSavedValue = (block) => htmlToText(getSavedInnerHtml(block));
+
+// Do not depend solely on @wordpress/blocks parse() for source="html"
+// attributes. The REST edit response already contains the canonical raw
+// post_content, so recover the Code Content markup from that source directly
+// when the parsed child has no usable value.
+const extractCodeFromRawContent = (rawContent = '') => {
+    if (!rawContent) return '';
+
+    const match = rawContent.match(
+        /<!--\s+wp:wpe\/code-content(?:\s+\{[\s\S]*?\})?\s*-->([\s\S]*?)<!--\s+\/wp:wpe\/code-content\s+-->/i
+    );
+
+    return match ? htmlToText(match[1]) : '';
+};
+
+const normalizeCanonicalBlock = (block, rawCode = '') => {
     if (!block) return block;
 
-    const innerBlocks = (block.innerBlocks || []).map(normalizeCanonicalBlock);
+    const innerBlocks = (block.innerBlocks || []).map((innerBlock) =>
+        normalizeCanonicalBlock(innerBlock, rawCode)
+    );
     let attributes = { ...(block.attributes || {}) };
 
-    // Historical Code Content values were saved in the block's HTML rather
-    // than a comment attribute. Gutenberg's parsed block can therefore have an
-    // empty attributes object even though originalContent still contains the
-    // code. Recover that canonical saved value before cloning the block tree.
     if (block.name === 'wpe/code-content') {
-        const savedCode = attributes.code ?? attributes.content ?? extractSavedValue(block);
+        const savedCode = attributes.code ?? attributes.content ?? extractSavedValue(block) ?? rawCode;
+        const resolvedCode = savedCode || rawCode || '';
         attributes = {
             ...attributes,
-            code: savedCode || '',
-            content: savedCode || '',
+            code: resolvedCode,
+            content: resolvedCode,
         };
     }
 
@@ -80,7 +93,7 @@ const getCanonicalAssistant = (record) => {
         (block) => block?.name === 'wpe/intelligent-code-assistant'
     ) || null;
 
-    return normalizeCanonicalBlock(assistant);
+    return normalizeCanonicalBlock(assistant, extractCodeFromRawContent(rawContent));
 };
 
 const getSharedAttributes = (attributes = {}) => {

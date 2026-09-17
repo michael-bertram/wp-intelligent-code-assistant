@@ -2,6 +2,101 @@
 @import url('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
 
 /* ==========================================================================
+   CODE EXAMPLE CHOOSER
+   Keep the entity relationship step compact and Gutenberg-like. Authors make
+   one decision first, then see only the controls required for that workflow.
+   ========================================================================== */
+.ica-code-example-chooser {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 24px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+
+    &__intro {
+        margin-bottom: 20px;
+
+        h3 {
+            margin: 0 0 6px;
+            font-size: 24px;
+            line-height: 1.25;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 0;
+            color: #50575e;
+            font-size: 14px;
+        }
+    }
+
+    &__modes {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    &__mode.components-button {
+        height: auto;
+        min-height: 68px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 2px;
+        text-align: left;
+        border-radius: 4px;
+        box-shadow: none;
+
+        &.is-secondary:not(.is-active) {
+            color: #1e1e1e;
+            background: #fff;
+            border: 1px solid #c3c4c7;
+        }
+    }
+
+    &__mode-title {
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    &__mode-description {
+        font-size: 12px;
+        line-height: 1.35;
+        opacity: 0.78;
+    }
+
+    &__form {
+        padding-top: 18px;
+        border-top: 1px solid #e0e0e0;
+
+        .components-base-control {
+            margin-bottom: 12px;
+        }
+
+        .components-base-control__label {
+            font-weight: 600;
+        }
+    }
+
+    &__error {
+        margin: 14px 0 0;
+        color: #cc1818;
+    }
+
+    @media (max-width: 600px) {
+        padding: 18px;
+
+        &__modes {
+            grid-template-columns: 1fr;
+        }
+    }
+}
+
+/* ==========================================================================
    LINKED CODE EXAMPLE REFERENCE
    The article reference must remain a real Gutenberg block for selection, but
    it should be visually transparent. The canonical ICA block supplies the
@@ -112,8 +207,6 @@
             width: 100%;
             background: transparent;
             z-index: 5;
-            
-            // Force horizontal scroll lock in the editor so lines don't wrap while typing
             overflow-x: auto !important;
 
             .block-editor-rich-text__editable, pre, code, p, div {
@@ -141,12 +234,11 @@
         position: relative;
     }
 
-    /* Absolute Left Gutter Track Column */
     .line-numbers-gutter {
         position: absolute;
         left: 0;
         bottom: 0;
-        top: 55px; /* Sits perfectly under the title header row */
+        top: 55px;
         width: 48px;
         background: #f1f5f9;
         border-right: 1px solid #e2e8f0;
@@ -166,16 +258,12 @@
         }
     }
 
-    /* Apply content padding offset when line numbers are checked */
     &.has-line-numbers {
         .editor-inner-blocks-wrapper .block-editor-block-list__layout > *:last-child {
             padding-left: 64px !important; 
         }
     }
 
-    /* ----------------------------------------------------------------------
-       DARK THEME EDITOR OVERRIDES 
-       ---------------------------------------------------------------------- */
     &.dark-theme {
         background: #1e1e1e !important;
         border-color: #2e2e2e !important;
@@ -215,9 +303,6 @@
         }
     }
 
-    /* ----------------------------------------------------------------------
-       COMPACT LAYOUT OVERRIDES 
-       ---------------------------------------------------------------------- */
     &.is-compact {
         .code-badge { top: 8px; }
 
@@ -246,8 +331,6 @@
    PRISM SYNTAX COLORING & LINE HIGHLIGHTING STYLES
    ========================================================================== */
 
-
-/* Line Numbers Gutter Styling */
 .wp-block-wpe-intelligent-code-assistant-editor .line-numbers-gutter,
 .wp-block-wpe-intelligent-code-assistant .line-numbers-gutter {
     display: flex;
@@ -261,16 +344,14 @@
     font-size: var(--editor-code-font-size, 14px);
 }
 
-/* Active Line Highlighting Overlay */
 .wp-block-wpe-intelligent-code-assistant-editor .line-numbers-gutter span.is-highlighted,
 .wp-block-wpe-intelligent-code-assistant .panel-content pre .line-highlight {
-    background-color: rgba(255, 235, 59, 0.2); /* Soft Yellow Highlight */
+    background-color: rgba(255, 235, 59, 0.2);
     border-left: 3px solid #ffeb3b;
     font-weight: bold;
     opacity: 1;
 }
 
-/* Language Badge Colors */
 .code-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -283,18 +364,18 @@
 }
 
 .code-badge.lang-css {
-    background-color: #264de4; /* CSS Blue */
+    background-color: #264de4;
     color: #ffffff;
 }
 
 .code-badge.lang-php {
-    background-color: #4f5d95; /* PHP Purple */
+    background-color: #4f5d95;
     color: #ffffff;
 }
 
 .code-badge.lang-js,
 .code-badge.lang-javascript {
-    background-color: #f7df1e; /* JS Yellow */
+    background-color: #f7df1e;
     color: #000000;
 }
 

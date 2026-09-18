@@ -751,3 +751,97 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-he
 	.ica-overview-grid { grid-template-columns: 1fr; }
 	.ica-intelligent-code-overview .ica-page-header { padding: 22px 20px; }
 }
+
+
+/* Unified platform shell: full-width slim masthead with centred content. */
+.ica-insights-workspace {
+	--ica-content-width: 1180px;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+	padding-top: 0 !important;
+	padding-right: 20px;
+}
+
+.ica-insights-workspace .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-insights-workspace > h1,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail > h1,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header {
+	border-radius: 0 !important;
+}
+
+.ica-intelligent-code-overview .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header {
+	margin: 0 calc(0px - 20px) 0 0;
+	padding: 18px max(28px, calc((100% - var(--ica-content-width)) / 2)) !important;
+	min-height: 88px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.ica-intelligent-code-overview .ica-page-header h1,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header h1 {
+	font-size: 27px;
+	margin-bottom: 4px;
+}
+
+.ica-intelligent-code-overview .ica-page-header .description,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header .description {
+	max-width: 760px;
+}
+
+.ica-intelligent-code-overview .ica-overview-intro,
+.ica-intelligent-code-overview .ica-overview-grid {
+	width: min(100%, var(--ica-content-width));
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.ica-intelligent-code-overview .ica-overview-intro {
+	margin-top: 34px;
+}
+
+.ica-intelligent-code-overview .ica-overview-grid {
+	margin-top: 20px;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-insights-workspace > h1,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail > h1 {
+	padding: 18px max(28px, calc((100% - var(--ica-content-width)) / 2)) 4px !important;
+	min-height: 50px;
+	font-size: 27px;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-insights-workspace > h1 + .description,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail > h1 + .description {
+	padding: 0 max(28px, calc((100% - var(--ica-content-width)) / 2)) 18px !important;
+	border-radius: 0 !important;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-insights-workspace > :not(h1):not(.description),
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail > :not(h1):not(.description),
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insights-workspace > :not(.ica-page-header) {
+	width: min(100%, var(--ica-content-width));
+	margin-left: auto;
+	margin-right: auto;
+	box-sizing: border-box;
+}
+
+@media (max-width: 782px) {
+	.ica-insights-workspace {
+		padding-right: 10px;
+	}
+	.ica-intelligent-code-overview .ica-page-header,
+	body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header {
+		margin-right: -10px;
+		padding: 16px 20px !important;
+	}
+	body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-insights-workspace > h1,
+	body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail > h1 {
+		padding: 16px 20px 4px !important;
+	}
+	body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-insights-workspace > h1 + .description,
+	body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail > h1 + .description {
+		padding: 0 20px 16px !important;
+	}
+}

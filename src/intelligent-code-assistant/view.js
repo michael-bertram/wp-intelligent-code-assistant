@@ -623,28 +623,6 @@ const { state } = store('wpe', {
 
       const { ref: blockElement } = getElement();
 
-      const assistantButton = blockElement?.querySelector('.ai-assistant-button');
-      if (assistantButton && !assistantButton.dataset.attentionBound) {
-        assistantButton.dataset.attentionBound = 'true';
-
-        if ('IntersectionObserver' in window) {
-          const observer = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-              if (!entry.isIntersecting) {
-                return;
-              }
-
-              assistantButton.classList.add('is-attention-ready');
-              observer.disconnect();
-            });
-          }, { threshold: 0.7 });
-
-          observer.observe(assistantButton);
-        } else {
-          assistantButton.classList.add('is-attention-ready');
-        }
-      }
-
       const panel = blockElement?.querySelector('.panel-content');
 
       if (!panel || panel.dataset.lineSelectionBound) {
@@ -707,3 +685,60 @@ const { state } = store('wpe', {
     },
   },
 });
+
+/**
+ * Bind the one-shot assistant attention treatment independently of the
+ * Interactivity API init callback. The view module is loaded after the block
+ * markup, so this reliably targets the rendered frontend button itself.
+ */
+function bindAssistantAttention() {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const buttons = document.querySelectorAll('.ai-assistant-button');
+
+  buttons.forEach((button) => {
+    if (button.dataset.attentionBound) {
+      return;
+    }
+
+    button.dataset.attentionBound = 'true';
+
+    const showAttention = () => {
+      // Force a fresh animation state even if another script touched the class.
+      button.classList.remove('is-attention-ready');
+      void button.offsetWidth;
+      button.classList.add('is-attention-ready');
+    };
+
+    if (!('IntersectionObserver' in window)) {
+      showAttention();
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      const visibleEntry = entries.find((entry) => entry.isIntersecting);
+
+      if (!visibleEntry) {
+        return;
+      }
+
+      showAttention();
+      observer.disconnect();
+    }, {
+      threshold: 0.25,
+      rootMargin: '0px 0px -24px 0px',
+    });
+
+    observer.observe(button);
+  });
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindAssistantAttention, { once: true });
+  } else {
+    bindAssistantAttention();
+  }
+}

@@ -687,49 +687,75 @@ const { state } = store('wpe', {
 });
 
 /**
- * Bind the one-shot assistant attention treatment independently of the
- * Interactivity API init callback. The view module is loaded after the block
- * markup, so this reliably targets the rendered frontend button itself.
+ * Give each rendered AI Assistant button a deterministic one-shot entrance.
+ * Web Animations applies the motion directly to the element, avoiding any
+ * dependency on an animation class or CSS keyframe being activated.
  */
 function bindAssistantAttention() {
   if (typeof document === 'undefined') {
     return;
   }
 
-  const buttons = document.querySelectorAll('.ai-assistant-button');
-
-  buttons.forEach((button) => {
+  document.querySelectorAll('.ai-assistant-button').forEach((button) => {
     if (button.dataset.attentionBound) {
       return;
     }
 
     button.dataset.attentionBound = 'true';
 
-    const showAttention = () => {
-      // Force a fresh animation state even if another script touched the class.
-      button.classList.remove('is-attention-ready');
-      void button.offsetWidth;
-      button.classList.add('is-attention-ready');
+    const playAttention = () => {
+      if (
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
+        typeof button.animate !== 'function'
+      ) {
+        return;
+      }
+
+      button.animate(
+        [
+          { transform: 'translateY(0) scale(1)', offset: 0 },
+          { transform: 'translateY(-10px) scale(1.04)', offset: 0.18 },
+          { transform: 'translateY(0) scale(1)', offset: 0.36 },
+          { transform: 'translateY(-5px) scale(1.02)', offset: 0.5 },
+          { transform: 'translateY(0) scale(1)', offset: 0.66 },
+          { transform: 'translateY(0) scale(1)', offset: 1 },
+        ],
+        {
+          duration: 1800,
+          easing: 'cubic-bezier(.22, 1, .36, 1)',
+          fill: 'none',
+        }
+      );
+
+      const sparkle = button.querySelector('span[aria-hidden="true"]');
+      if (sparkle && typeof sparkle.animate === 'function') {
+        sparkle.animate(
+          [
+            { transform: 'scale(1) rotate(0deg)', offset: 0 },
+            { transform: 'scale(1.5) rotate(20deg)', offset: 0.18 },
+            { transform: 'scale(1) rotate(0deg)', offset: 0.36 },
+            { transform: 'scale(1.22) rotate(-10deg)', offset: 0.5 },
+            { transform: 'scale(1) rotate(0deg)', offset: 0.66 },
+            { transform: 'scale(1) rotate(0deg)', offset: 1 },
+          ],
+          { duration: 1800, easing: 'ease-out', fill: 'none' }
+        );
+      }
     };
 
     if (!('IntersectionObserver' in window)) {
-      showAttention();
+      playAttention();
       return;
     }
 
     const observer = new IntersectionObserver((entries) => {
-      const visibleEntry = entries.find((entry) => entry.isIntersecting);
-
-      if (!visibleEntry) {
+      if (!entries.some((entry) => entry.isIntersecting)) {
         return;
       }
 
-      showAttention();
+      playAttention();
       observer.disconnect();
-    }, {
-      threshold: 0.25,
-      rootMargin: '0px 0px -24px 0px',
-    });
+    }, { threshold: 0.2 });
 
     observer.observe(button);
   });

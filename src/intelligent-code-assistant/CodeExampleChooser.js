@@ -99,7 +99,7 @@ export default function CodeExampleChooser({ onSelect }) {
         }
     };
 
-    const useExistingCodeExample = async (id) => {
+    const selectExistingCodeExample = async (id) => {
         const exampleId = Number(id || 0);
         if (!exampleId || selectingId) {
             return;
@@ -193,7 +193,7 @@ export default function CodeExampleChooser({ onSelect }) {
                                         <Button
                                             key={example.id}
                                             className="ica-code-example-browser__item"
-                                            onClick={() => useExistingCodeExample(example.id)}
+                                            onClick={() => selectExistingCodeExample(example.id)}
                                             disabled={Boolean(selectingId)}
                                             role="listitem"
                                         >

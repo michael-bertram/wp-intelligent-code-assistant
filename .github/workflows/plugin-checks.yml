@@ -29,7 +29,7 @@ jobs:
         run: npm ci
 
       - name: Lint JavaScript
-        run: npm run lint:js -- --config .eslintrc.json
+        run: npm run lint:js -- --config eslint.config.mjs
 
       - name: Lint styles
         run: npm run lint:css

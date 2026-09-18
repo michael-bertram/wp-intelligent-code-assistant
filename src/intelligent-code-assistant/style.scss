@@ -357,7 +357,7 @@ a:focus { outline: none; }
         transition: background 0.2s ease, transform 0.1s ease;
         &:hover { background: #343d4a; }
         &:active { transform: scale(0.98); }
-        &.is-completed { background: #10b981 !important; color: white !important; }
+        &.is-completed { background: #10b981 !important; color: #fff !important; }
     }
 }
 

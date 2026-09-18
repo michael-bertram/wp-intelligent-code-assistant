@@ -845,3 +845,127 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insight
 		padding: 0 20px 16px !important;
 	}
 }
+
+
+/* Intelligent Code design system: assistant-led controls and integrated headers. */
+.ica-insights-workspace {
+	--ica-navy: #0b1730;
+	--ica-blue: #155dfc;
+	--ica-blue-hover: #0f4bd8;
+	--ica-header: #23436b;
+}
+
+.ica-insights-workspace .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-insights-workspace > h1,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-insights-workspace > h1 + .description {
+	background: var(--ica-header) !important;
+}
+
+.ica-insights-workspace .ica-page-header {
+	box-sizing: border-box;
+}
+
+.ica-insights-workspace .ica-page-header .ica-back-nav {
+	margin: 0 0 12px;
+}
+
+.ica-insights-workspace .ica-page-header .ica-back-nav a {
+	display: inline-flex;
+	align-items: center;
+	color: #dbeafe;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.ica-insights-workspace .ica-page-header .ica-back-nav a:hover,
+.ica-insights-workspace .ica-page-header .ica-back-nav a:focus {
+	color: #fff;
+}
+
+.ica-insights-workspace .button,
+.ica-insights-workspace .button-primary,
+.ica-insights-workspace button.button,
+.ica-insights-workspace button.button-primary,
+.ica-insights-workspace .ica-ai-insights-button {
+	min-height: 42px;
+	padding: 8px 18px;
+	border: 2px solid var(--ica-navy) !important;
+	border-radius: 9px !important;
+	background: var(--ica-navy) !important;
+	color: #fff !important;
+	font-weight: 650;
+	line-height: 1.25;
+	box-shadow: none !important;
+	text-shadow: none !important;
+	transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.ica-insights-workspace .button:hover,
+.ica-insights-workspace .button-primary:hover,
+.ica-insights-workspace button.button:hover,
+.ica-insights-workspace button.button-primary:hover,
+.ica-insights-workspace .ica-ai-insights-button:hover {
+	background: #10254a !important;
+	border-color: var(--ica-blue) !important;
+	color: #fff !important;
+	box-shadow: 0 0 0 3px rgba(21,93,252,.14) !important;
+	transform: translateY(-1px);
+}
+
+.ica-insights-workspace .button:focus,
+.ica-insights-workspace .button-primary:focus,
+.ica-insights-workspace button.button:focus,
+.ica-insights-workspace button.button-primary:focus,
+.ica-insights-workspace .ica-ai-insights-button:focus {
+	border-color: var(--ica-blue) !important;
+	box-shadow: 0 0 0 3px rgba(21,93,252,.24) !important;
+	outline: none;
+}
+
+.ica-intelligent-code-overview .ica-overview-card::before,
+.ica-insights-workspace .ica-stat-card::before {
+	background: var(--ica-blue);
+}
+
+.ica-intelligent-code-overview .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header {
+	padding-top: 16px !important;
+	padding-bottom: 16px !important;
+	min-height: 78px;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insights-detail .ica-page-header {
+	min-height: 118px;
+	padding-top: 14px !important;
+	padding-bottom: 18px !important;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insights-detail .ica-page-header h1 {
+	margin-top: 0;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail .ica-page-header {
+	width: 100%;
+	max-width: none;
+	margin: 0;
+	padding: 14px max(28px, calc((100% - var(--ica-content-width)) / 2)) 18px !important;
+	background: var(--ica-header) !important;
+	border-radius: 0 !important;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail .ica-page-header h1 {
+	margin: 0 0 4px;
+	color: #fff;
+	font-size: 27px;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail .ica-page-header .description {
+	margin: 0;
+	color: #dbeafe !important;
+}
+
+@media (max-width: 782px) {
+	body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail .ica-page-header {
+		padding: 14px 20px 18px !important;
+	}
+}

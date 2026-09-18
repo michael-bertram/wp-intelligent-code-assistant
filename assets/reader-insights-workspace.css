@@ -1501,3 +1501,119 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 		text-align: left !important;
 	}
 }
+
+
+/* Landing page: same platform header, richer product-level hero in the content area. */
+.ica-intelligent-code-overview .ica-page-header {
+	grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.ica-intelligent-code-overview .ica-page-header .ica-header-title {
+	grid-column: 2;
+	justify-self: center;
+	width: 100%;
+	text-align: center;
+}
+
+.ica-intelligent-code-overview .ica-overview-hero {
+	width: min(calc(100% - 56px), 1200px);
+	max-width: 1200px;
+	margin: 0 auto 34px;
+	padding: 34px 38px;
+	box-sizing: border-box;
+	border: 1px solid #dce7f6;
+	border-radius: 16px;
+	background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+	box-shadow: 0 12px 30px rgba(15, 23, 42, .06);
+}
+
+.ica-intelligent-code-overview .ica-overview-hero .ica-eyebrow {
+	display: block;
+	margin-bottom: 10px;
+	color: #155dfc;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1.3;
+	letter-spacing: .08em;
+}
+
+.ica-intelligent-code-overview .ica-overview-hero h2 {
+	max-width: 760px;
+	margin: 0 0 12px;
+	color: #0b1730;
+	font-size: 30px;
+	font-weight: 650;
+	line-height: 1.2;
+	letter-spacing: -.015em;
+}
+
+.ica-intelligent-code-overview .ica-overview-hero p {
+	max-width: 820px;
+	margin: 0;
+	color: #52647d;
+	font-size: 17px;
+	font-weight: 400;
+	line-height: 1.65;
+}
+
+.ica-intelligent-code-overview .ica-overview-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+	gap: 22px;
+	align-items: stretch;
+}
+
+.ica-intelligent-code-overview .ica-overview-card {
+	display: flex;
+	flex-direction: column;
+	min-height: 230px;
+}
+
+.ica-intelligent-code-overview .ica-overview-card h2 {
+	margin: 0 0 10px;
+	color: #0b1730;
+	font-size: 21px;
+	font-weight: 600;
+	line-height: 1.25;
+}
+
+.ica-intelligent-code-overview .ica-overview-card p {
+	margin: 0 0 24px;
+	color: #52647d;
+	font-size: 15px;
+	line-height: 1.6;
+}
+
+.ica-intelligent-code-overview .ica-overview-card .button {
+	align-self: flex-start;
+	margin-top: auto;
+}
+
+/* Shared page-title typography: restrained but less generic than wp-admin defaults. */
+.ica-insights-workspace .ica-page-header h1 {
+	color: #0b1730 !important;
+	font-size: 26px !important;
+	font-weight: 650 !important;
+	letter-spacing: -.012em !important;
+}
+
+@media (max-width: 960px) {
+	.ica-intelligent-code-overview .ica-page-header .ica-header-title {
+		grid-column: 1;
+		justify-self: start;
+		text-align: left;
+	}
+	.ica-intelligent-code-overview .ica-overview-grid {
+		grid-template-columns: 1fr !important;
+	}
+}
+
+@media (max-width: 782px) {
+	.ica-intelligent-code-overview .ica-overview-hero {
+		width: calc(100% - 40px);
+		padding: 26px 24px;
+	}
+	.ica-intelligent-code-overview .ica-overview-hero h2 {
+		font-size: 25px;
+	}
+}

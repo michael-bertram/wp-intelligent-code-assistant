@@ -137,10 +137,8 @@ function intelligent_code_assistant_render_reader_insights_overview() {
 	$active_articles    = (int) ( $totals['articles_with_activity'] ?? 0 );
 	?>
 	<div class="wrap ica-insights-workspace ica-reader-insights-overview">
-		<header class="ica-page-header ica-page-header--overview">
-			<div class="ica-header-title"><h1><?php esc_html_e( 'Reader Insights', 'intelligent-code-assistant' ); ?></h1></div>
-			<div class="ica-header-summary"><p class="description"><?php esc_html_e( 'Explore deterministic reader interaction data across your intelligent code articles. These figures represent actions, not unique readers.', 'intelligent-code-assistant' ); ?></p></div>
-		</header>
+		<header class="ica-page-header ica-page-header--overview"><div class="ica-header-title"><h1><?php esc_html_e( 'Reader Insights', 'intelligent-code-assistant' ); ?></h1></div></header>
+		<p class="ica-page-intro"><?php esc_html_e( 'Explore deterministic reader interaction data across your intelligent code articles. These figures represent actions, not unique readers.', 'intelligent-code-assistant' ); ?></p>
 
 		<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;max-width:1000px;margin:24px 0;">
 			<?php

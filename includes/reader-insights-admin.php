@@ -53,10 +53,10 @@ function intelligent_code_assistant_render_admin_overview() {
 	$insights_url = add_query_arg( 'page', 'intelligent-code-assistant-reader-insights', admin_url( 'admin.php' ) );
 	?>
 	<div class="wrap ica-insights-workspace ica-intelligent-code-overview">
-		<h1><?php esc_html_e( 'Intelligent Code', 'intelligent-code-assistant' ); ?></h1>
-		<p class="description" style="max-width:760px;">
-			<?php esc_html_e( 'Create reusable Code Snippets and understand how readers interact with intelligent code across your articles.', 'intelligent-code-assistant' ); ?>
-		</p>
+		<header class="ica-page-header">
+			<h1><?php esc_html_e( 'Intelligent Code', 'intelligent-code-assistant' ); ?></h1>
+			<p class="description"><?php esc_html_e( 'Create reusable Code Snippets and understand how readers interact with intelligent code across your articles.', 'intelligent-code-assistant' ); ?></p>
+		</header>
 		<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:900px;margin:28px 0;">
 			<div style="background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:24px;">
 				<h2 style="margin-top:0;"><?php esc_html_e( 'Code Snippets', 'intelligent-code-assistant' ); ?></h2>

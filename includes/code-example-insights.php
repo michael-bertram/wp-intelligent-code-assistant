@@ -98,7 +98,7 @@ function intelligent_code_assistant_get_code_example_analytics_summary( $code_ex
 
 /** Register concept-level Reader Insights. */
 function intelligent_code_assistant_register_code_example_insights_page() {
-	add_submenu_page( 'intelligent-code-assistant-reader-insights', __( 'Code Snippet Insights', 'intelligent-code-assistant' ), __( 'Code Snippets', 'intelligent-code-assistant' ), 'edit_posts', 'intelligent-code-assistant-code-examples', 'intelligent_code_assistant_render_code_example_insights_page' );
+	add_submenu_page( 'intelligent-code-assistant', __( 'Code Snippet Insights', 'intelligent-code-assistant' ), __( 'Code Snippets', 'intelligent-code-assistant' ), 'edit_posts', 'intelligent-code-assistant-code-examples', 'intelligent_code_assistant_render_code_example_insights_page' );
 }
 add_action( 'admin_menu', 'intelligent_code_assistant_register_code_example_insights_page', 20 );
 

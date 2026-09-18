@@ -718,12 +718,12 @@ function bindAssistantAttention() {
 
       attentionWrapper.animate(
         [
-          { transform: 'translateY(0) scale(1)', offset: 0 },
-          { transform: 'translateY(-10px) scale(1.04)', offset: 0.18 },
-          { transform: 'translateY(0) scale(1)', offset: 0.36 },
-          { transform: 'translateY(-5px) scale(1.02)', offset: 0.5 },
-          { transform: 'translateY(0) scale(1)', offset: 0.66 },
-          { transform: 'translateY(0) scale(1)', offset: 1 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 0 },
+          { transform: 'translateY(12px) scale(1.04)', opacity: 0.9, offset: 0.16 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 0.34 },
+          { transform: 'translateY(5px) scale(1.02)', opacity: 1, offset: 0.48 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 0.64 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 1 },
         ],
         {
           duration: 1800,

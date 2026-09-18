@@ -1350,3 +1350,85 @@ body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reade
 		justify-content: flex-start;
 	}
 }
+
+
+/* One header type scale and alignment across every Intelligent Code screen. */
+.ica-insights-workspace .ica-page-header,
+.ica-insights-workspace .ica-page-header--overview,
+.ica-insights-workspace .ica-page-header--detail {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	min-height: 82px !important;
+	padding-top: 14px !important;
+	padding-bottom: 14px !important;
+}
+
+.ica-insights-workspace .ica-page-header--overview .ica-header-title {
+	grid-column: 2;
+	justify-self: center;
+	text-align: center;
+}
+
+.ica-insights-workspace .ica-page-header h1,
+.ica-insights-workspace .ica-page-header--overview h1,
+.ica-insights-workspace .ica-page-header--detail h1 {
+	font-size: 25px !important;
+	font-weight: 600 !important;
+	line-height: 1.2 !important;
+	letter-spacing: 0 !important;
+}
+
+.ica-insights-workspace .ica-page-header .ica-back-nav a {
+	font-size: 14px !important;
+	font-weight: 600 !important;
+	line-height: 1.3 !important;
+}
+
+.ica-insights-workspace .ica-page-intro {
+	width: min(calc(100% - 56px), 1200px) !important;
+	max-width: 1200px !important;
+	margin: 0 auto 26px !important;
+	font-size: 17px !important;
+	font-weight: 400 !important;
+	line-height: 1.6 !important;
+	color: #42526a !important;
+}
+
+/* The Code Snippet detail uses the exact same left / centre / right toolbar geometry as article insights. */
+.ica-insights-workspace.ica-insights-detail .ica-page-header--detail .ica-back-nav {
+	grid-column: 1;
+	justify-self: start;
+}
+
+.ica-insights-workspace.ica-insights-detail .ica-page-header--detail .ica-header-title {
+	grid-column: 2;
+	justify-self: center;
+	text-align: center;
+}
+
+.ica-insights-workspace.ica-insights-detail .ica-page-header--detail .ica-header-summary {
+	grid-column: 3;
+	justify-self: end;
+}
+
+/* Overview page masthead follows the same typography even where legacy markup remains. */
+.ica-intelligent-code-overview .ica-page-header h1 {
+	font-size: 25px !important;
+	font-weight: 600 !important;
+	line-height: 1.2 !important;
+}
+
+@media (max-width: 960px) {
+	.ica-insights-workspace .ica-page-header,
+	.ica-insights-workspace .ica-page-header--overview,
+	.ica-insights-workspace .ica-page-header--detail {
+		grid-template-columns: 1fr;
+	}
+	.ica-insights-workspace .ica-page-header--overview .ica-header-title,
+	.ica-insights-workspace.ica-insights-detail .ica-page-header--detail .ica-back-nav,
+	.ica-insights-workspace.ica-insights-detail .ica-page-header--detail .ica-header-title,
+	.ica-insights-workspace.ica-insights-detail .ica-page-header--detail .ica-header-summary {
+		grid-column: 1;
+		justify-self: start;
+		text-align: left;
+	}
+}

@@ -1432,3 +1432,72 @@ body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reade
 		text-align: left;
 	}
 }
+
+
+/* Header geometry correction: direct-child selectors override older detail rules. */
+body.toplevel_page_intelligent-code-assistant,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights,
+body.intelligent-code_page_intelligent-code-assistant-code-examples,
+body.toplevel_page_intelligent-code-assistant #wpcontent,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights #wpcontent,
+body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
+.ica-insights-workspace {
+	background: #fff !important;
+}
+
+.ica-insights-workspace > .ica-page-header--detail {
+	display: grid !important;
+	grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+	align-items: center !important;
+	column-gap: 32px !important;
+	width: 100% !important;
+	margin: 0 0 30px !important;
+	padding: 14px max(28px, calc((100% - 1200px) / 2)) !important;
+	background: var(--ica-header-light) !important;
+}
+
+.ica-insights-workspace > .ica-page-header--detail > .ica-back-nav {
+	grid-column: 1 !important;
+	grid-row: 1 !important;
+	justify-self: start !important;
+	align-self: center !important;
+	margin: 0 !important;
+	text-align: left !important;
+}
+
+.ica-insights-workspace > .ica-page-header--detail > .ica-header-title {
+	grid-column: 2 !important;
+	grid-row: 1 !important;
+	justify-self: center !important;
+	align-self: center !important;
+	width: 100% !important;
+	text-align: center !important;
+}
+
+.ica-insights-workspace > .ica-page-header--detail > .ica-header-summary {
+	grid-column: 3 !important;
+	grid-row: 1 !important;
+	justify-self: end !important;
+	align-self: center !important;
+	width: 100% !important;
+	margin: 0 !important;
+}
+
+.ica-insights-workspace > .ica-page-header--detail > .ica-header-title h1 {
+	margin: 0 !important;
+}
+
+@media (max-width: 960px) {
+	.ica-insights-workspace > .ica-page-header--detail {
+		grid-template-columns: 1fr !important;
+		row-gap: 10px !important;
+	}
+	.ica-insights-workspace > .ica-page-header--detail > .ica-back-nav,
+	.ica-insights-workspace > .ica-page-header--detail > .ica-header-title,
+	.ica-insights-workspace > .ica-page-header--detail > .ica-header-summary {
+		grid-column: 1 !important;
+		grid-row: auto !important;
+		justify-self: start !important;
+		text-align: left !important;
+	}
+}

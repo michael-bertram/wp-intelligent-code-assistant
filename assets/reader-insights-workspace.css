@@ -1035,3 +1035,92 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insight
 		--ica-wp-gutter: 10px;
 	}
 }
+
+
+/* Light platform chrome: inspired by the Code Assistant hover state. */
+.ica-insights-workspace {
+	--ica-header-light: #eef5ff;
+	--ica-header-border: #d7e6fb;
+	--ica-header-ink: #0b1730;
+	--ica-header-muted: #52647d;
+}
+
+/* Replace the dark hero treatment with a slim application toolbar. */
+.ica-intelligent-code-overview .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail .ica-page-header {
+	background: var(--ica-header-light) !important;
+	border-top: 1px solid var(--ica-header-border);
+	border-bottom: 1px solid var(--ica-header-border);
+	box-shadow: 0 5px 16px rgba(15, 23, 42, .07);
+}
+
+.ica-intelligent-code-overview .ica-page-header h1,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header h1,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail .ica-page-header h1 {
+	color: var(--ica-header-ink) !important;
+}
+
+.ica-intelligent-code-overview .ica-page-header .description,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header .description,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail .ica-page-header .description {
+	color: var(--ica-header-muted) !important;
+}
+
+/* Reader Insights overview currently renders title/description separately: visually join them. */
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1 + .description {
+	background: var(--ica-header-light) !important;
+	color: var(--ica-header-ink) !important;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1 {
+	border-top: 1px solid var(--ica-header-border);
+	box-shadow: none;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1 + .description {
+	color: var(--ica-header-muted) !important;
+	border-bottom: 1px solid var(--ica-header-border);
+	box-shadow: 0 5px 16px rgba(15, 23, 42, .07);
+}
+
+/* Back is part of the toolbar, not a separate blue hero link. */
+.ica-insights-workspace .ica-page-header .ica-back-nav a {
+	color: #315f9d;
+}
+
+.ica-insights-workspace .ica-page-header .ica-back-nav a:hover,
+.ica-insights-workspace .ica-page-header .ica-back-nav a:focus {
+	color: var(--ica-blue);
+}
+
+/* Article detail previously inherited the dark header as the whole page canvas. */
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail {
+	background: transparent !important;
+	color: inherit !important;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail > :not(.ica-page-header) {
+	color: inherit;
+}
+
+/* Keep the toolbar compact while allowing detail screens enough room for navigation. */
+.ica-intelligent-code-overview .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insights-workspace:not(.ica-insights-detail) .ica-page-header {
+	min-height: 82px;
+	padding-top: 14px !important;
+	padding-bottom: 14px !important;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insights-detail .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail .ica-page-header {
+	min-height: 116px;
+}
+
+/* Give overview/stat surfaces the same restrained assistant-blue interaction language. */
+.ica-overview-card:hover,
+.ica-insights-workspace .ica-stat-card:hover {
+	border-color: #c9dcfb;
+	box-shadow: 0 10px 24px rgba(21, 93, 252, .08);
+}

@@ -969,3 +969,69 @@ body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reade
 		padding: 14px 20px 18px !important;
 	}
 }
+
+
+/* Platform canvas: intentionally escape the WordPress .wrap gutter for a true masthead. */
+body.toplevel_page_intelligent-code-assistant,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights,
+body.intelligent-code_page_intelligent-code-assistant-code-examples {
+	background: #f3f6fb;
+}
+
+body.toplevel_page_intelligent-code-assistant #wpcontent,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights #wpcontent,
+body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent {
+	background: #f3f6fb;
+}
+
+.ica-insights-workspace {
+	--ica-wp-gutter: 20px;
+	--ica-canvas: #f3f6fb;
+	background: var(--ica-canvas);
+}
+
+.ica-intelligent-code-overview .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-header,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-detail .ica-page-header {
+	width: auto !important;
+	max-width: none !important;
+	margin-left: calc(0px - var(--ica-wp-gutter)) !important;
+	margin-right: calc(0px - var(--ica-wp-gutter)) !important;
+	box-shadow: 0 8px 22px rgba(15, 23, 42, .12);
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1 + .description {
+	position: relative;
+	left: calc(0px - var(--ica-wp-gutter));
+	width: calc(100% + (var(--ica-wp-gutter) * 2));
+	max-width: none !important;
+	box-sizing: border-box;
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1 {
+	margin-top: 0 !important;
+	margin-bottom: 0 !important;
+	padding-top: 16px !important;
+	box-shadow: 0 -1px 0 var(--ica-header), 0 8px 22px rgba(15, 23, 42, .12);
+}
+
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1 + .description {
+	margin-top: 0 !important;
+	margin-bottom: 28px !important;
+	padding-bottom: 16px !important;
+	box-shadow: 0 8px 22px rgba(15, 23, 42, .12);
+}
+
+.ica-intelligent-code-overview .ica-overview-intro,
+.ica-intelligent-code-overview .ica-overview-grid,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-insights-workspace > :not(h1):not(.description):not(.ica-page-header),
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insights-workspace > :not(.ica-page-header) {
+	position: relative;
+}
+
+@media (max-width: 782px) {
+	.ica-insights-workspace {
+		--ica-wp-gutter: 10px;
+	}
+}

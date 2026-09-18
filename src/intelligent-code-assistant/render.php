@@ -467,15 +467,17 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 
 			<div class="code-footer-actions">
 				<?php if ( $enable_ai_assistant ) : ?>
-					<button
-						type="button"
-						class="explain-button ai-assistant-button"
-						data-wp-on--click="actions.openAssistant"
-						data-wp-class--active="context.aiAssistantOpen"
-					>
-						<span aria-hidden="true">✦</span>
-						<span><?php esc_html_e( 'AI Assistant', 'intelligent-code-assistant' ); ?></span>
-					</button>
+					<div class="ai-assistant-attention">
+						<button
+							type="button"
+							class="explain-button ai-assistant-button"
+							data-wp-on--click="actions.openAssistant"
+							data-wp-class--active="context.aiAssistantOpen"
+						>
+							<span aria-hidden="true">✦</span>
+							<span><?php esc_html_e( 'AI Assistant', 'intelligent-code-assistant' ); ?></span>
+						</button>
+					</div>
 				<?php endif; ?>
 
 				<button

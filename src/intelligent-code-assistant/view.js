@@ -622,6 +622,7 @@ const { state } = store('wpe', {
       }
 
       const { ref: blockElement } = getElement();
+
       const panel = blockElement?.querySelector('.panel-content');
 
       if (!panel || panel.dataset.lineSelectionBound) {
@@ -684,3 +685,91 @@ const { state } = store('wpe', {
     },
   },
 });
+
+/**
+ * Give each rendered AI Assistant button a deterministic one-shot entrance.
+ * Web Animations applies the motion directly to the element, avoiding any
+ * dependency on an animation class or CSS keyframe being activated.
+ */
+function bindAssistantAttention() {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  document.querySelectorAll('.ai-assistant-attention').forEach((attentionWrapper) => {
+    if (attentionWrapper.dataset.attentionBound) {
+      return;
+    }
+
+    attentionWrapper.dataset.attentionBound = 'true';
+    const button = attentionWrapper.querySelector('.ai-assistant-button');
+
+    if (!button) {
+      return;
+    }
+
+    const playAttention = () => {
+      if (
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
+        typeof attentionWrapper.animate !== 'function'
+      ) {
+        return;
+      }
+
+      attentionWrapper.animate(
+        [
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 0 },
+          { transform: 'translateY(12px) scale(1.04)', opacity: 0.9, offset: 0.16 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 0.34 },
+          { transform: 'translateY(5px) scale(1.02)', opacity: 1, offset: 0.48 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 0.64 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 1 },
+        ],
+        {
+          duration: 1800,
+          easing: 'cubic-bezier(.22, 1, .36, 1)',
+          fill: 'none',
+        }
+      );
+
+      const sparkle = button.querySelector('span[aria-hidden="true"]');
+      if (sparkle && typeof sparkle.animate === 'function') {
+        sparkle.animate(
+          [
+            { transform: 'scale(1) rotate(0deg)', offset: 0 },
+            { transform: 'scale(1.5) rotate(20deg)', offset: 0.18 },
+            { transform: 'scale(1) rotate(0deg)', offset: 0.36 },
+            { transform: 'scale(1.22) rotate(-10deg)', offset: 0.5 },
+            { transform: 'scale(1) rotate(0deg)', offset: 0.66 },
+            { transform: 'scale(1) rotate(0deg)', offset: 1 },
+          ],
+          { duration: 1800, easing: 'ease-out', fill: 'none' }
+        );
+      }
+    };
+
+    if (!('IntersectionObserver' in window)) {
+      playAttention();
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) {
+        return;
+      }
+
+      playAttention();
+      observer.disconnect();
+    }, { threshold: 0.2 });
+
+    observer.observe(attentionWrapper);
+  });
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindAssistantAttention, { once: true });
+  } else {
+    bindAssistantAttention();
+  }
+}

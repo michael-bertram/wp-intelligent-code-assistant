@@ -82,7 +82,7 @@ function intelligent_code_assistant_render_reader_insights_overview() {
 	$total_interactions = (int) ( $totals['total_interactions'] ?? 0 );
 	$active_articles    = (int) ( $totals['articles_with_activity'] ?? 0 );
 	?>
-	<div class="wrap">
+	<div class="wrap ica-insights-workspace ica-reader-insights-overview">
 		<h1><?php esc_html_e( 'Reader Insights', 'intelligent-code-assistant' ); ?></h1>
 		<p class="description" style="max-width:760px;">
 			<?php esc_html_e( 'Explore deterministic reader interaction data across your intelligent code articles. These figures represent actions, not unique readers.', 'intelligent-code-assistant' ); ?>
@@ -174,7 +174,7 @@ function intelligent_code_assistant_render_reader_insights_article( $post_id ) {
 	$back_url = add_query_arg( 'page', 'intelligent-code-assistant-reader-insights', admin_url( 'admin.php' ) );
 	$edit_url = get_edit_post_link( $post_id );
 	?>
-	<div class="wrap">
+	<div class="wrap ica-insights-workspace ica-reader-insights-detail">
 		<p style="margin:12px 0 8px;"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php esc_html_e( 'Back to Reader Insights', 'intelligent-code-assistant' ); ?></a></p>
 		<h1><?php echo esc_html( $title ); ?></h1>
 		<p class="description" style="max-width:760px;">

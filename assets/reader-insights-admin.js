@@ -115,6 +115,9 @@
 	button.addEventListener( 'click', async () => {
 		button.disabled = true;
 		button.setAttribute( 'aria-disabled', 'true' );
+		button.classList.add( 'is-generating' );
+		button.dataset.idleLabel = button.textContent;
+		button.textContent = config.i18n?.generating || 'Generating insights…';
 		status.classList.add( 'is-loading' );
 		status.textContent = config.i18n?.generating || 'Generating insights…';
 		renderLoading();
@@ -130,6 +133,7 @@
 			if ( ! response.ok ) throw new Error( data?.message || config.i18n?.error );
 			renderInsights( data );
 			button.textContent = config.i18n?.regenerate || 'Regenerate insights';
+			button.dataset.idleLabel = button.textContent;
 			status.textContent = isCodeExample
 				? ( config.i18n?.generatedCodeExample || 'Generated from current Code Example analytics' )
 				: ( config.i18n?.generatedArticle || 'Generated from current article analytics' );
@@ -140,6 +144,10 @@
 			status.classList.remove( 'is-loading' );
 			button.disabled = false;
 			button.removeAttribute( 'aria-disabled' );
+			button.classList.remove( 'is-generating' );
+			if ( ! results.querySelector( '.ica-ai-summary' ) ) {
+				button.textContent = button.dataset.idleLabel || config.i18n?.generate || 'Generate AI insights';
+			}
 			results.setAttribute( 'aria-busy', 'false' );
 		}
 	} );

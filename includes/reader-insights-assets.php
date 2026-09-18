@@ -10,7 +10,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 	if ( ! in_array( $hook_suffix, $allowed, true ) ) { return; }
 
 	$plugin_file = dirname( __DIR__ ) . '/intelligent-code-assistant.php';
-	$version = '1.2.5';
+	$version = '1.2.7';
 	wp_enqueue_style( 'intelligent-code-assistant-reader-insights-admin', plugin_dir_url( $plugin_file ) . 'assets/reader-insights-admin.css', array(), $version );
 	wp_enqueue_style( 'intelligent-code-assistant-reader-insights-workspace', plugin_dir_url( $plugin_file ) . 'assets/reader-insights-workspace.css', array( 'intelligent-code-assistant-reader-insights-admin' ), $version );
 	wp_enqueue_script( 'intelligent-code-assistant-reader-insights-admin', plugin_dir_url( $plugin_file ) . 'assets/reader-insights-admin.js', array(), $version, true );

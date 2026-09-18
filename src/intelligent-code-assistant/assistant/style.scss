@@ -194,8 +194,13 @@
 	}
 
 	.ai-assistant-button.is-attention-ready {
-		animation: ai-assistant-nudge 1.35s ease-in-out .18s 2;
-		span[aria-hidden="true"] { animation: ai-assistant-sparkle 1.35s ease-in-out .18s 2; }
+		animation: ai-assistant-nudge 1.8s cubic-bezier(.22, 1, .36, 1) .12s 1 both;
+
+		span[aria-hidden="true"] {
+			display: inline-block;
+			transform-origin: center;
+			animation: ai-assistant-sparkle 1.8s ease-out .12s 1 both;
+		}
 	}
 
 	.ai-assistant-drawer {
@@ -222,15 +227,18 @@
 }
 
 @keyframes ai-assistant-nudge {
-	0%, 72%, 100% { transform: translateY(0); }
-	80% { transform: translateY(-5px); }
-	88% { transform: translateY(0); }
-	94% { transform: translateY(-2px); }
+	0% { transform: translateY(0) scale(1); }
+	18% { transform: translateY(-8px) scale(1.03); }
+	34% { transform: translateY(0) scale(1); }
+	48% { transform: translateY(-4px) scale(1.015); }
+	62%, 100% { transform: translateY(0) scale(1); }
 }
 @keyframes ai-assistant-sparkle {
-	0%, 72%, 100% { transform: scale(1) rotate(0); opacity: 1; }
-	82% { transform: scale(1.22) rotate(12deg); opacity: .82; }
-	92% { transform: scale(1) rotate(0); opacity: 1; }
+	0% { transform: scale(1) rotate(0); opacity: 1; }
+	18% { transform: scale(1.4) rotate(18deg); opacity: .9; }
+	34% { transform: scale(1) rotate(0); opacity: 1; }
+	48% { transform: scale(1.18) rotate(-8deg); opacity: .95; }
+	62%, 100% { transform: scale(1) rotate(0); opacity: 1; }
 }
 @keyframes ai-assistant-arrive {
 	from { opacity: 0; transform: translateY(6px) scale(.99); }

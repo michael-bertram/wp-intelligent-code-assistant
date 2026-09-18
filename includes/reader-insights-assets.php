@@ -5,6 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 	$allowed_pages = array(
+		'intelligent-code-assistant',
 		'intelligent-code-assistant-reader-insights',
 		'intelligent-code-assistant-code-examples',
 	);

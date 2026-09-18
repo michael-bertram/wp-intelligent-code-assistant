@@ -7,6 +7,8 @@ let activeBlock = null;
 let launcher = null;
 let rafId = null;
 let hasPlayedLauncherAttention = false;
+let launcherReminderTimer = null;
+const LAUNCHER_REMINDER_INTERVAL = 18000;
 
 function getBlockLabel(block) {
 	const title = block?.querySelector('.code-title');
@@ -65,7 +67,12 @@ function setActiveBlock(nextBlock) {
 		launcher.hidden = !activeBlock;
 
 		if (wasHidden && activeBlock) {
-			window.requestAnimationFrame(playLauncherAttention);
+			window.requestAnimationFrame(() => {
+				playLauncherAttention();
+				scheduleLauncherReminder();
+			});
+		} else if (!activeBlock) {
+			window.clearTimeout(launcherReminderTimer);
 		}
 	}
 
@@ -120,17 +127,32 @@ function scheduleActiveBlockUpdate() {
 	});
 }
 
-function playLauncherAttention() {
+function scheduleLauncherReminder() {
+	window.clearTimeout(launcherReminderTimer);
+
+	if (!launcher || launcher.hidden || launcher.getAttribute('aria-expanded') === 'true') {
+		return;
+	}
+
+	launcherReminderTimer = window.setTimeout(() => {
+		playLauncherAttention(true);
+		scheduleLauncherReminder();
+	}, LAUNCHER_REMINDER_INTERVAL);
+}
+
+function playLauncherAttention(isReminder = false) {
 	if (
 		!launcher ||
-		hasPlayedLauncherAttention ||
+		(!isReminder && hasPlayedLauncherAttention) ||
 		window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
 		typeof launcher.animate !== 'function'
 	) {
 		return;
 	}
 
-	hasPlayedLauncherAttention = true;
+	if (!isReminder) {
+		hasPlayedLauncherAttention = true;
+	}
 
 	launcher.animate(
 		[
@@ -169,15 +191,24 @@ function createLauncher() {
 	launcher.innerHTML = '<span aria-hidden="true">✦</span><span>AI Assistant</span>';
 
 	launcher.addEventListener('click', () => {
+		window.clearTimeout(launcherReminderTimer);
 		if (!activeBlock || !isMeaningfullyVisible(activeBlock)) {
 			setActiveBlock(null);
 			return;
 		}
 
+		activeBlock.classList.add('is-ai-assistant-focused');
+		window.setTimeout(() => activeBlock?.classList.remove('is-ai-assistant-focused'), 1800);
+
 		const blockLauncher = activeBlock.querySelector('.ai-assistant-button');
 		blockLauncher?.click();
 
-		window.setTimeout(syncLauncherState, 0);
+		window.setTimeout(() => {
+			syncLauncherState();
+			if (launcher?.getAttribute('aria-expanded') !== 'true') {
+				scheduleLauncherReminder();
+			}
+		}, 0);
 	});
 
 	document.body.appendChild(launcher);

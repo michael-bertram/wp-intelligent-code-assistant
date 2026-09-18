@@ -1,0 +1,97 @@
+/* Unified AI Assistant presentation overrides. */
+
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .code-footer-actions,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .code-footer-actions {
+	display: grid !important;
+	grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+	gap: 8px !important;
+	width: 100% !important;
+}
+
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button {
+	appearance: none !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: flex-start !important;
+	width: 100% !important;
+	min-height: 42px !important;
+	margin: 0 !important;
+	padding: 9px 12px !important;
+	border: 1px solid #cbd5e1 !important;
+	border-radius: 6px !important;
+	background: #ffffff !important;
+	color: #334155 !important;
+	font-family: inherit !important;
+	font-size: 0.8125rem !important;
+	line-height: 1.35 !important;
+	font-weight: 600 !important;
+	text-align: left !important;
+	box-shadow: none !important;
+}
+
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button:hover,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button:hover {
+	background: #eff6ff !important;
+	border-color: #2563eb !important;
+	color: #1d4ed8 !important;
+}
+
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn {
+	appearance: none !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: flex-start !important;
+	width: auto !important;
+	height: auto !important;
+	min-height: 0 !important;
+	margin: 0 0 8px !important;
+	padding: 0 !important;
+	border: 0 !important;
+	background: transparent !important;
+	color: #64748b !important;
+	font-family: inherit !important;
+	font-size: 0.8125rem !important;
+	line-height: 1.4 !important;
+	font-weight: 600 !important;
+	text-decoration: none !important;
+	box-shadow: none !important;
+}
+
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn:hover,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn:hover {
+	background: transparent !important;
+	color: #2563eb !important;
+}
+
+.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > h3,
+.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > h3 {
+	margin: 4px 0 14px !important;
+	color: #0f172a !important;
+	font-family: inherit !important;
+	font-size: 1rem !important;
+	line-height: 1.35 !important;
+	font-weight: 700 !important;
+	letter-spacing: 0 !important;
+	text-transform: none !important;
+}
+
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button {
+	background: #202020 !important;
+	border-color: #3f3f46 !important;
+	color: #e4e4e7 !important;
+}
+
+.wp-block-wpe-intelligent-code-assistant-editor.dark-theme .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn,
+.wp-block-wpe-intelligent-code-assistant.dark-theme .ai-assistant-drawer .ai-assistant-view > .explanation-close-btn {
+	color: #a1a1aa !important;
+}
+
+@media (max-width: 640px) {
+	.wp-block-wpe-intelligent-code-assistant-editor .ai-assistant-drawer .ai-assistant-view > .code-footer-actions,
+	.wp-block-wpe-intelligent-code-assistant .ai-assistant-drawer .ai-assistant-view > .code-footer-actions {
+		grid-template-columns: 1fr !important;
+	}
+}

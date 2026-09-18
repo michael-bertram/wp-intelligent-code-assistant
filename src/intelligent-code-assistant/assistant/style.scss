@@ -1,0 +1,275 @@
+/* Unified AI Assistant styles bundled as frontend block styles. */
+
+.wp-block-wpe-intelligent-code-assistant-editor,
+.wp-block-wpe-intelligent-code-assistant {
+	.ai-assistant-drawer {
+		.ai-assistant-view > .code-footer-actions {
+			display: grid !important;
+			grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+			gap: 8px !important;
+			width: 100% !important;
+		}
+
+		.ai-assistant-view > .code-footer-actions > button {
+			appearance: none !important;
+			display: flex !important;
+			align-items: center !important;
+			justify-content: flex-start !important;
+			width: 100% !important;
+			min-height: 42px !important;
+			margin: 0 !important;
+			padding: 9px 12px !important;
+			border: 1px solid #cbd5e1 !important;
+			border-radius: 6px !important;
+			background: #ffffff !important;
+			color: #334155 !important;
+			font-family: inherit !important;
+			font-size: 0.8125rem !important;
+			line-height: 1.35 !important;
+			font-weight: 600 !important;
+			text-align: left !important;
+			box-shadow: none !important;
+
+			&:hover {
+				background: #eff6ff !important;
+				border-color: #2563eb !important;
+				color: #1d4ed8 !important;
+			}
+		}
+
+		.ai-assistant-view > .explanation-close-btn {
+			appearance: none !important;
+			display: inline-flex !important;
+			align-items: center !important;
+			justify-content: flex-start !important;
+			width: auto !important;
+			height: auto !important;
+			min-height: 0 !important;
+			margin: 0 0 8px !important;
+			padding: 0 !important;
+			border: 0 !important;
+			background: transparent !important;
+			color: #64748b !important;
+			font-family: inherit !important;
+			font-size: 0.8125rem !important;
+			line-height: 1.4 !important;
+			font-weight: 600 !important;
+			text-decoration: none !important;
+			box-shadow: none !important;
+
+			&:hover {
+				background: transparent !important;
+				color: #2563eb !important;
+			}
+		}
+
+		.ai-assistant-view > h3 {
+			margin: 4px 0 14px !important;
+			color: #0f172a !important;
+			font-family: inherit !important;
+			font-size: 1rem !important;
+			line-height: 1.35 !important;
+			font-weight: 700 !important;
+			letter-spacing: 0 !important;
+			text-transform: none !important;
+		}
+
+		/* Shared shimmer loading state used by Explain, Explain Line and Check Understanding. */
+		.explanation-loading-container,
+		.line-explanation-loading,
+		.understanding-check-loading {
+			position: relative;
+			padding-bottom: 48px !important;
+
+			&::before,
+			&::after {
+				content: '';
+				position: absolute;
+				left: 0;
+				height: 10px;
+				border-radius: 4px;
+				background: linear-gradient(
+					90deg,
+					#e2e8f0 25%,
+					#f8fafc 50%,
+					#e2e8f0 75%
+				);
+				background-size: 200% 100%;
+				animation: ai-assistant-shimmer 1.4s ease-in-out infinite;
+			}
+
+			&::before {
+				bottom: 24px;
+				width: 100%;
+			}
+
+			&::after {
+				bottom: 6px;
+				width: 72%;
+			}
+		}
+
+		/* Give Ask's submit state the same visual language while a response is generated. */
+		.ask-code-submit:disabled {
+			background: linear-gradient(
+				90deg,
+				#0f172a 25%,
+				#334155 50%,
+				#0f172a 75%
+			) !important;
+			background-size: 200% 100% !important;
+			animation: ai-assistant-shimmer 1.4s ease-in-out infinite;
+		}
+	}
+
+	&.dark-theme {
+		.ai-assistant-drawer {
+			.ai-assistant-view > .code-footer-actions > button {
+				background: #202020 !important;
+				border-color: #3f3f46 !important;
+				color: #e4e4e7 !important;
+			}
+
+			.ai-assistant-view > .explanation-close-btn {
+				color: #a1a1aa !important;
+			}
+
+			.ai-assistant-view > h3 {
+				color: #f4f4f5 !important;
+			}
+
+			.explanation-loading-container,
+			.line-explanation-loading,
+			.understanding-check-loading {
+				&::before,
+				&::after {
+					background: linear-gradient(
+						90deg,
+						#27272a 25%,
+						#3f3f46 50%,
+						#27272a 75%
+					);
+					background-size: 200% 100%;
+				}
+			}
+		}
+	}
+}
+
+@keyframes ai-assistant-shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+@media (max-width: 640px) {
+	.wp-block-wpe-intelligent-code-assistant-editor,
+	.wp-block-wpe-intelligent-code-assistant {
+		.ai-assistant-drawer .ai-assistant-view > .code-footer-actions {
+			grid-template-columns: 1fr !important;
+		}
+	}
+}
+
+
+/* Final interaction polish: personality on the reader assistant, never at the expense of accessibility. */
+.wp-block-wpe-intelligent-code-assistant-editor,
+.wp-block-wpe-intelligent-code-assistant {
+	.ai-assistant-button,
+	.ai-assistant-drawer .ai-assistant-view > .code-footer-actions > button {
+		transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease, color .18s ease;
+
+		&:hover:not(:disabled) {
+			transform: translateY(-2px);
+			box-shadow: 0 7px 16px rgba(15, 23, 42, .10) !important;
+		}
+
+		&:active:not(:disabled) {
+			transform: translateY(0);
+		}
+	}
+
+	.ai-assistant-button.is-attention-ready {
+		animation: ai-assistant-nudge 1.8s cubic-bezier(.22, 1, .36, 1) .12s 1 both;
+
+		span[aria-hidden="true"] {
+			display: inline-block;
+			transform-origin: center;
+			animation: ai-assistant-sparkle 1.8s ease-out .12s 1 both;
+		}
+	}
+
+	.ai-assistant-drawer {
+		transform-origin: bottom right;
+		animation: ai-assistant-arrive .28s ease-out;
+
+		.explanation-text,
+		.line-explanation-content,
+		.ask-code-response,
+		.understanding-check-result,
+		.understanding-check-explanation {
+			animation: ai-assistant-answer .28s ease-out;
+		}
+	}
+
+	.panel-content .code-lines .code-line.is-selected {
+		animation: ai-selected-line .34s ease-out;
+	}
+
+	.copy-button.copied,
+	.is-copied {
+		animation: ai-assistant-confirm .26s ease-out;
+	}
+}
+
+@keyframes ai-assistant-nudge {
+	0% { transform: translateY(0) scale(1); }
+	18% { transform: translateY(-8px) scale(1.03); }
+	34% { transform: translateY(0) scale(1); }
+	48% { transform: translateY(-4px) scale(1.015); }
+	62%, 100% { transform: translateY(0) scale(1); }
+}
+@keyframes ai-assistant-sparkle {
+	0% { transform: scale(1) rotate(0); opacity: 1; }
+	18% { transform: scale(1.4) rotate(18deg); opacity: .9; }
+	34% { transform: scale(1) rotate(0); opacity: 1; }
+	48% { transform: scale(1.18) rotate(-8deg); opacity: .95; }
+	62%, 100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes ai-assistant-arrive {
+	from { opacity: 0; transform: translateY(6px) scale(.99); }
+	to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes ai-assistant-answer {
+	from { opacity: 0; transform: translateY(4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+@keyframes ai-assistant-confirm {
+	0% { transform: scale(.92); }
+	65% { transform: scale(1.06); }
+	100% { transform: scale(1); }
+}
+@keyframes ai-selected-line {
+	0% { box-shadow: inset 0 0 0 999px rgba(37,99,235,.05); }
+	100% { box-shadow: inset 0 0 0 999px rgba(37,99,235,0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wp-block-wpe-intelligent-code-assistant-editor,
+	.wp-block-wpe-intelligent-code-assistant {
+		.ai-assistant-drawer,
+		.ai-assistant-trigger,
+		.ai-assistant-button,
+		.ai-assistant-drawer *,
+		.panel-content .code-lines .code-line,
+		.copy-button {
+			animation: none !important;
+			transition-duration: .001ms !important;
+			transform: none !important;
+		}
+	}
+}

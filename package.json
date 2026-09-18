@@ -1,27 +1,27 @@
 {
-	"name": "interactive-v6",
-	"version": "0.1.0",
-	"description": "An interactive block with the Interactivity API.",
-	"author": "The WordPress Contributors",
-	"license": "GPL-2.0-or-later",
-	"main": "build/index.js",
-	"scripts": {
-		"build": "wp-scripts build --experimental-modules",
-		"format": "wp-scripts format",
-		"lint:css": "wp-scripts lint-style",
-		"lint:js": "wp-scripts lint-js",
-		"packages-update": "wp-scripts packages-update",
-		"plugin-zip": "wp-scripts plugin-zip",
-		"start": "wp-scripts start --experimental-modules"
-	},
-	"dependencies": {
-		"@wordpress/interactivity": "latest",
-		"lucide-react": "^0.577.0"
-	},
-	"files": [
-		"[^.]*"
-	],
-	"devDependencies": {
-		"@wordpress/scripts": "^32.2.0"
-	}
+  "name": "wp-intelligent-code-assistant",
+  "version": "1.1.0",
+  "description": "Interactive WordPress code examples with contextual AI assistance and Reader Insights.",
+  "author": "Michael Bertram",
+  "license": "GPL-2.0-or-later",
+  "main": "build/intelligent-code-assistant/index.js",
+  "scripts": {
+    "build": "wp-scripts build --experimental-modules --webpack-src-dir=src",
+    "format": "wp-scripts format",
+    "lint:css": "wp-scripts lint-style",
+    "lint:js": "wp-scripts lint-js",
+    "packages-update": "wp-scripts packages-update",
+    "plugin-zip": "wp-scripts plugin-zip",
+    "start": "wp-scripts start --experimental-modules --webpack-src-dir=src"
+  },
+  "dependencies": {
+    "@wordpress/interactivity": "latest",
+    "lucide-react": "^0.577.0"
+  },
+  "files": [
+    "[^.]*"
+  ],
+  "devDependencies": {
+    "@wordpress/scripts": "^32.2.0"
+  }
 }

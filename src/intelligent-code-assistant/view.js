@@ -1,95 +1,490 @@
-import { store, getContext, getElement } from '@wordpress/interactivity';
-import { buildAIContext, formatAIItems, requestAICapability } from './ai-context';
+import {
+  store,
+  getContext,
+  getElement,
+} from '@wordpress/interactivity';
+
+import {
+  buildAIContext,
+  formatAIItems,
+  requestAICapability,
+} from './ai-context';
+
+import {
+  ANALYTICS_EVENTS,
+  recordAnalyticsEvent,
+} from './analytics';
 
 const STORAGE_KEY = 'wpe_tasks';
 
-const { state, actions } = store('wpe', {
+function getAIErrorMessage(response) {
+  const status = Number(response?.status || 0);
+
+  if (status === 429) {
+    return 'AI assistance is temporarily unavailable. Please try again later.';
+  }
+
+  if (status === 503) {
+    return 'The AI service is currently busy. Please try again in a moment.';
+  }
+
+  return 'Unable to generate an AI response right now. Please try again.';
+}
+
+const { state } = store('wpe', {
   state: {
     currentlyOpenId: null,
     registeredIds: [],
     tasks: {},
     _storageLoaded: false,
 
-    get totalTasks() { return state.registeredIds.length; },
-    get completedTasks() { return state.registeredIds.filter((id) => state.tasks[id]).length; },
-    get progressPercent() {
-      if (!state.totalTasks) return 0;
-      return Math.round((state.completedTasks / state.totalTasks) * 100);
+    get isAssistantMenu() {
+      return getContext().aiAssistantView === 'menu';
     },
-    get progressBarStyle() { return `width: ${state.progressPercent}%; transition: width 0.5s ease;`; },
-    get isAllDone() { return state.totalTasks > 0 && state.completedTasks === state.totalTasks; },
+
+    get isAssistantExplain() {
+      return getContext().aiAssistantView === 'explain';
+    },
+
+    get isAssistantExplainLine() {
+      return getContext().aiAssistantView === 'explain-line';
+    },
+
+    get isAssistantAsk() {
+      return getContext().aiAssistantView === 'ask';
+    },
+
+    get isAssistantCheck() {
+      return getContext().aiAssistantView === 'check';
+    },
+
+    get totalTasks() {
+      return state.registeredIds.length;
+    },
+
+    get completedTasks() {
+      return state.registeredIds.filter((id) => state.tasks[id]).length;
+    },
+
+    get progressPercent() {
+      if (!state.totalTasks) {
+        return 0;
+      }
+
+      return Math.round(
+        (state.completedTasks / state.totalTasks) * 100
+      );
+    },
+
+    get progressBarStyle() {
+      return `width: ${state.progressPercent}%; transition: width 0.5s ease;`;
+    },
+
+    get isAllDone() {
+      return (
+        state.totalTasks > 0 &&
+        state.completedTasks === state.totalTasks
+      );
+    },
+
+    get isCheckOption0Correct() {
+      const context = getContext();
+      return context.hasAnsweredCheck && context.checkCorrectAnswer === 0;
+    },
+
+    get isCheckOption1Correct() {
+      const context = getContext();
+      return context.hasAnsweredCheck && context.checkCorrectAnswer === 1;
+    },
+
+    get isCheckOption2Correct() {
+      const context = getContext();
+      return context.hasAnsweredCheck && context.checkCorrectAnswer === 2;
+    },
+
+    get isCheckOption0Incorrect() {
+      const context = getContext();
+      return (
+        context.hasAnsweredCheck &&
+        context.selectedCheckAnswer === 0 &&
+        context.checkCorrectAnswer !== 0
+      );
+    },
+
+    get isCheckOption1Incorrect() {
+      const context = getContext();
+      return (
+        context.hasAnsweredCheck &&
+        context.selectedCheckAnswer === 1 &&
+        context.checkCorrectAnswer !== 1
+      );
+    },
+
+    get isCheckOption2Incorrect() {
+      const context = getContext();
+      return (
+        context.hasAnsweredCheck &&
+        context.selectedCheckAnswer === 2 &&
+        context.checkCorrectAnswer !== 2
+      );
+    },
   },
 
   actions: {
+    openAssistant() {
+      const context = getContext();
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'menu';
+    },
+
+    closeAssistant() {
+      const context = getContext();
+      context.aiAssistantOpen = false;
+      context.aiAssistantView = 'menu';
+    },
+
+    showAssistantMenu() {
+      const context = getContext();
+      context.aiAssistantView = 'menu';
+    },
+
+    showAskCode() {
+      const context = getContext();
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'ask';
+      context.isAskingCode = true;
+      context.codeQuestionError = '';
+    },
+
     toggleOpen() {
       const context = getContext();
       context.isOpen = !context.isOpen;
-      context.toggleText = context.isOpen ? context.closeText : context.openText;
+      context.toggleText = context.isOpen
+        ? context.closeText
+        : context.openText;
     },
 
     *toggleComplete() {
       const context = getContext();
-      context.isComplete = !context.isComplete;
-      context.completeText = context.isComplete ? '✓' : 'Mark as complete';
-      state.tasks = { ...state.tasks, [context.id]: context.isComplete };
 
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks)); } catch (err) { /* Optional storage. */ }
+      context.isComplete = !context.isComplete;
+      context.completeText = context.isComplete
+        ? '✓'
+        : 'Mark as complete';
+
+      state.tasks = {
+        ...state.tasks,
+        [context.id]: context.isComplete,
+      };
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.MARK_COMPLETE,
+        context,
+        { status: context.isComplete }
+      );
 
       try {
-        yield fetch('/wp-json/intelligent-code-assistant/v1/toggle-complete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': window.wpApiSettings?.nonce || '' },
-          body: JSON.stringify({ block_id: context.id, status: context.isComplete }),
-        });
-      } catch (err) { /* Local completion remains available. */ }
-    },
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
+      } catch (err) {
+        // Local storage is optional.
+      }
 
-    closeExplanation() {
-      const context = getContext();
-      context.isExplaining = false;
-      context.isAnalyzingExplanation = false;
-      context.explanationError = '';
+      try {
+        yield fetch(
+          '/wp-json/intelligent-code-assistant/v1/toggle-complete',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-WP-Nonce': window.wpApiSettings?.nonce || '',
+            },
+            body: JSON.stringify({
+              block_id: context.id,
+              status: context.isComplete,
+            }),
+          }
+        );
+      } catch (err) {
+        // Local completion remains available.
+      }
     },
 
     *explainCode() {
       const context = getContext();
 
-      if (context.isExplaining && context.explanationText && !context.isAnalyzingExplanation) {
-        context.isExplaining = false;
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.EXPLAIN_CODE,
+        context
+      );
+
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'explain';
+      context.isExplaining = true;
+
+      if (context.explanationText && !context.explanationError) {
         return;
       }
-
-      context.isExplaining = true;
-      if (context.explanationText && !context.explanationError) return;
 
       context.isAnalyzingExplanation = true;
       context.explanationError = '';
       context.explanationText = '';
       context.explanationItems = [];
 
-      const response = yield requestAICapability('explain-code', buildAIContext(context));
+      const response = yield requestAICapability(
+        'explain-code',
+        buildAIContext(context)
+      );
 
-      if (response && typeof response.explanation === 'string' && response.explanation.trim()) {
+      if (response?.error) {
+        context.explanationError = getAIErrorMessage(response);
+      } else if (
+        response &&
+        typeof response.explanation === 'string' &&
+        response.explanation.trim()
+      ) {
         context.explanationText = response.explanation.trim();
         context.explanationItems = formatAIItems(response.explanation);
       } else {
-        context.explanationError = 'Unable to generate a code explanation right now.';
+        context.explanationError =
+          'Unable to generate a code explanation right now.';
       }
 
       context.isAnalyzingExplanation = false;
     },
 
-    async copyToClipboard() {
+    *explainLine() {
       const context = getContext();
-      const { ref: buttonElement } = getElement();
-      if (!buttonElement) return;
 
-      const blockElement = buttonElement.closest('[data-wp-interactive="wpe"]');
-      const contentContainer = blockElement?.querySelector('.panel-content');
-      if (!contentContainer) return;
+      if (!context.selectedLineNumber || !context.selectedLineText) {
+        context.lineExplanationError = 'Select a line of code first.';
+        return;
+      }
+
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'explain-line';
+      context.isExplainingLine = true;
+      context.isAnalyzingLine = true;
+      context.lineExplanation = '';
+      context.lineExplanationError = '';
+
+      const lines = (context.rawCodeText || '').split('\n');
+      const selectedLineNumber = Number(context.selectedLineNumber);
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.EXPLAIN_LINE,
+        context,
+        { lineNumber: selectedLineNumber }
+      );
+
+      const start = Math.max(1, selectedLineNumber - 2);
+      const end = Math.min(lines.length, selectedLineNumber + 2);
+
+      const surroundingCode = lines
+        .slice(start - 1, end)
+        .map((line, index) => {
+          const lineNumber = start + index;
+          const marker = lineNumber === selectedLineNumber ? '>>>' : '   ';
+          return `${marker} ${lineNumber}: ${line}`;
+        })
+        .join('\n');
+
+      const payload = buildAIContext(context, {
+        selectedLineNumber,
+        selectedLine: context.selectedLineText,
+        surroundingCode,
+      });
+
+      const response = yield requestAICapability('explain-line', payload);
+
+      if (response?.error) {
+        context.lineExplanationError = getAIErrorMessage(response);
+      } else if (
+        response &&
+        typeof response.explanation === 'string' &&
+        response.explanation.trim()
+      ) {
+        context.lineExplanation = response.explanation.trim();
+      } else {
+        context.lineExplanationError = 'Unable to explain this line right now.';
+      }
+
+      context.isAnalyzingLine = false;
+    },
+
+    handleCodeQuestionInput(event) {
+      const context = getContext();
+      context.codeQuestion = event.target.value;
+      context.codeQuestionError = '';
+    },
+
+    toggleAskCode() {
+      const context = getContext();
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'ask';
+      context.isAskingCode = true;
+      context.codeQuestionError = '';
+    },
+
+    *submitCodeQuestion() {
+      const context = getContext();
+      const question = (context.codeQuestion || '').trim();
+
+      if (!question) {
+        context.codeQuestionError = 'Enter a question about this code first.';
+        return;
+      }
+
+      if (context.isSubmittingQuestion) {
+        return;
+      }
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.ASK_QUESTION,
+        context,
+        { question }
+      );
+
+      context.isSubmittingQuestion = true;
+      context.codeQuestionError = '';
+      context.codeAnswer = '';
+
+      const requestContext = {
+        ...context,
+        question,
+      };
 
       try {
-        const cleanedText = (contentContainer.textContent || contentContainer.innerText || '').trim();
+        const response = yield requestAICapability(
+          'ask-code',
+          buildAIContext(requestContext)
+        );
+
+        if (
+          response &&
+          typeof response.answer === 'string' &&
+          response.answer.trim()
+        ) {
+          context.codeAnswer = response.answer.trim();
+        } else {
+          context.codeQuestionError =
+            'AI assistance is temporarily unavailable. Please try again later.';
+        }
+      } catch (error) {
+        context.codeQuestionError =
+          'AI assistance is temporarily unavailable. Please try again later.';
+      } finally {
+        context.isSubmittingQuestion = false;
+      }
+    },
+
+    *generateUnderstandingCheck() {
+      const context = getContext();
+
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'check';
+
+      if (context.isGeneratingCheck) {
+        return;
+      }
+
+      if (context.checkQuestion) {
+        context.isCheckingUnderstanding = true;
+        return;
+      }
+
+      context.isCheckingUnderstanding = true;
+      context.isGeneratingCheck = true;
+      context.checkError = '';
+      context.checkQuestion = '';
+      context.checkOptions = [];
+      context.checkOption0 = '';
+      context.checkOption1 = '';
+      context.checkOption2 = '';
+      context.checkCorrectAnswer = null;
+      context.checkExplanation = '';
+      context.selectedCheckAnswer = null;
+      context.hasAnsweredCheck = false;
+      context.isCheckCorrect = false;
+
+      try {
+        const response = yield requestAICapability(
+          'check-understanding',
+          buildAIContext(context)
+        );
+
+        const hasValidResponse =
+          response &&
+          typeof response.question === 'string' &&
+          response.question.trim() &&
+          Array.isArray(response.options) &&
+          response.options.length === 3 &&
+          Number.isInteger(response.correctAnswer) &&
+          response.correctAnswer >= 0 &&
+          response.correctAnswer <= 2 &&
+          typeof response.explanation === 'string';
+
+        if (!hasValidResponse) {
+          context.checkError =
+            'Unable to generate a knowledge check right now.';
+          return;
+        }
+
+        context.checkQuestion = response.question.trim();
+        context.checkOptions = response.options;
+        context.checkOption0 = response.options[0];
+        context.checkOption1 = response.options[1];
+        context.checkOption2 = response.options[2];
+        context.checkCorrectAnswer = response.correctAnswer;
+        context.checkExplanation = response.explanation.trim();
+      } catch (error) {
+        context.checkError =
+          'Unable to generate a knowledge check right now.';
+      } finally {
+        context.isGeneratingCheck = false;
+      }
+    },
+
+    selectCheckAnswer(event) {
+      const context = getContext();
+
+      if (context.hasAnsweredCheck) {
+        return;
+      }
+
+      const answerIndex = Number(event.currentTarget.dataset.answerIndex);
+
+      if (
+        !Number.isInteger(answerIndex) ||
+        answerIndex < 0 ||
+        answerIndex >= context.checkOptions.length
+      ) {
+        return;
+      }
+
+      context.selectedCheckAnswer = answerIndex;
+      context.hasAnsweredCheck = true;
+      context.isCheckCorrect = answerIndex === context.checkCorrectAnswer;
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.KNOWLEDGE_CHECK,
+        context,
+        {
+          correct: context.isCheckCorrect,
+          selectedAnswer: answerIndex,
+          correctAnswer: context.checkCorrectAnswer,
+        }
+      );
+    },
+
+    async copyToClipboard() {
+      const context = getContext();
+      const cleanedText = (context.rawCodeText || '').trim();
+
+      if (!cleanedText) {
+        return;
+      }
+
+      try {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(cleanedText);
         } else {
@@ -103,8 +498,15 @@ const { state, actions } = store('wpe', {
           document.execCommand('copy');
           document.body.removeChild(textarea);
         }
+
         context.isCopied = true;
-        setTimeout(() => { context.isCopied = false; }, 2000);
+        recordAnalyticsEvent(
+          ANALYTICS_EVENTS.COPY_CODE,
+          context
+        );
+        setTimeout(() => {
+          context.isCopied = false;
+        }, 2000);
       } catch (err) {
         console.error('[Intelligent Code Assistant] Failed to copy code.', err);
       }
@@ -113,23 +515,34 @@ const { state, actions } = store('wpe', {
 
   callbacks: {
     initShared() {
-      if (state._storageLoaded) return;
+      if (state._storageLoaded) {
+        return;
+      }
+
       try {
         const storedTasks = localStorage.getItem(STORAGE_KEY);
         state.tasks = storedTasks ? JSON.parse(storedTasks) : {};
-      } catch (err) { state.tasks = {}; }
+      } catch (err) {
+        state.tasks = {};
+      }
+
       state._storageLoaded = true;
     },
 
     initTask() {
       const context = getContext();
-      if (!context.id) return;
+
+      if (!context.id) {
+        return;
+      }
 
       if (!state._storageLoaded) {
         try {
           const storedTasks = localStorage.getItem(STORAGE_KEY);
           state.tasks = storedTasks ? JSON.parse(storedTasks) : {};
-        } catch (err) { state.tasks = {}; }
+        } catch (err) {
+          state.tasks = {};
+        }
         state._storageLoaded = true;
       }
 
@@ -139,27 +552,224 @@ const { state, actions } = store('wpe', {
 
       context.isComplete = state.tasks[context.id] ?? false;
       context.isCopied = false;
+      context.aiAssistantOpen = false;
+      context.aiAssistantView = 'menu';
+
       context.isExplaining = false;
       context.isAnalyzingExplanation = false;
       context.explanationText = '';
       context.explanationItems = [];
       context.explanationError = '';
+
+      context.selectedLineNumber = 0;
+      context.selectedLineText = '';
+      context.isExplainingLine = false;
+      context.isAnalyzingLine = false;
+      context.lineExplanation = '';
+      context.lineExplanationError = '';
+
+      context.isAskingCode = false;
+      context.isSubmittingQuestion = false;
+      context.codeQuestion = '';
+      context.codeAnswer = '';
+      context.codeQuestionError = '';
+
+      context.isCheckingUnderstanding = false;
+      context.isGeneratingCheck = false;
+      context.checkQuestion = '';
+      context.checkOptions = [];
+      context.checkOption0 = '';
+      context.checkOption1 = '';
+      context.checkOption2 = '';
+      context.checkCorrectAnswer = null;
+      context.checkExplanation = '';
+      context.selectedCheckAnswer = null;
+      context.hasAnsweredCheck = false;
+      context.isCheckCorrect = false;
+      context.checkError = '';
+
       context.completeText = context.isComplete ? '✓' : 'Mark as complete';
 
       if (context.highlightLines) {
         const targetLines = new Set();
+
         context.highlightLines.split(',').forEach((range) => {
-          const parts = range.split('-').map((num) => parseInt(num.trim(), 10));
-          if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
-            for (let i = Math.min(parts[0], parts[1]); i <= Math.max(parts[0], parts[1]); i += 1) targetLines.add(i);
-          } else if (parts.length === 1 && !Number.isNaN(parts[0])) {
+          const parts = range
+            .split('-')
+            .map((num) => parseInt(num.trim(), 10));
+
+          if (
+            parts.length === 2 &&
+            !Number.isNaN(parts[0]) &&
+            !Number.isNaN(parts[1])
+          ) {
+            const start = Math.min(parts[0], parts[1]);
+            const end = Math.max(parts[0], parts[1]);
+            for (let i = start; i <= end; i += 1) {
+              targetLines.add(i);
+            }
+          } else if (
+            parts.length === 1 &&
+            !Number.isNaN(parts[0])
+          ) {
             targetLines.add(parts[0]);
           }
         });
+
         context.highlightedNumbers = Array.from(targetLines);
       } else {
         context.highlightedNumbers = [];
       }
+
+      const { ref: blockElement } = getElement();
+
+      const panel = blockElement?.querySelector('.panel-content');
+
+      if (!panel || panel.dataset.lineSelectionBound) {
+        return;
+      }
+
+      panel.dataset.lineSelectionBound = 'true';
+      panel.setAttribute(
+        'aria-label',
+        context.aiAssistantEnabled
+          ? 'Code. Select a line to explain it with AI.'
+          : 'Code.'
+      );
+
+      const selectLine = (lineElement) => {
+        const lineNumber = Number(lineElement.dataset.lineNumber);
+
+        if (!lineNumber || Number.isNaN(lineNumber)) {
+          return;
+        }
+
+        const lines = (context.rawCodeText || '').split('\n');
+        context.selectedLineNumber = lineNumber;
+        context.selectedLineText = lines[lineNumber - 1] || '';
+        context.isExplainingLine = false;
+        context.isAnalyzingLine = false;
+        context.lineExplanation = '';
+        context.lineExplanationError = '';
+
+        panel.querySelectorAll('.code-line').forEach((line) => {
+          line.classList.remove('is-selected');
+          line.removeAttribute('aria-current');
+        });
+
+        lineElement.classList.add('is-selected');
+        lineElement.setAttribute('aria-current', 'true');
+      };
+
+      panel.addEventListener('click', (event) => {
+        const lineElement = event.target.closest('.code-line');
+        if (!lineElement || !panel.contains(lineElement)) {
+          return;
+        }
+        selectLine(lineElement);
+      });
+
+      panel.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+
+        const lineElement = event.target.closest('.code-line');
+        if (!lineElement || !panel.contains(lineElement)) {
+          return;
+        }
+
+        event.preventDefault();
+        selectLine(lineElement);
+      });
     },
   },
 });
+
+/**
+ * Give each rendered AI Assistant button a deterministic one-shot entrance.
+ * Web Animations applies the motion directly to the element, avoiding any
+ * dependency on an animation class or CSS keyframe being activated.
+ */
+function bindAssistantAttention() {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  document.querySelectorAll('.ai-assistant-attention').forEach((attentionWrapper) => {
+    if (attentionWrapper.dataset.attentionBound) {
+      return;
+    }
+
+    attentionWrapper.dataset.attentionBound = 'true';
+    const button = attentionWrapper.querySelector('.ai-assistant-button');
+
+    if (!button) {
+      return;
+    }
+
+    const playAttention = () => {
+      if (
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
+        typeof attentionWrapper.animate !== 'function'
+      ) {
+        return;
+      }
+
+      attentionWrapper.animate(
+        [
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 0 },
+          { transform: 'translateY(12px) scale(1.04)', opacity: 0.9, offset: 0.16 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 0.34 },
+          { transform: 'translateY(5px) scale(1.02)', opacity: 1, offset: 0.48 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 0.64 },
+          { transform: 'translateY(0) scale(1)', opacity: 1, offset: 1 },
+        ],
+        {
+          duration: 1800,
+          easing: 'cubic-bezier(.22, 1, .36, 1)',
+          fill: 'none',
+        }
+      );
+
+      const sparkle = button.querySelector('span[aria-hidden="true"]');
+      if (sparkle && typeof sparkle.animate === 'function') {
+        sparkle.animate(
+          [
+            { transform: 'scale(1) rotate(0deg)', offset: 0 },
+            { transform: 'scale(1.5) rotate(20deg)', offset: 0.18 },
+            { transform: 'scale(1) rotate(0deg)', offset: 0.36 },
+            { transform: 'scale(1.22) rotate(-10deg)', offset: 0.5 },
+            { transform: 'scale(1) rotate(0deg)', offset: 0.66 },
+            { transform: 'scale(1) rotate(0deg)', offset: 1 },
+          ],
+          { duration: 1800, easing: 'ease-out', fill: 'none' }
+        );
+      }
+    };
+
+    if (!('IntersectionObserver' in window)) {
+      playAttention();
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) {
+        return;
+      }
+
+      playAttention();
+      observer.disconnect();
+    }, { threshold: 0.2 });
+
+    observer.observe(attentionWrapper);
+  });
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindAssistantAttention, { once: true });
+  } else {
+    bindAssistantAttention();
+  }
+}

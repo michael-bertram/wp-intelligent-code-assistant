@@ -232,11 +232,9 @@ function intelligent_code_assistant_render_reader_insights_article( $post_id ) {
 		<header class="ica-page-header ica-page-header--detail">
 			<nav class="ica-back-nav"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php esc_html_e( 'Back to Reader Insights', 'intelligent-code-assistant' ); ?></a></nav>
 			<div class="ica-header-title"><h1><?php echo esc_html( $title ); ?></h1></div>
-			<div class="ica-header-summary">
-				<p class="description"><?php esc_html_e( 'Detailed reader interaction data for this article. These are recorded actions, not unique-reader metrics.', 'intelligent-code-assistant' ); ?></p>
-				<?php if ( $edit_url ) : ?><a class="button" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Edit article', 'intelligent-code-assistant' ); ?></a><?php endif; ?>
-			</div>
+			<div class="ica-header-summary"><?php if ( $edit_url ) : ?><a class="button" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Edit article', 'intelligent-code-assistant' ); ?></a><?php endif; ?></div>
 		</header>
+		<p class="ica-page-intro"><?php esc_html_e( 'Detailed reader interaction data for this article. These are recorded actions, not unique-reader metrics.', 'intelligent-code-assistant' ); ?></p>
 
 		<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;max-width:1100px;margin:24px 0;">
 			<?php

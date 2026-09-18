@@ -3,6 +3,6 @@
   "rules": {
     "no-descending-specificity": null,
     "no-duplicate-selectors": null,
-    "@stylistic/max-line-length": null
+    "selector-class-pattern": null
   }
 }

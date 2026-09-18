@@ -696,22 +696,27 @@ function bindAssistantAttention() {
     return;
   }
 
-  document.querySelectorAll('.ai-assistant-button').forEach((button) => {
-    if (button.dataset.attentionBound) {
+  document.querySelectorAll('.ai-assistant-attention').forEach((attentionWrapper) => {
+    if (attentionWrapper.dataset.attentionBound) {
       return;
     }
 
-    button.dataset.attentionBound = 'true';
+    attentionWrapper.dataset.attentionBound = 'true';
+    const button = attentionWrapper.querySelector('.ai-assistant-button');
+
+    if (!button) {
+      return;
+    }
 
     const playAttention = () => {
       if (
         window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
-        typeof button.animate !== 'function'
+        typeof attentionWrapper.animate !== 'function'
       ) {
         return;
       }
 
-      button.animate(
+      attentionWrapper.animate(
         [
           { transform: 'translateY(0) scale(1)', offset: 0 },
           { transform: 'translateY(-10px) scale(1.04)', offset: 0.18 },
@@ -757,7 +762,7 @@ function bindAssistantAttention() {
       observer.disconnect();
     }, { threshold: 0.2 });
 
-    observer.observe(button);
+    observer.observe(attentionWrapper);
   });
 }
 

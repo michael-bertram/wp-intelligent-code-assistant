@@ -1124,3 +1124,163 @@ body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reade
 	border-color: #c9dcfb;
 	box-shadow: 0 10px 24px rgba(21, 93, 252, .08);
 }
+
+
+/* Unified toolbar + centred justified content shell. */
+body.toplevel_page_intelligent-code-assistant #wpcontent,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights #wpcontent,
+body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent {
+	padding-left: 0 !important;
+}
+
+body.toplevel_page_intelligent-code-assistant .wrap.ica-insights-workspace,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .wrap.ica-insights-workspace,
+body.intelligent-code_page_intelligent-code-assistant-code-examples .wrap.ica-insights-workspace {
+	width: 100%;
+	max-width: none !important;
+	margin: 0 !important;
+	padding: 0 0 48px !important;
+	box-sizing: border-box;
+}
+
+.ica-insights-workspace .ica-page-header {
+	display: grid;
+	grid-template-columns: minmax(0, .8fr) minmax(320px, 1.2fr);
+	align-items: center;
+	column-gap: 48px;
+	width: 100% !important;
+	max-width: none !important;
+	min-height: 86px !important;
+	margin: 0 0 30px !important;
+	padding: 16px max(28px, calc((100% - 1200px) / 2)) !important;
+	box-sizing: border-box;
+	background: var(--ica-header-light) !important;
+	border-top: 0 !important;
+	border-bottom: 1px solid var(--ica-header-border);
+	border-radius: 0 !important;
+	box-shadow: 0 5px 16px rgba(15, 23, 42, .07);
+}
+
+.ica-insights-workspace .ica-page-header--detail {
+	grid-template-columns: auto minmax(260px, .9fr) minmax(320px, 1.1fr);
+	column-gap: 34px;
+}
+
+.ica-insights-workspace .ica-page-header .ica-back-nav {
+	margin: 0 !important;
+	white-space: nowrap;
+}
+
+.ica-insights-workspace .ica-page-header .ica-header-title,
+.ica-insights-workspace .ica-page-header .ica-header-summary {
+	min-width: 0;
+}
+
+.ica-insights-workspace .ica-page-header h1 {
+	margin: 0 !important;
+	padding: 0 !important;
+	background: transparent !important;
+	color: var(--ica-header-ink) !important;
+	font-size: 25px !important;
+	line-height: 1.2;
+}
+
+.ica-insights-workspace .ica-page-header .description {
+	max-width: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	background: transparent !important;
+	color: var(--ica-header-muted) !important;
+	line-height: 1.55;
+}
+
+.ica-insights-workspace .ica-page-header .ica-header-summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 18px;
+}
+
+/* Every primary page section shares the same centred left/right edges. */
+.ica-intelligent-code-overview .ica-overview-intro,
+.ica-intelligent-code-overview .ica-overview-grid,
+.ica-reader-insights-overview > :not(.ica-page-header),
+.ica-reader-insights-detail > :not(.ica-page-header),
+.ica-insights-workspace.ica-insights-detail > :not(.ica-page-header),
+body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insights-workspace:not(.ica-insights-detail) > :not(.ica-page-header) {
+	width: min(calc(100% - 56px), 1200px) !important;
+	max-width: 1200px !important;
+	margin-left: auto !important;
+	margin-right: auto !important;
+	box-sizing: border-box;
+}
+
+/* Make the summary cards actually justify across the shared content width. */
+.ica-reader-insights-overview > div[style*="display:grid"],
+.ica-reader-insights-detail > div[style*="display:grid"],
+.ica-insights-workspace .ica-stat-grid {
+	width: min(calc(100% - 56px), 1200px) !important;
+	max-width: 1200px !important;
+	margin-left: auto !important;
+	margin-right: auto !important;
+	grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+}
+
+/* Overview cards should fill the same shared content width. */
+.ica-intelligent-code-overview .ica-overview-grid {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Remove legacy split-title Reader Insights header styling now that it has semantic header markup. */
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1,
+body.intelligent-code_page_intelligent-code-assistant-reader-insights .ica-reader-insights-overview > h1 + .description {
+	position: static;
+	left: auto;
+	width: auto;
+	border: 0;
+	box-shadow: none;
+}
+
+@media (max-width: 960px) {
+	.ica-insights-workspace .ica-page-header,
+	.ica-insights-workspace .ica-page-header--detail {
+		grid-template-columns: 1fr;
+		row-gap: 8px;
+		align-items: start;
+	}
+	.ica-insights-workspace .ica-page-header .ica-header-summary {
+		display: block;
+	}
+	.ica-reader-insights-overview > div[style*="display:grid"],
+	.ica-reader-insights-detail > div[style*="display:grid"],
+	.ica-insights-workspace .ica-stat-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+	}
+}
+
+@media (max-width: 782px) {
+	.ica-insights-workspace .ica-page-header {
+		padding-left: 20px !important;
+		padding-right: 20px !important;
+	}
+	.ica-intelligent-code-overview .ica-overview-intro,
+	.ica-intelligent-code-overview .ica-overview-grid,
+	.ica-reader-insights-overview > :not(.ica-page-header),
+	.ica-reader-insights-detail > :not(.ica-page-header),
+	.ica-insights-workspace.ica-insights-detail > :not(.ica-page-header),
+	body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-insights-workspace:not(.ica-insights-detail) > :not(.ica-page-header),
+	.ica-reader-insights-overview > div[style*="display:grid"],
+	.ica-reader-insights-detail > div[style*="display:grid"],
+	.ica-insights-workspace .ica-stat-grid {
+		width: calc(100% - 40px) !important;
+	}
+}
+
+@media (max-width: 520px) {
+	.ica-intelligent-code-overview .ica-overview-grid,
+	.ica-reader-insights-overview > div[style*="display:grid"],
+	.ica-reader-insights-detail > div[style*="display:grid"],
+	.ica-insights-workspace .ica-stat-grid {
+		grid-template-columns: 1fr !important;
+	}
+}

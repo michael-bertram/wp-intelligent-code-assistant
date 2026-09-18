@@ -14,7 +14,7 @@ function getBlockLabel(block) {
 	const title = block?.querySelector('.code-title');
 	const text = title?.textContent?.trim();
 
-	return text || 'this code example';
+	return text || 'this code snippet';
 }
 
 function syncLauncherState() {
@@ -29,8 +29,8 @@ function syncLauncherState() {
 	launcher.setAttribute(
 		'aria-label',
 		activeBlock
-			? `Open AI Assistant for ${getBlockLabel(activeBlock)}`
-			: 'Open AI Assistant'
+			? `Open Code Assistant for ${getBlockLabel(activeBlock)}`
+			: 'Open Code Assistant'
 	);
 }
 
@@ -189,7 +189,7 @@ function createLauncher() {
 	launcher.className = LAUNCHER_CLASS;
 	launcher.hidden = true;
 	launcher.setAttribute('aria-expanded', 'false');
-	launcher.innerHTML = '<span aria-hidden="true">✦</span><span>AI Assistant</span>';
+	launcher.innerHTML = '<span aria-hidden="true">✦</span><span>Code Assistant</span>';
 
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);

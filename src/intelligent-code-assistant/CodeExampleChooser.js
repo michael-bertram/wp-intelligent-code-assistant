@@ -72,7 +72,7 @@ export default function CodeExampleChooser({ onSelect }) {
     const createCodeExample = async () => {
         const title = newTitle.trim();
         if (!title) {
-            setError(__('Enter a name for the new Code Example.', 'intelligent-code-assistant'));
+            setError(__('Enter a name for the new Code Snippet.', 'intelligent-code-assistant'));
             return;
         }
 
@@ -87,13 +87,13 @@ export default function CodeExampleChooser({ onSelect }) {
             });
 
             if (!record?.id) {
-                throw new Error(__('The Code Example could not be created.', 'intelligent-code-assistant'));
+                throw new Error(__('The Code Snippet could not be created.', 'intelligent-code-assistant'));
             }
 
             const resolvedRecord = await resolveCodeExample(record.id);
             onSelect(record.id, resolvedRecord);
         } catch (err) {
-            setError(err?.message || __('The Code Example could not be created.', 'intelligent-code-assistant'));
+            setError(err?.message || __('The Code Snippet could not be created.', 'intelligent-code-assistant'));
         } finally {
             setIsCreating(false);
         }
@@ -112,7 +112,7 @@ export default function CodeExampleChooser({ onSelect }) {
             const record = await resolveCodeExample(exampleId);
             onSelect(exampleId, record);
         } catch (err) {
-            setError(err?.message || __('The Code Example could not be loaded.', 'intelligent-code-assistant'));
+            setError(err?.message || __('The Code Snippet could not be loaded.', 'intelligent-code-assistant'));
         } finally {
             setSelectingId(0);
         }
@@ -121,11 +121,11 @@ export default function CodeExampleChooser({ onSelect }) {
     return (
         <div className="ica-code-example-chooser">
             <div className="ica-code-example-chooser__intro">
-                <h3>{__('Add a Code Example', 'intelligent-code-assistant')}</h3>
+                <h3>{__('Add a Code Snippet', 'intelligent-code-assistant')}</h3>
                 <p>{__('Create a new example or reuse one you’ve already made.', 'intelligent-code-assistant')}</p>
             </div>
 
-            <div className="ica-code-example-chooser__modes" role="group" aria-label={__('Choose how to add a Code Example', 'intelligent-code-assistant')}>
+            <div className="ica-code-example-chooser__modes" role="group" aria-label={__('Choose how to add a Code Snippet', 'intelligent-code-assistant')}>
                 <Button
                     className={`ica-code-example-chooser__mode ${mode === 'create' ? 'is-active' : ''}`}
                     variant={mode === 'create' ? 'primary' : 'secondary'}
@@ -167,24 +167,24 @@ export default function CodeExampleChooser({ onSelect }) {
                             disabled={isCreating || !newTitle.trim()}
                             isBusy={isCreating}
                         >
-                            {isCreating ? <Spinner /> : __('Create Code Example', 'intelligent-code-assistant')}
+                            {isCreating ? <Spinner /> : __('Create Code Snippet', 'intelligent-code-assistant')}
                         </Button>
                     </>
                 ) : (
                     <div className="ica-code-example-browser">
                         <TextControl
-                            label={__('Search Code Examples', 'intelligent-code-assistant')}
+                            label={__('Search Code Snippets', 'intelligent-code-assistant')}
                             value={searchTerm}
                             onChange={setSearchTerm}
                             placeholder={__('Search by name, filename or language…', 'intelligent-code-assistant')}
                         />
 
-                        <div className="ica-code-example-browser__results" role="list" aria-label={__('Available Code Examples', 'intelligent-code-assistant')}>
+                        <div className="ica-code-example-browser__results" role="list" aria-label={__('Available Code Snippets', 'intelligent-code-assistant')}>
                             {isLoadingExamples && !codeExamples.length ? (
                                 <div className="ica-code-example-browser__empty"><Spinner /></div>
                             ) : filteredExamples.length ? (
                                 filteredExamples.map((example) => {
-                                    const title = decodeTitle(example.title?.rendered || '') || `${__('Code Example', 'intelligent-code-assistant')} #${example.id}`;
+                                    const title = decodeTitle(example.title?.rendered || '') || `${__('Code Snippet', 'intelligent-code-assistant')} #${example.id}`;
                                     const language = example.meta?._ica_code_language || '';
                                     const filename = example.meta?._ica_code_filename || '';
                                     const isSelecting = selectingId === Number(example.id);
@@ -200,7 +200,7 @@ export default function CodeExampleChooser({ onSelect }) {
                                             <span className="ica-code-example-browser__item-copy">
                                                 <span className="ica-code-example-browser__title">{title}</span>
                                                 <span className="ica-code-example-browser__meta">
-                                                    {[language, filename].filter(Boolean).join(' · ') || __('Code Example', 'intelligent-code-assistant')}
+                                                    {[language, filename].filter(Boolean).join(' · ') || __('Code Snippet', 'intelligent-code-assistant')}
                                                 </span>
                                             </span>
                                             <span className="ica-code-example-browser__action" aria-hidden="true">
@@ -212,8 +212,8 @@ export default function CodeExampleChooser({ onSelect }) {
                             ) : (
                                 <p className="ica-code-example-browser__empty">
                                     {searchTerm.trim()
-                                        ? __('No Code Examples match your search.', 'intelligent-code-assistant')
-                                        : __('No Code Examples are available yet.', 'intelligent-code-assistant')}
+                                        ? __('No Code Snippets match your search.', 'intelligent-code-assistant')
+                                        : __('No Code Snippets are available yet.', 'intelligent-code-assistant')}
                                 </p>
                             )}
                         </div>

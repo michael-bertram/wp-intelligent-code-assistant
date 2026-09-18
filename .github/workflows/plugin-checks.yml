@@ -32,7 +32,7 @@ jobs:
         run: npm run lint:js -- --config eslint.config.mjs
 
       - name: Lint styles
-        run: npm run lint:css -- --fix "src/**/*.scss" "assets/reader-insights-admin.css"
+        run: npm run lint:css -- --config .stylelintrc.json --fix "src/**/*.scss" "assets/reader-insights-admin.css"
 
       - name: Build plugin assets
         run: npm run build

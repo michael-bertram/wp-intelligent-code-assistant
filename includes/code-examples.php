@@ -36,7 +36,7 @@ function intelligent_code_assistant_register_code_example_post_type() {
 			'public'              => false,
 			'publicly_queryable'  => false,
 			'show_ui'             => true,
-			'show_in_menu'        => 'intelligent-code-assistant',
+			'show_in_menu'        => true,
 			'show_in_admin_bar'   => true,
 			'show_in_rest'        => true,
 			'exclude_from_search' => true,

@@ -723,10 +723,10 @@ a:focus { outline: none; }
 }
 [data-ai-assistant-enabled="true"].is-ai-assistant-focused {
     position: relative;
-    border-color: #2563eb !important;
+    border-color: rgba(37, 99, 235, 0.48) !important;
     box-shadow:
-        0 0 0 3px rgba(37, 99, 235, 0.18),
-        0 12px 30px rgba(37, 99, 235, 0.14) !important;
+        0 0 0 2px rgba(37, 99, 235, 0.09),
+        0 8px 22px rgba(37, 99, 235, 0.08) !important;
     transition: border-color 0.22s ease, box-shadow 0.22s ease;
 }
 @keyframes wpe-assistant-icon-twinkle {

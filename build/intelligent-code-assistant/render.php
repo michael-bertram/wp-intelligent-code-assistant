@@ -272,7 +272,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 							type="button"
 							class="explanation-close-btn"
 							data-wp-on--click="actions.closeAssistant"
-							aria-label="<?php esc_attr_e( 'Close AI Assistant', 'intelligent-code-assistant' ); ?>"
+							aria-label="<?php esc_attr_e( 'Close Code Assistant', 'intelligent-code-assistant' ); ?>"
 						>&times;</button>
 					</div>
 
@@ -475,7 +475,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 							data-wp-class--active="context.aiAssistantOpen"
 						>
 							<span aria-hidden="true">✦</span>
-							<span><?php esc_html_e( 'AI Assistant', 'intelligent-code-assistant' ); ?></span>
+							<span><?php esc_html_e( 'Code Assistant', 'intelligent-code-assistant' ); ?></span>
 						</button>
 					</div>
 				<?php endif; ?>

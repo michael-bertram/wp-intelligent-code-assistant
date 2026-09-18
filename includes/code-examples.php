@@ -1,6 +1,6 @@
 <?php
 /**
- * Code Example content type and analytics identity support.
+ * Code Snippet content type and analytics identity support.
  *
  * @package IntelligentCodeAssistant
  */
@@ -9,22 +9,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Register the Code Example custom post type. */
+/** Register the Code Snippet custom post type. */
 function intelligent_code_assistant_register_code_example_post_type() {
 	$labels = array(
-		'name'               => __( 'Code Examples', 'intelligent-code-assistant' ),
-		'singular_name'      => __( 'Code Example', 'intelligent-code-assistant' ),
-		'menu_name'          => __( 'Code Examples', 'intelligent-code-assistant' ),
-		'name_admin_bar'     => __( 'Code Example', 'intelligent-code-assistant' ),
+		'name'               => __( 'Code Snippets', 'intelligent-code-assistant' ),
+		'singular_name'      => __( 'Code Snippet', 'intelligent-code-assistant' ),
+		'menu_name'          => __( 'Code Snippets', 'intelligent-code-assistant' ),
+		'name_admin_bar'     => __( 'Code Snippet', 'intelligent-code-assistant' ),
 		'add_new'            => __( 'Add New', 'intelligent-code-assistant' ),
-		'add_new_item'       => __( 'Add New Code Example', 'intelligent-code-assistant' ),
-		'new_item'           => __( 'New Code Example', 'intelligent-code-assistant' ),
-		'edit_item'          => __( 'Edit Code Example', 'intelligent-code-assistant' ),
-		'view_item'          => __( 'View Code Example', 'intelligent-code-assistant' ),
-		'all_items'          => __( 'All Code Examples', 'intelligent-code-assistant' ),
-		'search_items'       => __( 'Search Code Examples', 'intelligent-code-assistant' ),
-		'not_found'          => __( 'No code examples found.', 'intelligent-code-assistant' ),
-		'not_found_in_trash' => __( 'No code examples found in Trash.', 'intelligent-code-assistant' ),
+		'add_new_item'       => __( 'Add New Code Snippet', 'intelligent-code-assistant' ),
+		'new_item'           => __( 'New Code Snippet', 'intelligent-code-assistant' ),
+		'edit_item'          => __( 'Edit Code Snippet', 'intelligent-code-assistant' ),
+		'view_item'          => __( 'View Code Snippet', 'intelligent-code-assistant' ),
+		'all_items'          => __( 'All Code Snippets', 'intelligent-code-assistant' ),
+		'search_items'       => __( 'Search Code Snippets', 'intelligent-code-assistant' ),
+		'not_found'          => __( 'No code snippets found.', 'intelligent-code-assistant' ),
+		'not_found_in_trash' => __( 'No code snippets found in Trash.', 'intelligent-code-assistant' ),
 		'item_published'     => __( 'Code example published.', 'intelligent-code-assistant' ),
 		'item_updated'       => __( 'Code example updated.', 'intelligent-code-assistant' ),
 	);
@@ -36,7 +36,7 @@ function intelligent_code_assistant_register_code_example_post_type() {
 			'public'              => false,
 			'publicly_queryable'  => false,
 			'show_ui'             => true,
-			'show_in_menu'        => true,
+			'show_in_menu'        => 'intelligent-code-assistant',
 			'show_in_admin_bar'   => true,
 			'show_in_rest'        => true,
 			'exclude_from_search' => true,
@@ -62,7 +62,7 @@ function intelligent_code_assistant_register_code_example_post_type() {
 }
 add_action( 'init', 'intelligent_code_assistant_register_code_example_post_type' );
 
-/** Register structured Code Example metadata. */
+/** Register structured Code Snippet metadata. */
 function intelligent_code_assistant_register_code_example_meta() {
 	$auth_callback = static function() {
 		return current_user_can( 'edit_posts' );
@@ -97,7 +97,7 @@ function intelligent_code_assistant_register_code_example_meta() {
 add_action( 'init', 'intelligent_code_assistant_register_code_example_meta' );
 
 /**
- * Keep the canonical block inside a Code Example aware of its owning post.
+ * Keep the canonical block inside a Code Snippet aware of its owning post.
  *
  * @param int     $post_id Post ID.
  * @param WP_Post $post    Post object.
@@ -133,9 +133,9 @@ function intelligent_code_assistant_bind_canonical_code_example_block( $post_id,
 add_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10, 3 );
 
 /**
- * Find the canonical Intelligent Code Assistant block for a Code Example.
+ * Find the canonical Intelligent Code Assistant block for a Code Snippet.
  *
- * @param int $code_example_id Code Example post ID.
+ * @param int $code_example_id Code Snippet post ID.
  * @return array|null Parsed canonical block, or null when unavailable.
  */
 function intelligent_code_assistant_get_canonical_block( $code_example_id ) {
@@ -154,9 +154,9 @@ function intelligent_code_assistant_get_canonical_block( $code_example_id ) {
 }
 
 /**
- * Resolve an article reference to the canonical Code Example before rendering.
+ * Resolve an article reference to the canonical Code Snippet before rendering.
  *
- * The Code Example owns code/configuration and inner blocks. The embedding
+ * The Code Snippet owns code/configuration and inner blocks. The embedding
  * article keeps only instance-specific context and its semantic relationship.
  * This means the normal render.php receives the same structure it would receive
  * if the canonical block had been placed directly in the article.
@@ -206,7 +206,7 @@ function intelligent_code_assistant_resolve_code_example_reference( $parsed_bloc
 add_filter( 'render_block_data', 'intelligent_code_assistant_resolve_code_example_reference', 10, 1 );
 
 /**
- * Upgrade the analytics table with a stable Code Example relationship.
+ * Upgrade the analytics table with a stable Code Snippet relationship.
  *
  * dbDelta keeps this safe for existing installations as well as fresh ones.
  */
@@ -246,7 +246,7 @@ function intelligent_code_assistant_upgrade_code_example_analytics_schema() {
 add_action( 'init', 'intelligent_code_assistant_upgrade_code_example_analytics_schema', 20 );
 
 /**
- * Record an analytics event including its optional Code Example identity.
+ * Record an analytics event including its optional Code Snippet identity.
  *
  * @param WP_REST_Request $request Request object.
  * @return WP_REST_Response|WP_Error
@@ -277,7 +277,7 @@ function intelligent_code_assistant_record_code_example_analytics_event( WP_REST
 	}
 
 	if ( $code_example_id > 0 && 'ica_code_example' !== get_post_type( $code_example_id ) ) {
-		return new WP_Error( 'invalid_code_example', __( 'Invalid code example.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+		return new WP_Error( 'invalid_code_example', __( 'Invalid code snippet.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
 	}
 
 	$inserted = $wpdb->insert(
@@ -303,7 +303,7 @@ function intelligent_code_assistant_record_code_example_analytics_event( WP_REST
 }
 
 /**
- * Replace the original analytics endpoint with the Code Example-aware version.
+ * Replace the original analytics endpoint with the Code Snippet-aware version.
  *
  * The route URL remains unchanged, so existing front-end clients remain
  * backwards compatible. codeExampleId is optional and defaults to zero.

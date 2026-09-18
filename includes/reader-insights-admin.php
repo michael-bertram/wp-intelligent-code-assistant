@@ -57,17 +57,21 @@ function intelligent_code_assistant_render_admin_overview() {
 			<h1><?php esc_html_e( 'Intelligent Code', 'intelligent-code-assistant' ); ?></h1>
 			<p class="description"><?php esc_html_e( 'Create reusable Code Snippets and understand how readers interact with intelligent code across your articles.', 'intelligent-code-assistant' ); ?></p>
 		</header>
-		<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:900px;margin:28px 0;">
-			<div style="background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:24px;">
-				<h2 style="margin-top:0;"><?php esc_html_e( 'Code Snippets', 'intelligent-code-assistant' ); ?></h2>
-				<p><?php esc_html_e( 'Create and manage reusable code that can be referenced across multiple articles.', 'intelligent-code-assistant' ); ?></p>
-				<a class="button button-primary" href="<?php echo esc_url( $snippets_url ); ?>"><?php esc_html_e( 'View Code Snippets', 'intelligent-code-assistant' ); ?></a>
-			</div>
-			<div style="background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:24px;">
-				<h2 style="margin-top:0;"><?php esc_html_e( 'Reader Insights', 'intelligent-code-assistant' ); ?></h2>
-				<p><?php esc_html_e( 'Explore article and Code Snippet interactions, reader questions, line explanations and AI editorial insights.', 'intelligent-code-assistant' ); ?></p>
-				<a class="button button-primary" href="<?php echo esc_url( $insights_url ); ?>"><?php esc_html_e( 'View Reader Insights', 'intelligent-code-assistant' ); ?></a>
-			</div>
+		<section class="ica-overview-intro">
+			<h2><?php esc_html_e( 'Your intelligent code workspace', 'intelligent-code-assistant' ); ?></h2>
+			<p><?php esc_html_e( 'Create reusable code, then use real reader behaviour to understand where your technical content can be improved.', 'intelligent-code-assistant' ); ?></p>
+		</section>
+		<div class="ica-overview-grid">
+			<section class="ica-overview-card">
+				<h2><?php esc_html_e( 'Code Snippets', 'intelligent-code-assistant' ); ?></h2>
+				<p><?php esc_html_e( 'Create and manage reusable code that can be referenced across multiple articles while keeping one canonical source.', 'intelligent-code-assistant' ); ?></p>
+				<a class="button button-primary" href="<?php echo esc_url( $snippets_url ); ?>"><?php esc_html_e( 'Manage Code Snippets', 'intelligent-code-assistant' ); ?></a>
+			</section>
+			<section class="ica-overview-card">
+				<h2><?php esc_html_e( 'Reader Insights', 'intelligent-code-assistant' ); ?></h2>
+				<p><?php esc_html_e( 'Explore interactions, reader questions, line explanations and AI editorial insights across articles and Code Snippets.', 'intelligent-code-assistant' ); ?></p>
+				<a class="button button-primary" href="<?php echo esc_url( $insights_url ); ?>"><?php esc_html_e( 'Explore Reader Insights', 'intelligent-code-assistant' ); ?></a>
+			</section>
 		</div>
 	</div>
 	<?php

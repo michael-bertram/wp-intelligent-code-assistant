@@ -6,6 +6,7 @@ const visibleBlocks = new Map();
 let activeBlock = null;
 let launcher = null;
 let rafId = null;
+let hasPlayedLauncherAttention = false;
 
 function getBlockLabel(block) {
 	const title = block?.querySelector('.code-title');
@@ -60,7 +61,12 @@ function setActiveBlock(nextBlock) {
 	}
 
 	if (launcher) {
+		const wasHidden = launcher.hidden;
 		launcher.hidden = !activeBlock;
+
+		if (wasHidden && activeBlock) {
+			window.requestAnimationFrame(playLauncherAttention);
+		}
 	}
 
 	syncLauncherState();
@@ -112,6 +118,42 @@ function scheduleActiveBlockUpdate() {
 		rafId = null;
 		chooseActiveBlock();
 	});
+}
+
+function playLauncherAttention() {
+	if (
+		!launcher ||
+		hasPlayedLauncherAttention ||
+		window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
+		typeof launcher.animate !== 'function'
+	) {
+		return;
+	}
+
+	hasPlayedLauncherAttention = true;
+
+	launcher.animate(
+		[
+			{ transform: 'translateY(0) scale(1)', offset: 0 },
+			{ transform: 'translateY(-8px) scale(1.05)', offset: 0.2 },
+			{ transform: 'translateY(0) scale(1)', offset: 0.4 },
+			{ transform: 'translateY(-4px) scale(1.025)', offset: 0.56 },
+			{ transform: 'translateY(0) scale(1)', offset: 0.72 },
+			{ transform: 'translateY(0) scale(1)', offset: 1 },
+		],
+		{ duration: 1600, easing: 'ease-out' }
+	);
+
+	launcher.querySelector('span[aria-hidden="true"]')?.animate(
+		[
+			{ transform: 'scale(1) rotate(0deg)' },
+			{ transform: 'scale(1.45) rotate(16deg)', offset: 0.24 },
+			{ transform: 'scale(1) rotate(0deg)', offset: 0.48 },
+			{ transform: 'scale(1.18) rotate(-8deg)', offset: 0.62 },
+			{ transform: 'scale(1) rotate(0deg)' },
+		],
+		{ duration: 1600, easing: 'ease-out' }
+	);
 }
 
 function createLauncher() {

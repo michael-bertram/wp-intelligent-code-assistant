@@ -53,6 +53,7 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.removeAttribute(ACTIVE_ATTRIBUTE);
+		activeBlock.classList.remove('is-ai-assistant-focused');
 		closeAssistantFor(activeBlock);
 	}
 
@@ -198,7 +199,6 @@ function createLauncher() {
 		}
 
 		activeBlock.classList.add('is-ai-assistant-focused');
-		window.setTimeout(() => activeBlock?.classList.remove('is-ai-assistant-focused'), 1800);
 
 		const blockLauncher = activeBlock.querySelector('.ai-assistant-button');
 		blockLauncher?.click();

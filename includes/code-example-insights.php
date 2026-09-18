@@ -112,10 +112,8 @@ function intelligent_code_assistant_render_code_example_insights_page() {
 	$rows = $wpdb->get_results( "SELECT code_example_id, COUNT(*) interactions, COUNT(DISTINCT post_id) articles, SUM(event_type='ask_question') questions, SUM(event_type='explain_line') line_explains, MAX(created_at) last_activity FROM {$table} WHERE code_example_id > 0 GROUP BY code_example_id ORDER BY interactions DESC", ARRAY_A );
 	?>
 	<div class="wrap ica-insights-workspace ica-code-example-insights">
-		<header class="ica-page-header ica-page-header--overview">
-			<div class="ica-header-title"><h1><?php esc_html_e( 'Code Snippet Insights', 'intelligent-code-assistant' ); ?></h1></div>
-			<div class="ica-header-summary"><p class="description"><?php esc_html_e( 'Concept-level interaction data aggregated across every article that references the same canonical Code Snippet. Counts are actions, not unique readers.', 'intelligent-code-assistant' ); ?></p></div>
-		</header>
+		<header class="ica-page-header ica-page-header--overview"><div class="ica-header-title"><h1><?php esc_html_e( 'Code Snippet Insights', 'intelligent-code-assistant' ); ?></h1></div></header>
+		<p class="ica-page-intro"><?php esc_html_e( 'Concept-level interaction data aggregated across every article that references the same canonical Code Snippet. Counts are actions, not unique readers.', 'intelligent-code-assistant' ); ?></p>
 		<?php if ( $rows ) : ?>
 			<section class="ica-insights-section" aria-labelledby="ica-code-example-activity-heading">
 				<h2 id="ica-code-example-activity-heading" class="screen-reader-text"><?php esc_html_e( 'Code Snippet activity', 'intelligent-code-assistant' ); ?></h2>

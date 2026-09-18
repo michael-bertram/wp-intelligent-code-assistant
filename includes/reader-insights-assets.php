@@ -3,11 +3,12 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
-	$allowed = array(
-		'intelligent-code_page_intelligent-code-assistant-reader-insights',
-		'intelligent-code_page_intelligent-code-assistant-code-examples',
+	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+	$allowed_pages = array(
+		'intelligent-code-assistant-reader-insights',
+		'intelligent-code-assistant-code-examples',
 	);
-	if ( ! in_array( $hook_suffix, $allowed, true ) ) { return; }
+	if ( ! in_array( $page, $allowed_pages, true ) ) { return; }
 
 	$plugin_file = dirname( __DIR__ ) . '/intelligent-code-assistant.php';
 	$version = '1.2.7';
@@ -15,7 +16,6 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 	wp_enqueue_style( 'intelligent-code-assistant-reader-insights-workspace', plugin_dir_url( $plugin_file ) . 'assets/reader-insights-workspace.css', array( 'intelligent-code-assistant-reader-insights-admin' ), $version );
 	wp_enqueue_script( 'intelligent-code-assistant-reader-insights-admin', plugin_dir_url( $plugin_file ) . 'assets/reader-insights-admin.js', array(), $version, true );
 
-	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 	$is_code_example_screen = 'intelligent-code-assistant-code-examples' === $page;
 	$code_example_id = $is_code_example_screen && isset( $_GET['code_example_id'] ) ? absint( wp_unslash( $_GET['code_example_id'] ) ) : 0;
 	$post_id = ! $is_code_example_screen && isset( $_GET['post_id'] ) ? absint( wp_unslash( $_GET['post_id'] ) ) : 0;

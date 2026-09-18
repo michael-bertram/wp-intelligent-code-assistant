@@ -8,20 +8,70 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Register Reader Insights as a top-level wp-admin screen.
+ * Register the unified Intelligent Code admin workspace.
  */
 function intelligent_code_assistant_register_reader_insights_admin_page() {
 	add_menu_page(
+		__( 'Intelligent Code', 'intelligent-code-assistant' ),
+		__( 'Intelligent Code', 'intelligent-code-assistant' ),
+		'edit_posts',
+		'intelligent-code-assistant',
+		'intelligent_code_assistant_render_admin_overview',
+		'dashicons-editor-code',
+		58
+	);
+
+	add_submenu_page(
+		'intelligent-code-assistant',
+		__( 'Overview', 'intelligent-code-assistant' ),
+		__( 'Overview', 'intelligent-code-assistant' ),
+		'edit_posts',
+		'intelligent-code-assistant',
+		'intelligent_code_assistant_render_admin_overview'
+	);
+
+	add_submenu_page(
+		'intelligent-code-assistant',
 		__( 'Reader Insights', 'intelligent-code-assistant' ),
 		__( 'Reader Insights', 'intelligent-code-assistant' ),
 		'edit_posts',
 		'intelligent-code-assistant-reader-insights',
-		'intelligent_code_assistant_render_reader_insights_admin_page',
-		'dashicons-chart-area',
-		58
+		'intelligent_code_assistant_render_reader_insights_admin_page'
 	);
 }
-add_action( 'admin_menu', 'intelligent_code_assistant_register_reader_insights_admin_page' );
+add_action( 'admin_menu', 'intelligent_code_assistant_register_reader_insights_admin_page', 9 );
+
+/**
+ * Render the Intelligent Code overview.
+ */
+function intelligent_code_assistant_render_admin_overview() {
+	if ( ! current_user_can( 'edit_posts' ) ) {
+		wp_die( esc_html__( 'You are not allowed to view Intelligent Code.', 'intelligent-code-assistant' ) );
+	}
+
+	$snippets_url = admin_url( 'edit.php?post_type=ica_code_example' );
+	$insights_url = add_query_arg( 'page', 'intelligent-code-assistant-reader-insights', admin_url( 'admin.php' ) );
+	?>
+	<div class="wrap ica-insights-workspace ica-intelligent-code-overview">
+		<h1><?php esc_html_e( 'Intelligent Code', 'intelligent-code-assistant' ); ?></h1>
+		<p class="description" style="max-width:760px;">
+			<?php esc_html_e( 'Create reusable Code Snippets and understand how readers interact with intelligent code across your articles.', 'intelligent-code-assistant' ); ?>
+		</p>
+		<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:900px;margin:28px 0;">
+			<div style="background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:24px;">
+				<h2 style="margin-top:0;"><?php esc_html_e( 'Code Snippets', 'intelligent-code-assistant' ); ?></h2>
+				<p><?php esc_html_e( 'Create and manage reusable code that can be referenced across multiple articles.', 'intelligent-code-assistant' ); ?></p>
+				<a class="button button-primary" href="<?php echo esc_url( $snippets_url ); ?>"><?php esc_html_e( 'View Code Snippets', 'intelligent-code-assistant' ); ?></a>
+			</div>
+			<div style="background:#fff;border:1px solid #dcdcde;border-radius:6px;padding:24px;">
+				<h2 style="margin-top:0;"><?php esc_html_e( 'Reader Insights', 'intelligent-code-assistant' ); ?></h2>
+				<p><?php esc_html_e( 'Explore article and Code Snippet interactions, reader questions, line explanations and AI editorial insights.', 'intelligent-code-assistant' ); ?></p>
+				<a class="button button-primary" href="<?php echo esc_url( $insights_url ); ?>"><?php esc_html_e( 'View Reader Insights', 'intelligent-code-assistant' ); ?></a>
+			</div>
+		</div>
+	</div>
+	<?php
+}
 
 /**
  * Render the dedicated analytics workspace.

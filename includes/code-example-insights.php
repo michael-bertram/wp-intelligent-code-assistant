@@ -27,6 +27,78 @@ function intelligent_code_assistant_normalize_canonical_code_example_block( $pos
 remove_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10 );
 add_action( 'save_post_ica_code_example', 'intelligent_code_assistant_normalize_canonical_code_example_block', 20, 2 );
 
+/**
+ * Check parsed blocks recursively for a reference to a canonical Code Snippet.
+ *
+ * @param array[] $blocks          Parsed blocks.
+ * @param int     $code_example_id Canonical Code Snippet ID.
+ * @return bool
+ */
+function intelligent_code_assistant_blocks_reference_code_example( $blocks, $code_example_id ) {
+	foreach ( $blocks as $block ) {
+		if (
+			'wpe/intelligent-code-assistant' === ( $block['blockName'] ?? '' ) &&
+			$code_example_id === absint( $block['attrs']['codeExampleId'] ?? 0 )
+		) {
+			return true;
+		}
+
+		if (
+			! empty( $block['innerBlocks'] ) &&
+			intelligent_code_assistant_blocks_reference_code_example( $block['innerBlocks'], $code_example_id )
+		) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Find published articles that reference a canonical Code Snippet.
+ *
+ * Analytics only tells us where readers have interacted. Reference counts must
+ * come from article content so a snippet used in an article with zero activity
+ * is still recognised by Code Snippet Insights.
+ *
+ * @param int $code_example_id Canonical Code Snippet ID.
+ * @return int[]
+ */
+function intelligent_code_assistant_get_code_example_article_ids( $code_example_id ) {
+	global $wpdb;
+
+	$code_example_id = absint( $code_example_id );
+	if ( ! $code_example_id ) {
+		return array();
+	}
+
+	$public_post_types = get_post_types( array( 'public' => true ), 'names' );
+	unset( $public_post_types['attachment'], $public_post_types['ica_code_example'] );
+
+	if ( ! $public_post_types ) {
+		return array();
+	}
+
+	$post_type_placeholders = implode( ', ', array_fill( 0, count( $public_post_types ), '%s' ) );
+	$like                   = '%"codeExampleId":' . $wpdb->esc_like( (string) $code_example_id ) . '%';
+	$args                   = array_merge( array_values( $public_post_types ), array( 'publish', $like ) );
+	$sql                    = "SELECT ID, post_content FROM {$wpdb->posts}
+		WHERE post_type IN ({$post_type_placeholders})
+		AND post_status = %s
+		AND post_content LIKE %s";
+
+	$candidates = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
+	$article_ids = array();
+
+	foreach ( $candidates as $candidate ) {
+		if ( intelligent_code_assistant_blocks_reference_code_example( parse_blocks( $candidate['post_content'] ), $code_example_id ) ) {
+			$article_ids[] = absint( $candidate['ID'] );
+		}
+	}
+
+	return array_values( array_unique( array_filter( $article_ids ) ) );
+}
+
 /** Build deterministic analytics for one semantic Code Snippet. */
 function intelligent_code_assistant_get_code_example_analytics_summary( $code_example_id ) {
 	global $wpdb;
@@ -87,6 +159,19 @@ function intelligent_code_assistant_get_code_example_analytics_summary( $code_ex
 	if ( $summary['knowledgeChecks']['attempts'] ) {
 		$summary['knowledgeChecks']['correctRate'] = (int) round( ( $summary['knowledgeChecks']['correct'] / $summary['knowledgeChecks']['attempts'] ) * 100 );
 	}
+	// Include every published article that references this snippet, even when
+	// that article has not generated an analytics event yet.
+	foreach ( intelligent_code_assistant_get_code_example_article_ids( $code_example_id ) as $post_id ) {
+		if ( ! isset( $articles[ $post_id ] ) ) {
+			$articles[ $post_id ] = array(
+				'postId'       => $post_id,
+				'title'        => get_the_title( $post_id ) ?: sprintf( __( 'Post #%d', 'intelligent-code-assistant' ), $post_id ),
+				'interactions' => 0,
+				'events'       => $events,
+			);
+		}
+	}
+
 	$summary['articles'] = array_values( $articles );
 	$summary['explainedLines'] = array_values( $lines );
 	$summary['questions'] = array_values( $questions );
@@ -118,8 +203,8 @@ function intelligent_code_assistant_render_code_example_insights_page() {
 			<section class="ica-insights-section" aria-labelledby="ica-code-example-activity-heading">
 				<h2 id="ica-code-example-activity-heading" class="screen-reader-text"><?php esc_html_e( 'Code Snippet activity', 'intelligent-code-assistant' ); ?></h2>
 				<div class="ica-table-wrap"><table class="widefat striped ica-insights-table"><thead><tr><th><?php esc_html_e( 'Code Snippet', 'intelligent-code-assistant' ); ?></th><th><?php esc_html_e( 'Interactions', 'intelligent-code-assistant' ); ?></th><th><?php esc_html_e( 'Articles', 'intelligent-code-assistant' ); ?></th><th><?php esc_html_e( 'Questions', 'intelligent-code-assistant' ); ?></th><th><?php esc_html_e( 'Line explains', 'intelligent-code-assistant' ); ?></th><th><?php esc_html_e( 'Last activity', 'intelligent-code-assistant' ); ?></th><th><?php esc_html_e( 'Actions', 'intelligent-code-assistant' ); ?></th></tr></thead><tbody>
-				<?php foreach ( $rows as $row ) : $eid = absint( $row['code_example_id'] ); if ( 'ica_code_example' !== get_post_type( $eid ) || ! current_user_can( 'edit_post', $eid ) ) { continue; } $url = add_query_arg( array( 'page' => 'intelligent-code-assistant-code-examples', 'code_example_id' => $eid ), admin_url( 'admin.php' ) ); ?>
-					<tr><td><strong><?php echo esc_html( get_the_title( $eid ) ?: sprintf( __( 'Code Snippet #%d', 'intelligent-code-assistant' ), $eid ) ); ?></strong></td><td><?php echo esc_html( (int) $row['interactions'] ); ?></td><td><?php echo esc_html( (int) $row['articles'] ); ?></td><td><?php echo esc_html( (int) $row['questions'] ); ?></td><td><?php echo esc_html( (int) $row['line_explains'] ); ?></td><td><?php echo esc_html( $row['last_activity'] ? mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $row['last_activity'] ) : '—' ); ?></td><td><a class="ica-action-link" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'View insights', 'intelligent-code-assistant' ); ?></a></td></tr>
+				<?php foreach ( $rows as $row ) : $eid = absint( $row['code_example_id'] ); if ( 'ica_code_example' !== get_post_type( $eid ) || ! current_user_can( 'edit_post', $eid ) ) { continue; } $url = add_query_arg( array( 'page' => 'intelligent-code-assistant-code-examples', 'code_example_id' => $eid ), admin_url( 'admin.php' ) ); $article_count = count( intelligent_code_assistant_get_code_example_article_ids( $eid ) ); ?>
+					<tr><td><strong><?php echo esc_html( get_the_title( $eid ) ?: sprintf( __( 'Code Snippet #%d', 'intelligent-code-assistant' ), $eid ) ); ?></strong></td><td><?php echo esc_html( (int) $row['interactions'] ); ?></td><td><?php echo esc_html( $article_count ); ?></td><td><?php echo esc_html( (int) $row['questions'] ); ?></td><td><?php echo esc_html( (int) $row['line_explains'] ); ?></td><td><?php echo esc_html( $row['last_activity'] ? mysql2date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $row['last_activity'] ) : '—' ); ?></td><td><a class="ica-action-link" href="<?php echo esc_url( $url ); ?>"><?php esc_html_e( 'View insights', 'intelligent-code-assistant' ); ?></a></td></tr>
 				<?php endforeach; ?></tbody></table></div>
 			</section>
 		<?php else : ?>

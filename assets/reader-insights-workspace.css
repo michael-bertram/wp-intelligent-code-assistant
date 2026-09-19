@@ -1617,3 +1617,131 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 		font-size: 25px;
 	}
 }
+
+
+/* Detail pages use the pale header as a compact navigation/action banner. */
+.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner {
+	display: flex !important;
+	justify-content: space-between !important;
+	align-items: center !important;
+	min-height: 64px !important;
+	padding-top: 10px !important;
+	padding-bottom: 10px !important;
+	margin-bottom: 0 !important;
+}
+
+.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner > .ica-back-nav,
+.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner > .ica-header-summary {
+	width: auto !important;
+	margin: 0 !important;
+}
+
+.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner .button {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	min-height: 40px !important;
+	padding: 0 18px !important;
+	line-height: 1 !important;
+}
+
+.ica-insights-workspace .ica-detail-intro {
+	width: min(calc(100% - 56px), 1200px);
+	max-width: 1200px;
+	margin: 0 auto 28px;
+	padding-top: 30px;
+	box-sizing: border-box;
+}
+
+.ica-insights-workspace .ica-detail-kicker {
+	display: block;
+	margin-bottom: 7px;
+	color: #155dfc;
+	font-size: 12px;
+	font-weight: 700;
+	line-height: 1.3;
+	letter-spacing: .075em;
+	text-transform: uppercase;
+}
+
+.ica-insights-workspace .ica-detail-intro h1 {
+	margin: 0 0 9px;
+	color: #0b1730;
+	font-size: 28px;
+	font-weight: 650;
+	line-height: 1.2;
+	letter-spacing: -.015em;
+}
+
+.ica-insights-workspace .ica-detail-intro p {
+	max-width: 850px;
+	margin: 0;
+	color: #52647d;
+	font-size: 17px;
+	font-weight: 400;
+	line-height: 1.6;
+}
+
+/* Cards: the blue accent belongs inside the rounded border, never outside it. */
+.ica-insights-workspace .ica-overview-card {
+	position: relative;
+	overflow: hidden;
+	border-left: 1px solid #dce5f1 !important;
+}
+
+.ica-insights-workspace .ica-overview-card::before {
+	content: "";
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: 4px;
+	background: #155dfc;
+	border-radius: 16px 0 0 16px;
+}
+
+.ica-insights-workspace .ica-stat-card {
+	overflow: hidden;
+	border-left: 1px solid #dce5f1 !important;
+}
+
+/* Paired insight panels: keep headings on one line and align both panels from the same top edge. */
+.ica-reader-insights-detail .ica-insights-grid,
+.ica-reader-insights-detail > div[style*="grid-template-columns:repeat(auto-fit,minmax(420px"],
+.ica-code-example-insights.ica-insights-detail .ica-insights-grid {
+	align-items: start !important;
+}
+
+.ica-reader-insights-detail .ica-insights-grid > *,
+.ica-reader-insights-detail > div[style*="grid-template-columns:repeat(auto-fit,minmax(420px"] > *,
+.ica-code-example-insights.ica-insights-detail .ica-insights-grid > * {
+	min-width: 0;
+}
+
+.ica-reader-insights-detail .ica-insights-grid h2,
+.ica-reader-insights-detail > div[style*="grid-template-columns:repeat(auto-fit,minmax(420px"] h2,
+.ica-code-example-insights.ica-insights-detail .ica-insights-grid h2 {
+	min-height: 28px;
+	margin: 0 0 12px !important;
+	white-space: nowrap;
+	font-size: 18px !important;
+	line-height: 1.35 !important;
+}
+
+@media (max-width: 960px) {
+	.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner {
+		display: flex !important;
+		flex-direction: row !important;
+	}
+	.ica-reader-insights-detail .ica-insights-grid h2,
+	.ica-reader-insights-detail > div[style*="grid-template-columns:repeat(auto-fit,minmax(420px"] h2,
+	.ica-code-example-insights.ica-insights-detail .ica-insights-grid h2 {
+		white-space: normal;
+	}
+}
+
+@media (max-width: 600px) {
+	.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner {
+		align-items: flex-start !important;
+		flex-direction: column !important;
+		gap: 10px !important;
+	}
+}

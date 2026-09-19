@@ -1745,3 +1745,52 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 		gap: 10px !important;
 	}
 }
+
+
+/* Final header alignment: keep detail banner controls on the same left/right content rails. */
+.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner {
+	display: grid !important;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+	column-gap: 32px !important;
+	justify-content: initial !important;
+}
+
+.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner > .ica-back-nav {
+	grid-column: 1 !important;
+	justify-self: start !important;
+}
+
+.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner > .ica-header-summary {
+	grid-column: 2 !important;
+	justify-self: end !important;
+	text-align: right !important;
+}
+
+/* Main workspace/list page titles are deliberately left aligned and more editorial. */
+.ica-insights-workspace > .ica-page-header--overview {
+	display: grid !important;
+	grid-template-columns: minmax(0, 1200px) !important;
+	justify-content: center !important;
+}
+
+.ica-insights-workspace > .ica-page-header--overview > .ica-header-title {
+	grid-column: 1 !important;
+	justify-self: stretch !important;
+	width: 100% !important;
+	text-align: left !important;
+}
+
+.ica-insights-workspace > .ica-page-header--overview > .ica-header-title h1 {
+	margin: 0 !important;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+	font-size: 30px !important;
+	font-weight: 750 !important;
+	line-height: 1.15 !important;
+	letter-spacing: -.025em !important;
+}
+
+@media (max-width: 600px) {
+	.ica-insights-workspace > .ica-page-header--detail.ica-page-header--banner {
+		display: flex !important;
+	}
+}

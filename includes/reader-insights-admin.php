@@ -231,12 +231,11 @@ function intelligent_code_assistant_render_reader_insights_article( $post_id ) {
 	$edit_url = get_edit_post_link( $post_id );
 	?>
 	<div class="wrap ica-insights-workspace ica-reader-insights-detail">
-		<header class="ica-page-header ica-page-header--detail">
+		<header class="ica-page-header ica-page-header--detail ica-page-header--banner">
 			<nav class="ica-back-nav"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php esc_html_e( 'Back to Reader Insights', 'intelligent-code-assistant' ); ?></a></nav>
-			<div class="ica-header-title"><h1><?php echo esc_html( $title ); ?></h1></div>
 			<div class="ica-header-summary"><?php if ( $edit_url ) : ?><a class="button" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Edit article', 'intelligent-code-assistant' ); ?></a><?php endif; ?></div>
 		</header>
-		<p class="ica-page-intro"><?php esc_html_e( 'Detailed reader interaction data for this article. These are recorded actions, not unique-reader metrics.', 'intelligent-code-assistant' ); ?></p>
+		<section class="ica-detail-intro"><span class="ica-detail-kicker"><?php esc_html_e( 'Article Insights', 'intelligent-code-assistant' ); ?></span><h1><?php echo esc_html( $title ); ?></h1><p><?php esc_html_e( 'Detailed reader interaction data for this article. These are recorded actions, not unique-reader metrics.', 'intelligent-code-assistant' ); ?></p></section>
 
 		<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;max-width:1100px;margin:24px 0;">
 			<?php

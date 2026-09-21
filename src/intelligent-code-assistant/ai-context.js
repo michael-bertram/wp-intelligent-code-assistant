@@ -49,12 +49,9 @@ export async function requestAICapability(capability, payload) {
   if (capability === 'explain-line') {
     await new Promise((resolve) => setTimeout(resolve, 700));
 
-    const selectedLine =
-      payload.selectedLine?.trim() || 'the selected line';
-
     return {
       explanation:
-        `Line ${payload.selectedLineNumber}: ${selectedLine}\n\nThis feature focuses the explanation on the exact line the reader selected. The assistant also receives the surrounding lines, so it can explain what this line is doing in the context of the code around it rather than treating it in isolation.\n\nWhy it matters: this gives the reader targeted help at the point where they need it, without requiring another explanation of the entire code example.`,
+        'This line displays a message when there are no tasks available to show. It sets the task list\'s innerHTML to a single <li> element containing the text "No tasks available."\n\nThe inline styles make the message grey, centre the text, and add 12 pixels of padding so the empty state is clearly separated from the rest of the interface.\n\nIn the surrounding code, this line only runs when filteredTasks.length is 0, giving the user clear feedback instead of leaving the task list blank.',
     };
   }
 

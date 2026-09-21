@@ -2120,3 +2120,17 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 		grid-template-columns: 1fr !important;
 	}
 }
+
+
+/* WordPress admin wraps this screen tightly; create visible space above the first overview element. */
+.ica-intelligent-code-overview {
+	padding-top: 0 !important;
+}
+.ica-intelligent-code-overview .ica-overview-hero {
+	margin-top: 40px !important;
+}
+@media (max-width: 782px) {
+	.ica-intelligent-code-overview .ica-overview-hero {
+		margin-top: 24px !important;
+	}
+}

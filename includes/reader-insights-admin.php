@@ -18,7 +18,7 @@ function intelligent_code_assistant_register_reader_insights_admin_page() {
 		'intelligent-code-assistant',
 		'intelligent_code_assistant_render_admin_overview',
 		'none',
-		58
+		80
 	);
 
 	add_submenu_page(
@@ -60,7 +60,17 @@ function intelligent_code_assistant_admin_menu_brand_styles() {
 	?>
 	<style>
 		#adminmenu .toplevel_page_intelligent-code-assistant .wp-menu-image {
-			background: url('<?php echo esc_url( $logo_url ); ?>') center 7px / 20px 20px no-repeat;
+			background: none !important;
+		}
+		#adminmenu .toplevel_page_intelligent-code-assistant .wp-menu-image::before {
+			content: "";
+			display: block;
+			width: 20px;
+			height: 20px;
+			margin: 7px auto 0;
+			background-color: currentColor;
+			-webkit-mask: url('<?php echo esc_url( $logo_url ); ?>') center / contain no-repeat;
+			mask: url('<?php echo esc_url( $logo_url ); ?>') center / contain no-repeat;
 		}
 	</style>
 	<?php

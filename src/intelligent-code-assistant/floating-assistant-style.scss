@@ -73,9 +73,6 @@
 	transition: box-shadow 0.25s ease;
 }
 
-[data-ai-assistant-enabled="true"][data-ai-assistant-active="true"] .ai-assistant-drawer {
-	border-top: 3px solid #2563eb;
-}
 
 [data-ai-assistant-enabled="true"][data-ai-assistant-active="true"] .ai-assistant-drawer {
 	position: fixed !important;

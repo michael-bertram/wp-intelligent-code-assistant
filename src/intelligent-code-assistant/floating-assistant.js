@@ -6,6 +6,7 @@ let activeBlock = null;
 let launcher = null;
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
+let hasRevealedLauncher = false;
 const LAUNCHER_REMINDER_INTERVAL = 18000;
 
 function isBlockExpanded(block) {
@@ -60,9 +61,6 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.setAttribute(ACTIVE_ATTRIBUTE, 'true');
-		if (launcher?.hidden) {
-			launcher.hidden = false;
-		}
 	}
 
 	if (launcher) {
@@ -82,18 +80,8 @@ function setActiveBlock(nextBlock) {
 	syncLauncherState();
 }
 
-function syncExpandedBlock(blocks, preferredBlock = null) {
-	if (preferredBlock && isBlockExpanded(preferredBlock)) {
-		setActiveBlock(preferredBlock);
-		return;
-	}
-
-	if (activeBlock && isBlockExpanded(activeBlock)) {
-		return;
-	}
-
-	const expandedBlock = blocks.find((block) => isBlockExpanded(block)) || null;
-	setActiveBlock(expandedBlock);
+function getExpandedBlock(blocks) {
+	return blocks.find((block) => isBlockExpanded(block)) || null;
 }
 
 function scheduleLauncherReminder() {
@@ -168,8 +156,7 @@ function createLauncher() {
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);
 
-		if (!activeBlock || !isBlockExpanded(activeBlock)) {
-			setActiveBlock(null);
+		if (!activeBlock) {
 			return;
 		}
 
@@ -197,18 +184,55 @@ function observeBlocks() {
 
 	createLauncher();
 
-	blocks.forEach((block) => {
-		const panel = block.querySelector('.editor-inner-blocks-wrapper');
+	// Reveal the neutral Code Assistant when the reader reaches the first
+	// AI-enabled code block. Visibility alone never selects a block.
+	if ('IntersectionObserver' in window) {
+		const revealObserver = new IntersectionObserver(
+			(entries) => {
+				if (
+					!hasRevealedLauncher &&
+					entries.some((entry) => entry.isIntersecting)
+				) {
+					hasRevealedLauncher = true;
+					launcher.hidden = false;
+					revealObserver.disconnect();
+				}
+			},
+			{ threshold: 0.1 }
+		);
 
+		blocks.forEach((block) => revealObserver.observe(block));
+	} else {
+		hasRevealedLauncher = true;
+		launcher.hidden = false;
+	}
+
+	blocks.forEach((block) => {
+		// Hover is an explicit temporary context, so readers can use the
+		// assistant without opening the code block.
+		block.addEventListener('mouseenter', () => {
+			setActiveBlock(block);
+		});
+
+		block.addEventListener('mouseleave', () => {
+			if (isBlockExpanded(block)) {
+				return;
+			}
+
+			const expandedBlock = getExpandedBlock(blocks);
+			setActiveBlock(expandedBlock);
+		});
+
+		const panel = block.querySelector('.editor-inner-blocks-wrapper');
 		if (!panel) {
 			return;
 		}
 
 		const observer = new MutationObserver(() => {
 			if (isBlockExpanded(block)) {
-				syncExpandedBlock(blocks, block);
-			} else if (activeBlock === block) {
-				setActiveBlock(null);
+				setActiveBlock(block);
+			} else if (activeBlock === block && !block.matches(':hover')) {
+				setActiveBlock(getExpandedBlock(blocks));
 			}
 		});
 
@@ -241,7 +265,10 @@ function observeBlocks() {
 		}
 	});
 
-	syncExpandedBlock(blocks);
+	const initiallyExpanded = getExpandedBlock(blocks);
+	if (initiallyExpanded) {
+		setActiveBlock(initiallyExpanded);
+	}
 }
 
 if (document.readyState === 'loading') {

@@ -54,6 +54,7 @@ function setActiveBlock(nextBlock) {
 	if (activeBlock) {
 		activeBlock.removeAttribute(ACTIVE_ATTRIBUTE);
 		activeBlock.classList.remove('is-ai-assistant-focused');
+		activeBlock.classList.remove('is-ai-assistant-visible-highlight');
 		closeAssistantFor(activeBlock);
 	}
 
@@ -61,6 +62,9 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.setAttribute(ACTIVE_ATTRIBUTE, 'true');
+		if (activeBlock.getBoundingClientRect().bottom > 0 && activeBlock.getBoundingClientRect().top < window.innerHeight) {
+			activeBlock.classList.add('is-ai-assistant-visible-highlight');
+		}
 	}
 
 	if (launcher) {
@@ -265,10 +269,12 @@ function observeBlocks() {
 						return;
 					}
 
-					if (entry.isIntersecting) {
-						entry.target.setAttribute(ACTIVE_ATTRIBUTE, 'true');
-					} else {
-						entry.target.removeAttribute(ACTIVE_ATTRIBUTE);
+					entry.target.classList.toggle(
+						'is-ai-assistant-visible-highlight',
+						entry.isIntersecting
+					);
+
+					if (!entry.isIntersecting) {
 						entry.target.classList.remove('is-ai-assistant-focused');
 					}
 				});

@@ -67,7 +67,8 @@ function intelligent_code_assistant_admin_menu_brand_styles() {
 			display: block;
 			width: 20px;
 			height: 20px;
-			margin: 7px auto 0;
+			margin: 7px 0 0 8px;
+			padding: 0;
 			background-color: currentColor;
 			-webkit-mask: url('<?php echo esc_url( $logo_url ); ?>') center / contain no-repeat;
 			mask: url('<?php echo esc_url( $logo_url ); ?>') center / contain no-repeat;

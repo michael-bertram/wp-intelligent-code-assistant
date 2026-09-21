@@ -2,15 +2,15 @@ const BLOCK_SELECTOR = '[data-ai-assistant-enabled="true"]';
 const LAUNCHER_CLASS = 'wpe-floating-ai-assistant';
 const ACTIVE_ATTRIBUTE = 'data-ai-assistant-active';
 
-const visibleBlocks = new Map();
 let activeBlock = null;
 let launcher = null;
-let rafId = null;
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
-let hasRevealedLauncher = false;
 const LAUNCHER_REMINDER_INTERVAL = 18000;
 
+function isBlockExpanded(block) {
+	return Boolean(block?.querySelector('.editor-inner-blocks-wrapper.active'));
+}
 
 function syncLauncherState() {
 	if (!launcher) {
@@ -19,17 +19,17 @@ function syncLauncherState() {
 
 	const drawer = activeBlock?.querySelector('.ai-assistant-drawer');
 	const isOpen = Boolean(drawer && !drawer.hidden);
+	const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
 
 	launcher.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-	const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
+
 	if (label) {
 		label.textContent = activeBlock ? 'Ask about this code' : 'Code Assistant';
 	}
+
 	launcher.setAttribute(
 		'aria-label',
-		activeBlock
-			? 'Ask about this code'
-			: 'Code Assistant — scroll to an AI-enabled code block'
+		activeBlock ? 'Ask about this code' : 'Code Assistant'
 	);
 }
 
@@ -60,8 +60,7 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.setAttribute(ACTIVE_ATTRIBUTE, 'true');
-		if (launcher && !hasRevealedLauncher) {
-			hasRevealedLauncher = true;
+		if (launcher?.hidden) {
 			launcher.hidden = false;
 		}
 	}
@@ -83,58 +82,29 @@ function setActiveBlock(nextBlock) {
 	syncLauncherState();
 }
 
-function isMeaningfullyVisible(block) {
-	if (!block?.isConnected) {
-		return false;
-	}
-
-	const rect = block.getBoundingClientRect();
-	const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-	const activationTop = viewportHeight * 0.12;
-	const activationBottom = viewportHeight * 0.88;
-
-	return rect.bottom > activationTop && rect.top < activationBottom;
-}
-
-function chooseActiveBlock() {
-	const viewportCenter = window.innerHeight / 2;
-	let bestBlock = null;
-	let bestScore = Number.POSITIVE_INFINITY;
-
-	visibleBlocks.forEach((intersectionRatio, block) => {
-		if (intersectionRatio <= 0 || !isMeaningfullyVisible(block)) {
-			return;
-		}
-
-		const rect = block.getBoundingClientRect();
-		const blockCenter = rect.top + rect.height / 2;
-		const distanceFromCenter = Math.abs(blockCenter - viewportCenter);
-		const score = distanceFromCenter - intersectionRatio * 100;
-
-		if (score < bestScore) {
-			bestScore = score;
-			bestBlock = block;
-		}
-	});
-
-	setActiveBlock(bestBlock);
-}
-
-function scheduleActiveBlockUpdate() {
-	if (rafId !== null) {
+function syncExpandedBlock(blocks, preferredBlock = null) {
+	if (preferredBlock && isBlockExpanded(preferredBlock)) {
+		setActiveBlock(preferredBlock);
 		return;
 	}
 
-	rafId = window.requestAnimationFrame(() => {
-		rafId = null;
-		chooseActiveBlock();
-	});
+	if (activeBlock && isBlockExpanded(activeBlock)) {
+		return;
+	}
+
+	const expandedBlock = blocks.find((block) => isBlockExpanded(block)) || null;
+	setActiveBlock(expandedBlock);
 }
 
 function scheduleLauncherReminder() {
 	window.clearTimeout(launcherReminderTimer);
 
-	if (!launcher || launcher.hidden || launcher.getAttribute('aria-expanded') === 'true') {
+	if (
+		!launcher ||
+		launcher.hidden ||
+		!activeBlock ||
+		launcher.getAttribute('aria-expanded') === 'true'
+	) {
 		return;
 	}
 
@@ -197,15 +167,14 @@ function createLauncher() {
 
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);
-		if (!activeBlock || !isMeaningfullyVisible(activeBlock)) {
+
+		if (!activeBlock || !isBlockExpanded(activeBlock)) {
 			setActiveBlock(null);
 			return;
 		}
 
 		activeBlock.classList.add('is-ai-assistant-focused');
-
-		const blockLauncher = activeBlock.querySelector('.ai-assistant-button');
-		blockLauncher?.click();
+		activeBlock.querySelector('.ai-assistant-button')?.click();
 
 		window.setTimeout(() => {
 			syncLauncherState();
@@ -228,36 +197,26 @@ function observeBlocks() {
 
 	createLauncher();
 
-	if (!('IntersectionObserver' in window)) {
-		blocks.forEach((block) => visibleBlocks.set(block, 1));
-		chooseActiveBlock();
-		window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
-		window.addEventListener('resize', scheduleActiveBlockUpdate);
-		return;
-	}
+	blocks.forEach((block) => {
+		const panel = block.querySelector('.editor-inner-blocks-wrapper');
 
-	const observer = new IntersectionObserver(
-		(entries) => {
-			entries.forEach((entry) => {
-				if (entry.isIntersecting) {
-					visibleBlocks.set(entry.target, entry.intersectionRatio);
-				} else {
-					visibleBlocks.delete(entry.target);
-				}
-			});
-
-			chooseActiveBlock();
-		},
-		{
-			root: null,
-			rootMargin: '-12% 0px -12% 0px',
-			threshold: [0, 0.15, 0.35, 0.5, 0.75, 1],
+		if (!panel) {
+			return;
 		}
-	);
 
-	blocks.forEach((block) => observer.observe(block));
-	window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
-	window.addEventListener('resize', scheduleActiveBlockUpdate);
+		const observer = new MutationObserver(() => {
+			if (isBlockExpanded(block)) {
+				syncExpandedBlock(blocks, block);
+			} else if (activeBlock === block) {
+				setActiveBlock(null);
+			}
+		});
+
+		observer.observe(panel, {
+			attributes: true,
+			attributeFilter: ['class'],
+		});
+	});
 
 	const drawerObserver = new MutationObserver((mutations) => {
 		if (
@@ -275,11 +234,14 @@ function observeBlocks() {
 	blocks.forEach((block) => {
 		const drawer = block.querySelector('.ai-assistant-drawer');
 		if (drawer) {
-			drawerObserver.observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
+			drawerObserver.observe(drawer, {
+				attributes: true,
+				attributeFilter: ['hidden'],
+			});
 		}
 	});
 
-	chooseActiveBlock();
+	syncExpandedBlock(blocks);
 }
 
 if (document.readyState === 'loading') {

@@ -255,6 +255,30 @@ function observeBlocks() {
 		});
 	});
 
+	// Keep expansion as the explicit context, but remove the visual block
+	// highlight once that active block has scrolled out of view.
+	if ('IntersectionObserver' in window) {
+		const activeHighlightObserver = new IntersectionObserver(
+			(entries) => {
+				entries.forEach((entry) => {
+					if (entry.target !== activeBlock) {
+						return;
+					}
+
+					if (entry.isIntersecting) {
+						entry.target.setAttribute(ACTIVE_ATTRIBUTE, 'true');
+					} else {
+						entry.target.removeAttribute(ACTIVE_ATTRIBUTE);
+						entry.target.classList.remove('is-ai-assistant-focused');
+					}
+				});
+			},
+			{ threshold: 0.05 }
+		);
+
+		blocks.forEach((block) => activeHighlightObserver.observe(block));
+	}
+
 	const drawerObserver = new MutationObserver((mutations) => {
 		if (
 			mutations.some(

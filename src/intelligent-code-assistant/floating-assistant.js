@@ -153,6 +153,30 @@ function createLauncher() {
 	launcher.setAttribute('aria-label', 'Code Assistant');
 	launcher.innerHTML = '<span aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Code Assistant</span>';
 
+	launcher.addEventListener('mouseenter', () => {
+		if (activeBlock) {
+			return;
+		}
+
+		launcher.classList.add('has-active-context');
+		const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
+		if (label) {
+			label.textContent = 'Ask about this code';
+		}
+	});
+
+	launcher.addEventListener('mouseleave', () => {
+		if (activeBlock) {
+			return;
+		}
+
+		launcher.classList.remove('has-active-context');
+		const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
+		if (label) {
+			label.textContent = 'Code Assistant';
+		}
+	});
+
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);
 
@@ -208,21 +232,6 @@ function observeBlocks() {
 	}
 
 	blocks.forEach((block) => {
-		// Hover is an explicit temporary context, so readers can use the
-		// assistant without opening the code block.
-		block.addEventListener('mouseenter', () => {
-			setActiveBlock(block);
-		});
-
-		block.addEventListener('mouseleave', () => {
-			if (isBlockExpanded(block)) {
-				return;
-			}
-
-			const expandedBlock = getExpandedBlock(blocks);
-			setActiveBlock(expandedBlock);
-		});
-
 		const panel = block.querySelector('.editor-inner-blocks-wrapper');
 		if (!panel) {
 			return;

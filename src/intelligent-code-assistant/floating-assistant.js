@@ -8,7 +8,10 @@ let launcher = null;
 let rafId = null;
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
+let scrollSettleTimer = null;
+let isScrolling = false;
 const LAUNCHER_REMINDER_INTERVAL = 18000;
+const SCROLL_SETTLE_DELAY = 225;
 
 function getBlockLabel(block) {
 	const filename = block?.querySelector('.code-title')?.textContent?.trim();
@@ -24,6 +27,10 @@ function syncLauncherState() {
 	const isOpen = Boolean(drawer && !drawer.hidden);
 
 	launcher.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+	const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
+	if (label) {
+		label.textContent = activeBlock ? 'Ask about this code' : 'Code Assistant';
+	}
 	launcher.setAttribute(
 		'aria-label',
 		activeBlock
@@ -59,12 +66,6 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.setAttribute(ACTIVE_ATTRIBUTE, 'true');
-		activeBlock.classList.remove('is-ai-context-changing');
-		void activeBlock.offsetWidth;
-		activeBlock.classList.add('is-ai-context-changing');
-		window.setTimeout(() => {
-			activeBlock?.classList.remove('is-ai-context-changing');
-		}, 650);
 	}
 
 	if (launcher) {
@@ -119,6 +120,17 @@ function chooseActiveBlock() {
 	});
 
 	setActiveBlock(bestBlock);
+}
+
+function handleScroll() {
+	isScrolling = true;
+	window.clearTimeout(scrollSettleTimer);
+	setActiveBlock(null);
+
+	scrollSettleTimer = window.setTimeout(() => {
+		isScrolling = false;
+		chooseActiveBlock();
+	}, SCROLL_SETTLE_DELAY);
 }
 
 function scheduleActiveBlockUpdate() {
@@ -192,8 +204,8 @@ function createLauncher() {
 	launcher.type = 'button';
 	launcher.className = LAUNCHER_CLASS;
 	launcher.setAttribute('aria-expanded', 'false');
-	launcher.setAttribute('aria-label', 'Code Assistant — scroll to an AI-enabled code block');
-	launcher.innerHTML = '<span class="wpe-floating-ai-assistant__icon" aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Ask about this code</span>';
+	launcher.setAttribute('aria-label', 'Code Assistant');
+	launcher.innerHTML = '<span aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Code Assistant</span>';
 
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);
@@ -228,21 +240,10 @@ function observeBlocks() {
 
 	createLauncher();
 
-	blocks.forEach((block) => {
-		const titleContainer = block.querySelector('.code-title-container');
-		if (titleContainer && !titleContainer.querySelector('.ai-active-indicator')) {
-			const indicator = document.createElement('span');
-			indicator.className = 'ai-active-indicator';
-			indicator.innerHTML = '<span aria-hidden="true">✦</span>';
-			indicator.setAttribute('aria-hidden', 'true');
-			titleContainer.appendChild(indicator);
-		}
-	});
-
 	if (!('IntersectionObserver' in window)) {
 		blocks.forEach((block) => visibleBlocks.set(block, 1));
 		chooseActiveBlock();
-		window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
+		window.addEventListener('scroll', handleScroll, { passive: true });
 		window.addEventListener('resize', scheduleActiveBlockUpdate);
 		return;
 	}
@@ -257,7 +258,9 @@ function observeBlocks() {
 				}
 			});
 
-			chooseActiveBlock();
+			if (!isScrolling) {
+				chooseActiveBlock();
+			}
 		},
 		{
 			root: null,
@@ -267,7 +270,7 @@ function observeBlocks() {
 	);
 
 	blocks.forEach((block) => observer.observe(block));
-	window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
+	window.addEventListener('scroll', handleScroll, { passive: true });
 	window.addEventListener('resize', scheduleActiveBlockUpdate);
 
 	const drawerObserver = new MutationObserver((mutations) => {

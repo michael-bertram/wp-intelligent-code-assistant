@@ -2033,3 +2033,45 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 		justify-self: start;
 	}
 }
+
+
+/* Overview alignment: one shared centred rail for hero and all workspace cards. */
+.ica-intelligent-code-overview {
+	padding-top: 28px;
+}
+.ica-intelligent-code-overview .ica-overview-hero,
+.ica-intelligent-code-overview .ica-overview-card--snippets,
+.ica-intelligent-code-overview .ica-overview-grid--insights {
+	width: calc(100% - 48px);
+	max-width: 1280px;
+	margin-left: auto;
+	margin-right: auto;
+	box-sizing: border-box;
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets {
+	margin-top: 24px;
+	margin-bottom: 24px;
+}
+.ica-intelligent-code-overview .ica-overview-grid--insights {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 24px;
+}
+.ica-intelligent-code-overview .ica-overview-grid--insights > * {
+	width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+@media (max-width: 782px) {
+	.ica-intelligent-code-overview {
+		padding-top: 18px;
+	}
+	.ica-intelligent-code-overview .ica-overview-hero,
+	.ica-intelligent-code-overview .ica-overview-card--snippets,
+	.ica-intelligent-code-overview .ica-overview-grid--insights {
+		width: calc(100% - 32px);
+	}
+	.ica-intelligent-code-overview .ica-overview-grid--insights {
+		grid-template-columns: 1fr;
+	}
+}

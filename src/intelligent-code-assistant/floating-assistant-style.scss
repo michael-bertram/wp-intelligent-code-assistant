@@ -28,7 +28,7 @@
 	> span[aria-hidden="true"] {
 		display: inline-block;
 		transform-origin: center;
-		animation: wpe-assistant-icon-twinkle 4.8s ease-in-out infinite;
+		animation: wpe-assistant-icon-spin 2.4s linear infinite;
 	}
 
 	&.has-active-context {
@@ -39,8 +39,8 @@
 	}
 
 	&:hover {
-		transform: translateY(-1px);
-		box-shadow: 0 14px 34px rgba(15, 23, 42, 0.28);
+		transform: translateY(-3px) scale(1.03);
+		box-shadow: 0 16px 38px rgba(15, 23, 42, 0.32);
 	}
 
 	&.has-active-context:hover {
@@ -57,11 +57,10 @@
 	}
 }
 
-@keyframes wpe-assistant-icon-twinkle {
-	0%, 76%, 100% { transform: rotate(0deg) scale(1); opacity: 1; }
-	82% { transform: rotate(14deg) scale(1.18); opacity: 0.78; }
-	88% { transform: rotate(-8deg) scale(1.08); opacity: 1; }
-	94% { transform: rotate(0deg) scale(1); opacity: 1; }
+@keyframes wpe-assistant-icon-spin {
+	0% { transform: rotate(0deg) scale(1); }
+	50% { transform: rotate(180deg) scale(1.12); }
+	100% { transform: rotate(360deg) scale(1); }
 }
 
 .wpe-floating-ai-assistant[hidden] {

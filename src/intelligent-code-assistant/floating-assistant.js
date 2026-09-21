@@ -10,13 +10,10 @@ let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
 let scrollSettleTimer = null;
 let isScrolling = false;
+let hasRevealedLauncher = false;
 const LAUNCHER_REMINDER_INTERVAL = 18000;
 const SCROLL_SETTLE_DELAY = 225;
 
-function getBlockLabel(block) {
-	const filename = block?.querySelector('.code-title')?.textContent?.trim();
-	return filename || 'this code';
-}
 
 function syncLauncherState() {
 	if (!launcher) {
@@ -66,6 +63,10 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.setAttribute(ACTIVE_ATTRIBUTE, 'true');
+		if (launcher && !hasRevealedLauncher) {
+			hasRevealedLauncher = true;
+			launcher.hidden = false;
+		}
 	}
 
 	if (launcher) {
@@ -123,10 +124,12 @@ function chooseActiveBlock() {
 }
 
 function handleScroll() {
-	isScrolling = true;
-	window.clearTimeout(scrollSettleTimer);
-	setActiveBlock(null);
+	if (!isScrolling) {
+		isScrolling = true;
+		setActiveBlock(null);
+	}
 
+	window.clearTimeout(scrollSettleTimer);
 	scrollSettleTimer = window.setTimeout(() => {
 		isScrolling = false;
 		chooseActiveBlock();
@@ -203,6 +206,7 @@ function createLauncher() {
 	launcher = document.createElement('button');
 	launcher.type = 'button';
 	launcher.className = LAUNCHER_CLASS;
+	launcher.hidden = true;
 	launcher.setAttribute('aria-expanded', 'false');
 	launcher.setAttribute('aria-label', 'Code Assistant');
 	launcher.innerHTML = '<span aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Code Assistant</span>';

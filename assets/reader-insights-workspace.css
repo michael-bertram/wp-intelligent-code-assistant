@@ -2075,3 +2075,48 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 		grid-template-columns: 1fr;
 	}
 }
+
+
+/* Final overview geometry: all three sections share one exact rail. */
+.ica-intelligent-code-overview {
+	--ica-overview-rail: 1280px;
+	padding-top: 40px !important;
+}
+.ica-intelligent-code-overview .ica-overview-hero,
+.ica-intelligent-code-overview .ica-overview-card--snippets,
+.ica-intelligent-code-overview .ica-overview-grid--insights {
+	width: min(calc(100% - 48px), var(--ica-overview-rail)) !important;
+	max-width: var(--ica-overview-rail) !important;
+	margin-left: auto !important;
+	margin-right: auto !important;
+}
+.ica-intelligent-code-overview .ica-overview-hero {
+	margin-bottom: 28px !important;
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets {
+	margin-top: 0 !important;
+	margin-bottom: 24px !important;
+}
+.ica-intelligent-code-overview .ica-overview-grid--insights {
+	display: grid !important;
+	grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+	gap: 24px !important;
+}
+.ica-intelligent-code-overview .ica-overview-grid--insights > .ica-overview-card {
+	width: 100% !important;
+	max-width: none !important;
+	margin: 0 !important;
+}
+@media (max-width: 782px) {
+	.ica-intelligent-code-overview {
+		padding-top: 24px !important;
+	}
+	.ica-intelligent-code-overview .ica-overview-hero,
+	.ica-intelligent-code-overview .ica-overview-card--snippets,
+	.ica-intelligent-code-overview .ica-overview-grid--insights {
+		width: calc(100% - 32px) !important;
+	}
+	.ica-intelligent-code-overview .ica-overview-grid--insights {
+		grid-template-columns: 1fr !important;
+	}
+}

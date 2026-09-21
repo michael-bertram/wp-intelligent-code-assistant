@@ -749,6 +749,10 @@ a:focus { outline: none; }
 	94% { transform: rotate(0deg) scale(1); opacity: 1; }
 }
 
+.wpe-floating-ai-assistant[hidden] {
+	display: none !important;
+}
+
 [data-ai-assistant-enabled="true"][data-ai-assistant-active="true"] {
 	box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12), 0 4px 10px rgba(37, 99, 235, 0.05);
 	transition: box-shadow 0.25s ease;

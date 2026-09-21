@@ -24,8 +24,8 @@ function syncLauncherState() {
 
 	launcher.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 
-	if (label) {
-		label.textContent = activeBlock ? 'Ask about this code' : 'Code Assistant';
+	if (label && !launcher.matches(':hover')) {
+		label.textContent = 'Code Assistant';
 	}
 
 	launcher.setAttribute(
@@ -68,15 +68,9 @@ function setActiveBlock(nextBlock) {
 	}
 
 	if (launcher) {
-		const hadActiveContext = launcher.classList.contains('has-active-context');
-		launcher.classList.toggle('has-active-context', Boolean(activeBlock));
-
-		if (!hadActiveContext && activeBlock) {
-			window.requestAnimationFrame(() => {
-				playLauncherAttention();
-				scheduleLauncherReminder();
-			});
-		} else if (!activeBlock) {
+		if (activeBlock) {
+			scheduleLauncherReminder();
+		} else {
 			window.clearTimeout(launcherReminderTimer);
 		}
 	}
@@ -158,7 +152,7 @@ function createLauncher() {
 	launcher.innerHTML = '<span aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Code Assistant</span>';
 
 	launcher.addEventListener('mouseenter', () => {
-		if (activeBlock) {
+		if (!activeBlock) {
 			return;
 		}
 
@@ -170,10 +164,6 @@ function createLauncher() {
 	});
 
 	launcher.addEventListener('mouseleave', () => {
-		if (activeBlock) {
-			return;
-		}
-
 		launcher.classList.remove('has-active-context');
 		const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
 		if (label) {
@@ -248,6 +238,8 @@ function observeBlocks() {
 		const observer = new MutationObserver(() => {
 			if (isBlockExpanded(block)) {
 				setActiveBlock(block);
+				block.classList.add('is-ai-assistant-focused');
+				block.classList.add('is-ai-assistant-visible-highlight');
 			} else if (activeBlock === block && !block.matches(':hover')) {
 				setActiveBlock(getExpandedBlock(blocks));
 			}

@@ -1988,3 +1988,48 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 		grid-template-columns: 1fr;
 	}
 }
+
+
+/* Keep the management destination distinct without turning it into a separate full-bleed section. */
+.ica-intelligent-code-overview .ica-overview-card--snippets {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 32px;
+	width: auto;
+	margin: 0 0 24px;
+	padding: 26px 30px 26px 34px;
+	background: #f8fbff;
+	border: 1px solid #d7e6fb;
+	border-radius: 14px;
+	box-shadow: 0 10px 26px rgba(15, 23, 42, .05);
+	overflow: hidden;
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets::before {
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: 4px;
+	margin: 0;
+	border-radius: 0;
+	background: #2563eb;
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets .ica-overview-card__copy {
+	max-width: 780px;
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets .button {
+	justify-self: end;
+}
+.ica-intelligent-code-overview .ica-overview-grid--insights {
+	width: 100%;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 782px) {
+	.ica-intelligent-code-overview .ica-overview-card--snippets {
+		grid-template-columns: 1fr;
+		gap: 20px;
+	}
+	.ica-intelligent-code-overview .ica-overview-card--snippets .button {
+		justify-self: start;
+	}
+}

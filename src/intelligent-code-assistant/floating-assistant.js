@@ -8,6 +8,7 @@ let launcher = null;
 let rafId = null;
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
+let expandedFocusBlock = null;
 const LAUNCHER_REMINDER_INTERVAL = 9000;
 
 function isBlockExpanded(block) {
@@ -30,10 +31,18 @@ function syncLauncherState() {
 
 	launcher.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 
-	// The visible CTA only changes while the reader is hovering the launcher.
-	if (label && !launcher.matches(':hover')) {
-		label.textContent = 'Code Assistant';
+	const showFocusedCta =
+		Boolean(expandedFocusBlock && expandedFocusBlock === activeBlock) ||
+		launcher.matches(':hover');
+
+	if (label) {
+		label.textContent = showFocusedCta ? 'Ask about this code' : 'Code Assistant';
 	}
+
+	launcher.classList.toggle(
+		'has-active-context',
+		Boolean(expandedFocusBlock && expandedFocusBlock === activeBlock)
+	);
 
 	launcher.setAttribute(
 		'aria-label',
@@ -124,6 +133,10 @@ function chooseActiveBlock() {
 			bestBlock = block;
 		}
 	});
+
+	if (expandedFocusBlock && bestBlock !== expandedFocusBlock) {
+		expandedFocusBlock = null;
+	}
 
 	setActiveBlock(bestBlock);
 }
@@ -222,6 +235,11 @@ function createLauncher() {
 	});
 
 	launcher.addEventListener('mouseleave', () => {
+		if (expandedFocusBlock && expandedFocusBlock === activeBlock) {
+			syncLauncherState();
+			return;
+		}
+
 		launcher.classList.remove('has-active-context');
 		const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
 		if (label) {
@@ -271,10 +289,16 @@ function observeBlocks() {
 
 		const expansionObserver = new MutationObserver(() => {
 			if (isBlockExpanded(block) && isMeaningfullyVisible(block)) {
+				expandedFocusBlock = block;
 				setActiveBlock(block);
 				block.classList.add('is-ai-assistant-focused');
 				block.classList.add('is-ai-assistant-visible-highlight');
+				syncLauncherState();
 			} else {
+				if (expandedFocusBlock === block) {
+					expandedFocusBlock = null;
+					syncLauncherState();
+				}
 				scheduleActiveBlockUpdate();
 			}
 		});

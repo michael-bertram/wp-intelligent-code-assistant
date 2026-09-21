@@ -2,15 +2,21 @@ const BLOCK_SELECTOR = '[data-ai-assistant-enabled="true"]';
 const LAUNCHER_CLASS = 'wpe-floating-ai-assistant';
 const ACTIVE_ATTRIBUTE = 'data-ai-assistant-active';
 
+const visibleBlocks = new Map();
 let activeBlock = null;
 let launcher = null;
+let rafId = null;
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
-let hasRevealedLauncher = false;
 const LAUNCHER_REMINDER_INTERVAL = 9000;
 
 function isBlockExpanded(block) {
 	return Boolean(block?.querySelector('.editor-inner-blocks-wrapper.active'));
+}
+
+function getBlockLabel(block) {
+	const title = block?.querySelector('.code-title');
+	return title?.textContent?.trim() || 'this code snippet';
 }
 
 function syncLauncherState() {
@@ -24,13 +30,16 @@ function syncLauncherState() {
 
 	launcher.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 
+	// The visible CTA only changes while the reader is hovering the launcher.
 	if (label && !launcher.matches(':hover')) {
 		label.textContent = 'Code Assistant';
 	}
 
 	launcher.setAttribute(
 		'aria-label',
-		activeBlock ? 'Ask about this code' : 'Code Assistant'
+		activeBlock
+			? `Open Code Assistant for ${getBlockLabel(activeBlock)}`
+			: 'Open Code Assistant'
 	);
 }
 
@@ -41,8 +50,7 @@ function closeAssistantFor(block) {
 		return;
 	}
 
-	const closeButton = drawer.querySelector('.ai-assistant-header .explanation-close-btn');
-	closeButton?.click();
+	drawer.querySelector('.ai-assistant-header .explanation-close-btn')?.click();
 }
 
 function setActiveBlock(nextBlock) {
@@ -62,15 +70,19 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.setAttribute(ACTIVE_ATTRIBUTE, 'true');
-		if (activeBlock.getBoundingClientRect().bottom > 0 && activeBlock.getBoundingClientRect().top < window.innerHeight) {
-			activeBlock.classList.add('is-ai-assistant-visible-highlight');
-		}
+		activeBlock.classList.add('is-ai-assistant-visible-highlight');
 	}
 
 	if (launcher) {
-		if (activeBlock) {
-			scheduleLauncherReminder();
-		} else {
+		const wasHidden = launcher.hidden;
+		launcher.hidden = !activeBlock;
+
+		if (wasHidden && activeBlock) {
+			window.requestAnimationFrame(() => {
+				playLauncherAttention();
+				scheduleLauncherReminder();
+			});
+		} else if (!activeBlock) {
 			window.clearTimeout(launcherReminderTimer);
 		}
 	}
@@ -78,8 +90,53 @@ function setActiveBlock(nextBlock) {
 	syncLauncherState();
 }
 
-function getExpandedBlock(blocks) {
-	return blocks.find((block) => isBlockExpanded(block)) || null;
+function isMeaningfullyVisible(block) {
+	if (!block?.isConnected) {
+		return false;
+	}
+
+	const rect = block.getBoundingClientRect();
+	const viewportHeight =
+		window.innerHeight || document.documentElement.clientHeight;
+	const activationTop = viewportHeight * 0.12;
+	const activationBottom = viewportHeight * 0.88;
+
+	return rect.bottom > activationTop && rect.top < activationBottom;
+}
+
+function chooseActiveBlock() {
+	const viewportCenter = window.innerHeight / 2;
+	let bestBlock = null;
+	let bestScore = Number.POSITIVE_INFINITY;
+
+	visibleBlocks.forEach((intersectionRatio, block) => {
+		if (intersectionRatio <= 0 || !isMeaningfullyVisible(block)) {
+			return;
+		}
+
+		const rect = block.getBoundingClientRect();
+		const blockCenter = rect.top + rect.height / 2;
+		const distanceFromCenter = Math.abs(blockCenter - viewportCenter);
+		const score = distanceFromCenter - intersectionRatio * 100;
+
+		if (score < bestScore) {
+			bestScore = score;
+			bestBlock = block;
+		}
+	});
+
+	setActiveBlock(bestBlock);
+}
+
+function scheduleActiveBlockUpdate() {
+	if (rafId !== null) {
+		return;
+	}
+
+	rafId = window.requestAnimationFrame(() => {
+		rafId = null;
+		chooseActiveBlock();
+	});
 }
 
 function scheduleLauncherReminder() {
@@ -148,8 +205,9 @@ function createLauncher() {
 	launcher.className = LAUNCHER_CLASS;
 	launcher.hidden = true;
 	launcher.setAttribute('aria-expanded', 'false');
-	launcher.setAttribute('aria-label', 'Code Assistant');
-	launcher.innerHTML = '<span aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Code Assistant</span>';
+	launcher.setAttribute('aria-label', 'Open Code Assistant');
+	launcher.innerHTML =
+		'<span aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Code Assistant</span>';
 
 	launcher.addEventListener('mouseenter', () => {
 		if (!activeBlock) {
@@ -174,7 +232,8 @@ function createLauncher() {
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);
 
-		if (!activeBlock) {
+		if (!activeBlock || !isMeaningfullyVisible(activeBlock)) {
+			setActiveBlock(null);
 			return;
 		}
 
@@ -202,80 +261,62 @@ function observeBlocks() {
 
 	createLauncher();
 
-	// Reveal the neutral Code Assistant when the reader reaches the first
-	// AI-enabled code block. Visibility alone never selects a block.
-	if ('IntersectionObserver' in window) {
-		const revealObserver = new IntersectionObserver(
-			(entries) => {
-				if (
-					!hasRevealedLauncher &&
-					entries.some((entry) => entry.isIntersecting)
-				) {
-					hasRevealedLauncher = true;
-					launcher.hidden = false;
-					window.requestAnimationFrame(() => {
-						playLauncherAttention();
-						scheduleLauncherReminder();
-					});
-					revealObserver.disconnect();
-				}
-			},
-			{ threshold: 0.1 }
-		);
-
-		blocks.forEach((block) => revealObserver.observe(block));
-	} else {
-		hasRevealedLauncher = true;
-		launcher.hidden = false;
-	}
-
+	// Expanding a block is an explicit focus action and immediately makes that
+	// block the current context. Normal viewport selection resumes on scroll.
 	blocks.forEach((block) => {
 		const panel = block.querySelector('.editor-inner-blocks-wrapper');
 		if (!panel) {
 			return;
 		}
 
-		const observer = new MutationObserver(() => {
-			if (isBlockExpanded(block)) {
+		const expansionObserver = new MutationObserver(() => {
+			if (isBlockExpanded(block) && isMeaningfullyVisible(block)) {
 				setActiveBlock(block);
 				block.classList.add('is-ai-assistant-focused');
 				block.classList.add('is-ai-assistant-visible-highlight');
-			} else if (activeBlock === block && !block.matches(':hover')) {
-				setActiveBlock(getExpandedBlock(blocks));
+			} else {
+				scheduleActiveBlockUpdate();
 			}
 		});
 
-		observer.observe(panel, {
+		expansionObserver.observe(panel, {
 			attributes: true,
 			attributeFilter: ['class'],
 		});
 	});
 
-	// Keep expansion as the explicit context, but remove the visual block
-	// highlight once that active block has scrolled out of view.
-	if ('IntersectionObserver' in window) {
-		const activeHighlightObserver = new IntersectionObserver(
-			(entries) => {
-				entries.forEach((entry) => {
-					if (entry.target !== activeBlock) {
-						return;
-					}
-
-					entry.target.classList.toggle(
-						'is-ai-assistant-visible-highlight',
-						entry.isIntersecting
-					);
-
-					if (!entry.isIntersecting) {
-						entry.target.classList.remove('is-ai-assistant-focused');
-					}
-				});
-			},
-			{ threshold: 0.05 }
-		);
-
-		blocks.forEach((block) => activeHighlightObserver.observe(block));
+	if (!('IntersectionObserver' in window)) {
+		blocks.forEach((block) => visibleBlocks.set(block, 1));
+		chooseActiveBlock();
+		window.addEventListener('scroll', scheduleActiveBlockUpdate, {
+			passive: true,
+		});
+		window.addEventListener('resize', scheduleActiveBlockUpdate);
+		return;
 	}
+
+	const observer = new IntersectionObserver(
+		(entries) => {
+			entries.forEach((entry) => {
+				if (entry.isIntersecting) {
+					visibleBlocks.set(entry.target, entry.intersectionRatio);
+				} else {
+					visibleBlocks.delete(entry.target);
+				}
+			});
+
+			chooseActiveBlock();
+		},
+		{
+			root: null,
+			rootMargin: '-12% 0px -12% 0px',
+			threshold: [0, 0.15, 0.35, 0.5, 0.75, 1],
+		}
+	);
+
+	blocks.forEach((block) => observer.observe(block));
+	window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
+	window.addEventListener('resize', scheduleActiveBlockUpdate);
 
 	const drawerObserver = new MutationObserver((mutations) => {
 		if (
@@ -300,10 +341,7 @@ function observeBlocks() {
 		}
 	});
 
-	const initiallyExpanded = getExpandedBlock(blocks);
-	if (initiallyExpanded) {
-		setActiveBlock(initiallyExpanded);
-	}
+	chooseActiveBlock();
 }
 
 if (document.readyState === 'loading') {

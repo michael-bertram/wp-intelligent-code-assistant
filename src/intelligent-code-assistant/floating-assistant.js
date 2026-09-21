@@ -8,11 +8,8 @@ let launcher = null;
 let rafId = null;
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
-let scrollSettleTimer = null;
-let isScrolling = false;
 let hasRevealedLauncher = false;
 const LAUNCHER_REMINDER_INTERVAL = 18000;
-const SCROLL_SETTLE_DELAY = 225;
 
 
 function syncLauncherState() {
@@ -121,19 +118,6 @@ function chooseActiveBlock() {
 	});
 
 	setActiveBlock(bestBlock);
-}
-
-function handleScroll() {
-	if (!isScrolling) {
-		isScrolling = true;
-		setActiveBlock(null);
-	}
-
-	window.clearTimeout(scrollSettleTimer);
-	scrollSettleTimer = window.setTimeout(() => {
-		isScrolling = false;
-		chooseActiveBlock();
-	}, SCROLL_SETTLE_DELAY);
 }
 
 function scheduleActiveBlockUpdate() {
@@ -247,7 +231,7 @@ function observeBlocks() {
 	if (!('IntersectionObserver' in window)) {
 		blocks.forEach((block) => visibleBlocks.set(block, 1));
 		chooseActiveBlock();
-		window.addEventListener('scroll', handleScroll, { passive: true });
+		window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
 		window.addEventListener('resize', scheduleActiveBlockUpdate);
 		return;
 	}
@@ -262,9 +246,7 @@ function observeBlocks() {
 				}
 			});
 
-			if (!isScrolling) {
-				chooseActiveBlock();
-			}
+			chooseActiveBlock();
 		},
 		{
 			root: null,
@@ -274,7 +256,7 @@ function observeBlocks() {
 	);
 
 	blocks.forEach((block) => observer.observe(block));
-	window.addEventListener('scroll', handleScroll, { passive: true });
+	window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
 	window.addEventListener('resize', scheduleActiveBlockUpdate);
 
 	const drawerObserver = new MutationObserver((mutations) => {

@@ -179,47 +179,52 @@ export function buildAIContext(context, extras = {}) {
  */
 export async function requestAICapability(capability, payload) {
   // Demo-only frontend AI responses. This branch intentionally avoids the
-  // external connector so the public reader experience can be demonstrated
-  // when the provider is unavailable.
+  // external connector while making the purpose of each reader feature clear.
   await new Promise((resolve) => window.setTimeout(resolve, 700));
 
-  const filename = payload?.filename || payload?.title || 'this code';
+  const filename = payload?.filename || payload?.title || 'this code example';
   const language = payload?.language || 'code';
+  const tutorialTitle = payload?.tutorialTitle || 'the current article';
 
   if (capability === 'explain-code') {
     return {
       explanation:
-        `This ${language} example demonstrates the main idea in ${filename}.\n\nIt is structured so each part has a clear responsibility, making the example easier to follow and adapt.\n\nThe key thing to notice is how the code works together with the surrounding article rather than as an isolated snippet.`,
+        `Understand the whole example — Code Assistant gives the reader a concise overview of what unfamiliar code is doing without making them leave the article.\n\nFollow the important parts — This ${language} example is explained as a set of responsibilities, helping the reader connect the structure and logic rather than reading each line in isolation.\n\nKeep the explanation in context — Because the assistant knows this is ${filename} within ${tutorialTitle}, the explanation can relate the code to what the reader is currently learning.`,
     };
   }
 
   if (capability === 'explain-line') {
     const line = payload?.selectedLine || 'the selected line';
+    const lineNumber = payload?.selectedLineNumber
+      ? `Line ${payload.selectedLineNumber}`
+      : 'The selected line';
+
     return {
       explanation:
-        `This line — "${line}" — performs one specific step in the example. It contributes to the surrounding logic and is shown here in context so you can see why it is needed before moving to the next step.`,
+        `${lineNumber} — "${line}" — is explained on its own while still considering the surrounding code. This feature is useful when a reader understands most of an example but gets stuck on one particular statement, property or expression. Instead of explaining the entire snippet again, Code Assistant focuses the help exactly where it is needed.`,
     };
   }
 
   if (capability === 'ask-code') {
     const question = payload?.question || 'your question';
+
     return {
       answer:
-        `For this demo, the assistant has considered your question: "${question}". The important point is to relate the code back to the example's purpose: each part contributes to the behaviour described in the article, and you can adapt the values or implementation while keeping the same overall structure.`,
+        `You asked: "${question}"\n\nAsk about this code lets a reader ask their own follow-up instead of being limited to a predefined explanation. The assistant uses the current ${filename} example and the surrounding article as context, so the response stays focused on what the reader is looking at.\n\nFor the demo, this response shows the concept: contextual questions can turn a static code example into an interactive learning experience.`,
     };
   }
 
   if (capability === 'check-understanding') {
     return {
-      question: `What is the main purpose of the ${filename} example?`,
+      question: `Why does Code Assistant offer a "Check understanding" feature after reading ${filename}?`,
       options: [
-        'To demonstrate the concept described in the article',
-        'To replace the entire WordPress theme',
-        'To configure the external AI connector',
+        'To help the reader actively test whether they understood the concept',
+        'To automatically rewrite the code in the article',
+        'To replace the explanation with a generic programming quiz',
       ],
       correctAnswer: 0,
       explanation:
-        'Correct. The code example is there to demonstrate the article concept in a practical, reusable way.',
+        'Correct. The knowledge check turns passive reading into active learning. It uses the code the reader is already studying, so the question reinforces the same concept rather than taking them away from the article.',
     };
   }
 

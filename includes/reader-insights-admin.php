@@ -261,7 +261,6 @@ function intelligent_code_assistant_render_reader_insights_article( $post_id ) {
 	<div class="wrap ica-insights-workspace ica-reader-insights-detail">
 		<header class="ica-page-header ica-page-header--detail ica-page-header--banner">
 			<nav class="ica-back-nav"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php esc_html_e( 'Back to Reader Insights', 'intelligent-code-assistant' ); ?></a></nav>
-			<?php intelligent_code_assistant_render_admin_brand(); ?>
 			<div class="ica-header-summary"><?php if ( $edit_url ) : ?><a class="button" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Edit article', 'intelligent-code-assistant' ); ?></a><?php endif; ?></div>
 		</header>
 		<section class="ica-detail-intro"><span class="ica-detail-kicker"><?php esc_html_e( 'Article Insights', 'intelligent-code-assistant' ); ?></span><h1><?php echo esc_html( $title ); ?></h1><p><?php esc_html_e( 'Detailed reader interaction data for this article. These are recorded actions, not unique-reader metrics.', 'intelligent-code-assistant' ); ?></p></section>

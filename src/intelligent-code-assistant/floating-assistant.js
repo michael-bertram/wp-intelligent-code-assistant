@@ -134,7 +134,14 @@ function chooseActiveBlock() {
 		}
 	});
 
-	if (expandedFocusBlock && bestBlock !== expandedFocusBlock) {
+	if (expandedFocusBlock && isMeaningfullyVisible(expandedFocusBlock)) {
+		setActiveBlock(expandedFocusBlock);
+		return;
+	}
+
+	if (expandedFocusBlock) {
+		expandedFocusBlock.classList.remove('is-ai-assistant-focused');
+		expandedFocusBlock.classList.remove('is-ai-assistant-visible-highlight');
 		expandedFocusBlock = null;
 	}
 
@@ -293,7 +300,11 @@ function observeBlocks() {
 				setActiveBlock(block);
 				block.classList.add('is-ai-assistant-focused');
 				block.classList.add('is-ai-assistant-visible-highlight');
-				syncLauncherState();
+				launcher?.classList.add('has-active-context');
+				const label = launcher?.querySelector('.wpe-floating-ai-assistant__label');
+				if (label) {
+					label.textContent = 'Ask about this code';
+				}
 			} else {
 				if (expandedFocusBlock === block) {
 					expandedFocusBlock = null;

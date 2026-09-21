@@ -17,7 +17,7 @@ function intelligent_code_assistant_register_reader_insights_admin_page() {
 		'edit_posts',
 		'intelligent-code-assistant',
 		'intelligent_code_assistant_render_admin_overview',
-		'dashicons-editor-code',
+		plugin_dir_url( dirname( __DIR__ ) . '/intelligent-code-assistant.php' ) . 'assets/intelligent-code-logo.png',
 		58
 	);
 
@@ -56,9 +56,11 @@ function intelligent_code_assistant_render_admin_overview() {
 	<div class="wrap ica-insights-workspace ica-intelligent-code-overview">
 		<header class="ica-page-header ica-page-header--overview"><div class="ica-header-title"><h1><?php esc_html_e( 'Intelligent Code', 'intelligent-code-assistant' ); ?></h1></div></header>
 		<section class="ica-overview-hero">
+			<div class="ica-overview-hero__brand"><img class="ica-overview-logo" src="<?php echo esc_url( plugin_dir_url( dirname( __DIR__ ) . '/intelligent-code-assistant.php' ) . 'assets/intelligent-code-logo.png' ); ?>" alt="" aria-hidden="true" /><div class="ica-overview-hero__copy">
 			<span class="ica-eyebrow"><?php esc_html_e( 'INTELLIGENT CODE WORKSPACE', 'intelligent-code-assistant' ); ?></span>
 			<h2><?php esc_html_e( 'Build better technical content with real reader signals.', 'intelligent-code-assistant' ); ?></h2>
 			<p><?php esc_html_e( 'Create reusable Code Snippets, understand how readers interact with them, and turn those signals into useful editorial insight.', 'intelligent-code-assistant' ); ?></p>
+			</div></div>
 		</section>
 		<div class="ica-overview-grid">
 			<section class="ica-overview-card">

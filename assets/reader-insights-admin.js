@@ -23,46 +23,6 @@
 		? { codeExampleId: Number( config.codeExampleId ) }
 		: { postId: Number( config.postId ) };
 
-	// Demo-only fallback for presentations when the external AI connector is unavailable.
-	// This branch is intentionally isolated from production/release code.
-	const demoMode = true;
-	const mockInsights = isCodeExample
-		? {
-			summary: 'Readers are engaging with this reusable snippet, but the interaction pattern suggests that a few implementation details could benefit from clearer supporting explanation.',
-			frictionPoints: [
-				'Repeated interaction with the snippet suggests readers may need more context around how the code fits into the wider example.',
-				'Line-level explanations indicate that some implementation details are less immediately clear than the overall snippet.',
-			],
-			recommendations: [
-				'Add a short explanation immediately before the snippet describing its role and expected outcome.',
-				'Annotate the most frequently explored lines with concise supporting guidance.',
-				'Keep the canonical snippet explanation consistent wherever this Code Snippet is reused.',
-			],
-			suggestedFaqs: [
-				'What does this Code Snippet do?',
-				'Which parts of this snippet should I change for my own project?',
-				'Why is this approach used instead of an alternative implementation?',
-			],
-		}
-		: {
-			summary: 'Reader behaviour shows strong engagement with the code in this article. Explanations and questions suggest readers understand the overall goal but are seeking clarification around specific implementation details.',
-			frictionPoints: [
-				'Line explanations are concentrated around implementation details rather than the overall concept.',
-				'Reader questions suggest that the relationship between the code example and the surrounding tutorial could be made more explicit.',
-				'Knowledge-check activity indicates an opportunity to reinforce the key concept before readers move on.',
-			],
-			recommendations: [
-				'Add a concise explanation before the most active code block describing what readers should notice.',
-				'Expand the explanation around the lines receiving the most requests for clarification.',
-				'Use a short recap after the example to reinforce the concept tested by the knowledge check.',
-			],
-			suggestedFaqs: [
-				'Why is this implementation structured this way?',
-				'What should I expect to happen when this code runs?',
-				'What are the most common changes I might make to this example?',
-			],
-		};
-
 	let aiHeading = Array.from( wrap.querySelectorAll( 'h2' ) ).find(
 		( heading ) => heading.textContent.trim().toLowerCase() === 'ai editorial insights'
 	);
@@ -163,15 +123,6 @@
 		renderLoading();
 
 		try {
-			if ( demoMode ) {
-				await new Promise( ( resolve ) => window.setTimeout( resolve, 900 ) );
-				renderInsights( mockInsights );
-				button.textContent = config.i18n?.regenerate || 'Regenerate insights';
-				button.dataset.idleLabel = button.textContent;
-				status.textContent = 'Demo insights generated from mock data';
-				return;
-			}
-
 			const response = await fetch( config.endpoint, {
 				method: 'POST',
 				credentials: 'same-origin',

@@ -30,6 +30,39 @@ export function buildAIContext(context, extras = {}) {
  * @return {Promise<Object|null>} Capability response or null on failure.
  */
 export async function requestAICapability(capability, payload) {
+  /* =========================================================
+   * DEMO MOCK RESPONSES
+   *
+   * Temporary demo-only responses for Stage 2.
+   * Remove this block to restore the real AI requests below.
+   * ========================================================= */
+
+  if (capability === 'explain-code') {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    const codeLabel =
+      payload.title || payload.filename || 'this code example';
+
+    return {
+      explanation:
+        `This explanation looks at the complete code snippet rather than one individual line. ${codeLabel} is written in ${payload.language || 'code'}, and the assistant receives the full snippet so it can explain the overall purpose, how the different parts work together, and the key concepts a reader should understand.\n\nFor the demo, this response shows the purpose of Explain Code: helping a reader understand the example as a whole before they explore any particular line in more detail.`,
+    };
+  }
+
+  if (capability === 'explain-line') {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    const selectedLine =
+      payload.selectedLine?.trim() || 'the selected line';
+
+    return {
+      explanation:
+        `Line ${payload.selectedLineNumber}: ${selectedLine}\n\nThis feature focuses the explanation on the exact line the reader selected. The assistant also receives the surrounding lines, so it can explain what this line is doing in the context of the code around it rather than treating it in isolation.\n\nWhy it matters: this gives the reader targeted help at the point where they need it, without requiring another explanation of the entire code example.`,
+    };
+  }
+
+  /* END DEMO MOCK RESPONSES */
+
   const directResponse = await fetch(
     `/wp-json/intelligent-code-assistant/v1/${capability}`,
     {

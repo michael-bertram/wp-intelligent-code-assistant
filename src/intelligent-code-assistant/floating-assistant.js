@@ -7,7 +7,7 @@ let launcher = null;
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
 let hasRevealedLauncher = false;
-const LAUNCHER_REMINDER_INTERVAL = 18000;
+const LAUNCHER_REMINDER_INTERVAL = 9000;
 
 function isBlockExpanded(block) {
 	return Boolean(block?.querySelector('.editor-inner-blocks-wrapper.active'));
@@ -219,6 +219,10 @@ function observeBlocks() {
 				) {
 					hasRevealedLauncher = true;
 					launcher.hidden = false;
+					window.requestAnimationFrame(() => {
+						playLauncherAttention();
+						scheduleLauncherReminder();
+					});
 					revealObserver.disconnect();
 				}
 			},

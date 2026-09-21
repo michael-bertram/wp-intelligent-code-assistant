@@ -27,8 +27,8 @@ function syncLauncherState() {
 	launcher.setAttribute(
 		'aria-label',
 		activeBlock
-			? `Open Code Assistant for ${getBlockLabel(activeBlock)}`
-			: 'Open Code Assistant'
+			? 'Ask about this code'
+			: 'Code Assistant — scroll to an AI-enabled code block'
 	);
 }
 
@@ -68,10 +68,10 @@ function setActiveBlock(nextBlock) {
 	}
 
 	if (launcher) {
-		const wasHidden = launcher.hidden;
-		launcher.hidden = !activeBlock;
+		const hadActiveContext = launcher.classList.contains('has-active-context');
+		launcher.classList.toggle('has-active-context', Boolean(activeBlock));
 
-		if (wasHidden && activeBlock) {
+		if (!hadActiveContext && activeBlock) {
 			window.requestAnimationFrame(() => {
 				playLauncherAttention();
 				scheduleLauncherReminder();
@@ -191,9 +191,9 @@ function createLauncher() {
 	launcher = document.createElement('button');
 	launcher.type = 'button';
 	launcher.className = LAUNCHER_CLASS;
-	launcher.hidden = true;
 	launcher.setAttribute('aria-expanded', 'false');
-	launcher.innerHTML = '<span aria-hidden="true">✦</span><span>Ask about this code</span>';
+	launcher.setAttribute('aria-label', 'Code Assistant — scroll to an AI-enabled code block');
+	launcher.innerHTML = '<span class="wpe-floating-ai-assistant__icon" aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Ask about this code</span>';
 
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);
@@ -233,7 +233,7 @@ function observeBlocks() {
 		if (titleContainer && !titleContainer.querySelector('.ai-active-indicator')) {
 			const indicator = document.createElement('span');
 			indicator.className = 'ai-active-indicator';
-			indicator.innerHTML = '<span aria-hidden="true">✦</span> AI active';
+			indicator.innerHTML = '<span aria-hidden="true">✦</span>';
 			indicator.setAttribute('aria-hidden', 'true');
 			titleContainer.appendChild(indicator);
 		}

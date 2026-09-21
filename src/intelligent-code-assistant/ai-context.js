@@ -40,12 +40,9 @@ export async function requestAICapability(capability, payload) {
   if (capability === 'explain-code') {
     await new Promise((resolve) => setTimeout(resolve, 700));
 
-    const codeLabel =
-      payload.title || payload.filename || 'this code example';
-
     return {
       explanation:
-        `This explanation looks at the complete code snippet rather than one individual line. ${codeLabel} is written in ${payload.language || 'code'}, and the assistant receives the full snippet so it can explain the overall purpose, how the different parts work together, and the key concepts a reader should understand.\n\nFor the demo, this response shows the purpose of Explain Code: helping a reader understand the example as a whole before they explore any particular line in more detail.`,
+        'This function renders the current task list in the page. It first clears the existing list, then filters the tasks based on the selected filter: pending tasks, completed tasks, or all tasks.\n\nThe filter callback checks each task\'s completed value. If the current filter is "pending", it keeps tasks that are not completed. If it is "completed", it keeps only completed tasks. For the "all" filter, it returns true so every task is included.\n\nAfter filtering, the function checks whether there are any tasks to display. If the filtered list is empty, it adds a "No tasks available." message to the task list and returns early, preventing the rest of the rendering code from running.\n\nOverall, this part of renderTasks() makes sure the interface only displays tasks that match the reader\'s selected filter and handles the empty state clearly.',
     };
   }
 

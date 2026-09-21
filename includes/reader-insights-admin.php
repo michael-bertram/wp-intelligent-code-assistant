@@ -17,7 +17,7 @@ function intelligent_code_assistant_register_reader_insights_admin_page() {
 		'edit_posts',
 		'intelligent-code-assistant',
 		'intelligent_code_assistant_render_admin_overview',
-		plugin_dir_url( dirname( __DIR__ ) . '/intelligent-code-assistant.php' ) . 'assets/intelligent-code-logo.png',
+		'none',
 		58
 	);
 
@@ -42,6 +42,32 @@ function intelligent_code_assistant_register_reader_insights_admin_page() {
 add_action( 'admin_menu', 'intelligent_code_assistant_register_reader_insights_admin_page', 9 );
 
 /**
+ * Render the compact Intelligent Code brand used by analytics headers.
+ */
+function intelligent_code_assistant_render_admin_brand() {
+	$logo_url = plugin_dir_url( dirname( __DIR__ ) . '/intelligent-code-assistant.php' ) . 'assets/intelligent-code-logo.png';
+	?>
+	<div class="ica-header-brand" aria-label="<?php esc_attr_e( 'Intelligent Code', 'intelligent-code-assistant' ); ?>">
+		<img src="<?php echo esc_url( $logo_url ); ?>" alt="" aria-hidden="true" />
+		<span><?php esc_html_e( 'Intelligent Code', 'intelligent-code-assistant' ); ?></span>
+	</div>
+	<?php
+}
+
+/** Keep the custom menu mark constrained on every wp-admin screen. */
+function intelligent_code_assistant_admin_menu_brand_styles() {
+	$logo_url = plugin_dir_url( dirname( __DIR__ ) . '/intelligent-code-assistant.php' ) . 'assets/intelligent-code-logo.png';
+	?>
+	<style>
+		#adminmenu .toplevel_page_intelligent-code-assistant .wp-menu-image {
+			background: url('<?php echo esc_url( $logo_url ); ?>') center 7px / 20px 20px no-repeat;
+		}
+	</style>
+	<?php
+}
+add_action( 'admin_head', 'intelligent_code_assistant_admin_menu_brand_styles' );
+
+/**
  * Render the Intelligent Code overview.
  */
 function intelligent_code_assistant_render_admin_overview() {
@@ -54,7 +80,6 @@ function intelligent_code_assistant_render_admin_overview() {
 	$snippet_insights_url = add_query_arg( 'page', 'intelligent-code-assistant-code-examples', admin_url( 'admin.php' ) );
 	?>
 	<div class="wrap ica-insights-workspace ica-intelligent-code-overview">
-		<header class="ica-page-header ica-page-header--overview"><div class="ica-header-title"><h1><?php esc_html_e( 'Intelligent Code', 'intelligent-code-assistant' ); ?></h1></div></header>
 		<section class="ica-overview-hero">
 			<div class="ica-overview-hero__brand"><img class="ica-overview-logo" src="<?php echo esc_url( plugin_dir_url( dirname( __DIR__ ) . '/intelligent-code-assistant.php' ) . 'assets/intelligent-code-logo.png' ); ?>" alt="" aria-hidden="true" /><div class="ica-overview-hero__copy">
 			<span class="ica-eyebrow"><?php esc_html_e( 'INTELLIGENT CODE WORKSPACE', 'intelligent-code-assistant' ); ?></span>
@@ -143,7 +168,8 @@ function intelligent_code_assistant_render_reader_insights_overview() {
 	$active_articles    = (int) ( $totals['articles_with_activity'] ?? 0 );
 	?>
 	<div class="wrap ica-insights-workspace ica-reader-insights-overview">
-		<header class="ica-page-header ica-page-header--overview"><div class="ica-header-title"><h1><?php esc_html_e( 'Reader Insights', 'intelligent-code-assistant' ); ?></h1></div></header>
+		<header class="ica-page-header ica-page-header--overview ica-page-header--brand"><?php intelligent_code_assistant_render_admin_brand(); ?></header>
+		<section class="ica-detail-intro ica-detail-intro--overview"><span class="ica-detail-kicker"><?php esc_html_e( 'Analytics', 'intelligent-code-assistant' ); ?></span><h1><?php esc_html_e( 'Reader Insights', 'intelligent-code-assistant' ); ?></h1></section>
 		<p class="ica-page-intro"><?php esc_html_e( 'Explore deterministic reader interaction data across your intelligent code articles. These figures represent actions, not unique readers.', 'intelligent-code-assistant' ); ?></p>
 
 		<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;max-width:1000px;margin:24px 0;">
@@ -235,6 +261,7 @@ function intelligent_code_assistant_render_reader_insights_article( $post_id ) {
 	<div class="wrap ica-insights-workspace ica-reader-insights-detail">
 		<header class="ica-page-header ica-page-header--detail ica-page-header--banner">
 			<nav class="ica-back-nav"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php esc_html_e( 'Back to Reader Insights', 'intelligent-code-assistant' ); ?></a></nav>
+			<?php intelligent_code_assistant_render_admin_brand(); ?>
 			<div class="ica-header-summary"><?php if ( $edit_url ) : ?><a class="button" href="<?php echo esc_url( $edit_url ); ?>"><?php esc_html_e( 'Edit article', 'intelligent-code-assistant' ); ?></a><?php endif; ?></div>
 		</header>
 		<section class="ica-detail-intro"><span class="ica-detail-kicker"><?php esc_html_e( 'Article Insights', 'intelligent-code-assistant' ); ?></span><h1><?php echo esc_html( $title ); ?></h1><p><?php esc_html_e( 'Detailed reader interaction data for this article. These are recorded actions, not unique-reader metrics.', 'intelligent-code-assistant' ); ?></p></section>

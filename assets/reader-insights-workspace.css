@@ -1921,3 +1921,70 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 	grid-column: 1 !important;
 	justify-self: start !important;
 }
+
+
+/* Overview hierarchy: management first, analytics grouped beneath it. */
+.ica-intelligent-code-overview {
+	padding-top: 48px !important;
+}
+.ica-intelligent-code-overview .ica-overview-hero {
+	margin-bottom: 34px;
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 36px;
+	width: 100%;
+	margin: 0 0 24px;
+	padding: 28px 32px;
+	box-sizing: border-box;
+	background: linear-gradient(100deg, #f8fbff 0%, #eef5ff 100%);
+	border: 1px solid #d7e6fb;
+	border-left: 0;
+	border-radius: 14px;
+	box-shadow: 0 12px 30px rgba(15, 23, 42, .06);
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets::before {
+	content: "";
+	align-self: stretch;
+	width: 4px;
+	flex: 0 0 4px;
+	margin: -28px 0 -28px -32px;
+	border-radius: 14px 0 0 14px;
+	background: #2563eb;
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets .ica-overview-card__copy {
+	flex: 1 1 auto;
+	max-width: 760px;
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets h2 {
+	margin: 4px 0 8px;
+}
+.ica-intelligent-code-overview .ica-overview-card--snippets p {
+	margin: 0;
+}
+.ica-intelligent-code-overview .ica-card-eyebrow {
+	display: block;
+	color: #2563eb;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+}
+.ica-intelligent-code-overview .ica-overview-grid--insights {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+	.ica-intelligent-code-overview {
+		padding-top: 28px !important;
+	}
+	.ica-intelligent-code-overview .ica-overview-card--snippets {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 20px;
+	}
+	.ica-intelligent-code-overview .ica-overview-grid--insights {
+		grid-template-columns: 1fr;
+	}
+}

@@ -1831,3 +1831,82 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 		width: 88px;
 	}
 }
+
+
+/* Branded analytics banner: navigation/action at the edges, plugin identity centred. */
+.ica-insights-workspace .ica-page-header--brand,
+.ica-insights-workspace .ica-page-header--banner {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	align-items: center;
+	width: 100%;
+	max-width: none !important;
+	min-height: 104px;
+	margin: 0 0 32px !important;
+	padding: 18px max(32px, calc((100% - 1200px) / 2)) !important;
+	box-sizing: border-box;
+	background: #eef5ff !important;
+	border: 0 !important;
+	border-bottom: 1px solid #d7e6fb !important;
+	border-radius: 0 !important;
+	box-shadow: 0 8px 22px rgba(15, 23, 42, .06);
+}
+.ica-insights-workspace .ica-page-header--brand .ica-header-brand {
+	grid-column: 2;
+}
+.ica-insights-workspace .ica-page-header--banner .ica-back-nav {
+	grid-column: 1;
+	justify-self: start;
+	margin: 0 !important;
+}
+.ica-insights-workspace .ica-page-header--banner .ica-header-brand {
+	grid-column: 2;
+	justify-self: center;
+}
+.ica-insights-workspace .ica-page-header--banner .ica-header-summary {
+	grid-column: 3;
+	justify-self: end;
+}
+.ica-insights-workspace .ica-header-brand {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	white-space: nowrap;
+	color: #0f172a;
+	font-size: 19px;
+	font-weight: 750;
+	letter-spacing: -.02em;
+}
+.ica-insights-workspace .ica-header-brand img {
+	display: block;
+	width: 38px !important;
+	height: 38px !important;
+	max-width: 38px !important;
+	object-fit: contain;
+}
+.ica-insights-workspace .ica-detail-intro--overview {
+	margin-top: 0;
+}
+
+/* The landing page hero is the page identity, so it does not need a second header. */
+.ica-intelligent-code-overview {
+	padding-top: 32px;
+}
+.ica-intelligent-code-overview .ica-overview-hero {
+	margin-top: 0;
+}
+
+@media (max-width: 782px) {
+	.ica-insights-workspace .ica-page-header--brand,
+	.ica-insights-workspace .ica-page-header--banner {
+		grid-template-columns: 1fr auto;
+		gap: 14px;
+		padding: 16px 20px !important;
+	}
+	.ica-insights-workspace .ica-page-header--banner .ica-back-nav { grid-column: 1; grid-row: 1; }
+	.ica-insights-workspace .ica-page-header--banner .ica-header-brand { grid-column: 2; grid-row: 1; }
+	.ica-insights-workspace .ica-page-header--banner .ica-header-summary { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+	.ica-insights-workspace .ica-page-header--brand .ica-header-brand { grid-column: 1 / -1; }
+}

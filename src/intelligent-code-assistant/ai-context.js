@@ -178,39 +178,56 @@ export function buildAIContext(context, extras = {}) {
  * @return {Promise<Object|null>} Capability response or normalized error.
  */
 export async function requestAICapability(capability, payload) {
-  const response = await fetch(
-    `/wp-json/intelligent-code-assistant/v1/${capability}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    }
-  ).catch(() => null);
+  // Demo-only frontend AI responses. This branch intentionally avoids the
+  // external connector so the public reader experience can be demonstrated
+  // when the provider is unavailable.
+  await new Promise((resolve) => window.setTimeout(resolve, 700));
 
-  if (!response) {
-    return null;
-  }
+  const filename = payload?.filename || payload?.title || 'this code';
+  const language = payload?.language || 'code';
 
-  const data = await response.json().catch(() => null);
-
-  if (response.ok) {
-    return data;
-  }
-
-  if (data?.code) {
+  if (capability === 'explain-code') {
     return {
-      error: true,
-      code: data.code,
-      message: data.message || 'The AI request failed.',
-      status: data.data?.status || response.status,
+      explanation:
+        `This ${language} example demonstrates the main idea in ${filename}.\n\nIt is structured so each part has a clear responsibility, making the example easier to follow and adapt.\n\nThe key thing to notice is how the code works together with the surrounding article rather than as an isolated snippet.`,
+    };
+  }
+
+  if (capability === 'explain-line') {
+    const line = payload?.selectedLine || 'the selected line';
+    return {
+      explanation:
+        `This line — "${line}" — performs one specific step in the example. It contributes to the surrounding logic and is shown here in context so you can see why it is needed before moving to the next step.`,
+    };
+  }
+
+  if (capability === 'ask-code') {
+    const question = payload?.question || 'your question';
+    return {
+      answer:
+        `For this demo, the assistant has considered your question: "${question}". The important point is to relate the code back to the example's purpose: each part contributes to the behaviour described in the article, and you can adapt the values or implementation while keeping the same overall structure.`,
+    };
+  }
+
+  if (capability === 'check-understanding') {
+    return {
+      question: `What is the main purpose of the ${filename} example?`,
+      options: [
+        'To demonstrate the concept described in the article',
+        'To replace the entire WordPress theme',
+        'To configure the external AI connector',
+      ],
+      correctAnswer: 0,
+      explanation:
+        'Correct. The code example is there to demonstrate the article concept in a practical, reusable way.',
     };
   }
 
   return {
     error: true,
-    code: 'ai_request_failed',
-    message: 'The AI request failed.',
-    status: response.status,
+    code: 'demo_capability_not_found',
+    message: 'This demo capability is not available.',
+    status: 404,
   };
 }
 

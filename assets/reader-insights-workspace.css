@@ -1910,3 +1910,14 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples #wpcontent,
 	.ica-insights-workspace .ica-page-header--banner .ica-header-summary { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
 	.ica-insights-workspace .ica-page-header--brand .ica-header-brand { grid-column: 1 / -1; }
 }
+
+
+/* Main analytics pages: keep the Intelligent Code identity aligned with the content edge. */
+.ica-insights-workspace .ica-page-header--brand {
+	grid-template-columns: 1fr !important;
+	justify-items: stretch;
+}
+.ica-insights-workspace .ica-page-header--brand .ica-header-brand {
+	grid-column: 1 !important;
+	justify-self: start !important;
+}

@@ -8,13 +8,67 @@ let launcher = null;
 let rafId = null;
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
+let launcherContextTimer = null;
 const LAUNCHER_REMINDER_INTERVAL = 18000;
+const LAUNCHER_CONTEXT_DURATION = 2800;
 
 function getBlockLabel(block) {
-	const title = block?.querySelector('.code-title');
-	const text = title?.textContent?.trim();
+	const filename = block?.querySelector('.code-title')?.textContent?.trim();
+	return filename || 'this code';
+}
 
-	return text || 'this code snippet';
+function getBlockAccent(block) {
+	const badge = block?.querySelector('.code-badge');
+
+	if (!badge || typeof window === 'undefined') {
+		return { background: '#0f172a', foreground: '#ffffff' };
+	}
+
+	const styles = window.getComputedStyle(badge);
+
+	return {
+		background: styles.backgroundColor || '#0f172a',
+		foreground: styles.color || '#ffffff',
+	};
+}
+
+function syncLauncherAccent() {
+	if (!launcher || !activeBlock) {
+		return;
+	}
+
+	const accent = getBlockAccent(activeBlock);
+	launcher.style.setProperty('--assistant-accent', accent.background);
+	launcher.style.setProperty('--assistant-accent-text', accent.foreground);
+	activeBlock.style.setProperty('--assistant-accent', accent.background);
+	activeBlock.style.setProperty('--assistant-accent-text', accent.foreground);
+}
+
+function showLauncherContext() {
+	if (!launcher || !activeBlock) {
+		return;
+	}
+
+	window.clearTimeout(launcherContextTimer);
+	const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
+
+	if (!label) {
+		return;
+	}
+
+	label.textContent = `Ask about ${getBlockLabel(activeBlock)}`;
+	launcher.classList.add('is-contextual');
+
+	if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+		label.textContent = 'Ask about this code';
+		launcher.classList.remove('is-contextual');
+		return;
+	}
+
+	launcherContextTimer = window.setTimeout(() => {
+		label.textContent = 'Ask about this code';
+		launcher?.classList.remove('is-contextual');
+	}, LAUNCHER_CONTEXT_DURATION);
 }
 
 function syncLauncherState() {
@@ -64,6 +118,10 @@ function setActiveBlock(nextBlock) {
 	}
 
 	if (launcher) {
+		syncLauncherAccent();
+		if (activeBlock) {
+			showLauncherContext();
+		}
 		const wasHidden = launcher.hidden;
 		launcher.hidden = !activeBlock;
 
@@ -189,7 +247,7 @@ function createLauncher() {
 	launcher.className = LAUNCHER_CLASS;
 	launcher.hidden = true;
 	launcher.setAttribute('aria-expanded', 'false');
-	launcher.innerHTML = '<span aria-hidden="true">✦</span><span>Code Assistant</span>';
+	launcher.innerHTML = '<span aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Ask about this code</span>';
 
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);

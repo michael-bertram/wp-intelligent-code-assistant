@@ -30,6 +30,21 @@ export function buildAIContext(context, extras = {}) {
  * @return {Promise<Object|null>} Capability response or null on failure.
  */
 export async function requestAICapability(capability, payload) {
+  // ==========================================
+  // DEMO MOCK RESPONSE — REMOVE AFTER DEMO
+  // ==========================================
+  if (capability === 'ask-code') {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    return {
+      answer:
+        'This code filters the task list based on the option currently selected by the user. If "pending" is selected, only incomplete tasks are returned. If "completed" is selected, only completed tasks are returned. When "all" is selected, every task is included.',
+    };
+  }
+  // ==========================================
+  // END DEMO MOCK
+  // ==========================================
+
   const directResponse = await fetch(
     `/wp-json/intelligent-code-assistant/v1/${capability}`,
     {

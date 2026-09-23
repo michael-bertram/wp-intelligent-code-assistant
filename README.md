@@ -1,37 +1,108 @@
 # WP Intelligent Code Assistant
 
-WP Intelligent Code Assistant is a WordPress plugin for interactive technical code examples with contextual AI assistance and reader-behaviour insights.
+WP Intelligent Code Assistant is an experimental WordPress plugin that turns technical code examples into contextual, AI-assisted learning experiences and turns reader interactions into useful editorial signals.
 
-Instead of requiring a reader to leave an article, copy code into an external AI tool, explain the surrounding context, and then return, the plugin brings assistance directly to the code example. The reader asks the question; WordPress supplies the context.
+The project explores a WordPress-native approach to AI integration: WordPress owns the content, context, capabilities and deterministic data, while the configured AI connection is used for generation and interpretation. Readers can get help without leaving the tutorial or manually recreating its context in an external AI tool.
 
-## Reader experience
+## What it does
 
-Code Examples can expose four contextual tools:
+### Reader-facing Code Assistant
 
-- **Explain Code** — explains the example in its article/tutorial context.
-- **Explain Line** — focuses assistance on selected code.
-- **Ask about this code** — answers a reader's own question about the example.
-- **Check Your Understanding** — provides an in-context knowledge check.
+Intelligent Code examples can expose four contextual AI tools:
 
-A floating AI Assistant follows the relevant Code Example as the reader moves through an article. The active example is subtly highlighted while its assistant is open, making the current AI context clear when several examples are close together.
+- **Explain Code** — explains the active example in the context of the tutorial.
+- **Explain This Line** — explains a selected line together with its surrounding code.
+- **Ask about this code** — lets the reader ask their own question about the active example.
+- **Check Your Understanding** — creates an in-context knowledge check.
 
-## Reader Insights
+A shared floating Code Assistant follows the reader's active code example rather than attaching a separate AI interface to every block. The active example and nearby tutorial content are supplied as context so the assistance can be grounded in what the reader is currently learning.
 
-Reader interactions become useful editorial signals rather than disappearing after the AI response. Reader Insights helps authors inspect article-level and reusable Code Example activity, including frequently explained lines, repeated questions, knowledge-check activity, interaction volume, and the articles in which a Code Example appears.
+### Tutorial-aware context
 
-AI Editorial Insights can interpret those deterministic analytics to help authors identify areas that may benefit from clearer explanations or improved examples.
+The assistant does not send code in isolation. Shared context can include the active code, language, filename, example title, tutorial title, nearby teaching content and capability-specific information such as the selected line or reader question.
+
+This keeps context construction in WordPress and allows the same AI abilities to be reused across multiple code examples.
+
+### Reusable canonical Code Snippets
+
+The plugin registers the `ica_code_example` custom post type as **Code Snippets**.
+
+Each Code Snippet owns one canonical Intelligent Code block and its code/configuration. Article blocks can reference that canonical snippet through `codeExampleId` instead of storing stale copies.
+
+This separates:
+
+- **semantic identity** — which Code Snippet the reader is working with;
+- **article context** — where and why the snippet is being taught;
+- **rendered identity** — which particular block instance received the interaction.
+
+A reference resolves the canonical content at render time while the article continues to provide its own tutorial context.
+
+### Deterministic Reader Insights
+
+WordPress records known reader actions before AI is asked to interpret them. The analytics model currently supports:
+
+- `explain_code`
+- `explain_line`
+- `ask_question`
+- `knowledge_check`
+- `mark_complete`
+- `copy_code`
+
+Events retain useful context including the article, Code Snippet, rendered block, filename, language and event-specific metadata.
+
+These figures represent **actions/interactions, not unique readers**.
+
+The **Intelligent Code** admin workspace provides:
+
+- **Overview** — entry point for Code Snippets and analytics.
+- **Reader Insights** — article-level deterministic interaction data.
+- **Code Snippet Insights** — activity for reusable snippets across the articles where they appear.
+- **AI Editorial Insights** — AI interpretation of server-authoritative analytics to help authors investigate possible reader friction and opportunities to improve content.
+
+Generated reader-facing AI responses are not the analytics source of truth. WordPress records what happened; deterministic code aggregates it; AI helps interpret what it might mean.
 
 ## WordPress-native AI architecture
 
-The plugin is built around WordPress rather than treating AI as a separate application:
+The plugin is designed around WordPress rather than treating AI as a separate application:
 
-- Gutenberg provides the authoring experience and reusable Code Examples.
-- The Interactivity API powers frontend interactions.
-- The Abilities API exposes structured editor-side AI capabilities.
-- The WordPress AI Client handles configured provider execution.
-- Plugin-owned REST endpoints provide the hardened boundary for logged-out reader requests.
+- **Gutenberg** provides the authoring and reusable-content model.
+- **Custom Post Types** give Code Snippets stable semantic identities.
+- **Interactivity API** powers reader-facing interactions.
+- **Abilities API** exposes reusable, structured capabilities.
+- **WordPress AI Client / configured AI connection** handles AI generation without coupling the feature to a single provider.
+- **Plugin REST endpoints** provide the application boundary for frontend requests.
+- **WordPress analytics storage and aggregation** provide deterministic evidence before AI interpretation.
 
-Public readers do not receive provider credentials. Anonymous requests are validated and rate-limited before server-side AI execution.
+The plugin also registers AI-assisted metadata generation as a WordPress Ability and exposes appropriate abilities through WordPress's AI/Abilities architecture.
+
+The key architectural principle is:
+
+> **Use deterministic software for what can be known; use AI for what needs to be interpreted.**
+
+That allows WordPress and AI to work together natively: WordPress supplies structured content, context and reliable application behaviour, while AI adds generation and interpretation where it is useful.
+
+## Content loop
+
+The project connects the reader and editorial experiences:
+
+```text
+Author creates structured WordPress content
+                    ↓
+             Reader engages
+                    ↓
+        AI provides contextual help
+                    ↓
+ WordPress records deterministic signals
+                    ↓
+        Analytics reveal patterns
+                    ↓
+         AI helps interpret them
+                    ↓
+       Author improves the content
+                    ↺
+```
+
+The reader remains in control of when AI assistance is requested, and the author remains responsible for editorial decisions.
 
 ## Development
 
@@ -48,7 +119,11 @@ During development:
 npm start
 ```
 
-Production assets in `build/` are intentionally tracked and should be rebuilt and committed whenever source assets change.
+Production assets in `build/` are intentionally tracked. Rebuild and commit them whenever source assets change.
+
+## Project status
+
+This repository is an experimental exploration of native WordPress AI integration and intelligent technical content. It demonstrates how WordPress's existing content and application architecture can work hand in hand with AI without requiring the AI layer to own the underlying content model or analytics.
 
 ## License
 

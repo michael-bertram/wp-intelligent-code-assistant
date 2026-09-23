@@ -8,13 +8,16 @@ let launcher = null;
 let rafId = null;
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
-const LAUNCHER_REMINDER_INTERVAL = 18000;
+let expandedFocusBlock = null;
+const LAUNCHER_REMINDER_INTERVAL = 9000;
+
+function isBlockExpanded(block) {
+	return Boolean(block?.querySelector('.editor-inner-blocks-wrapper.active'));
+}
 
 function getBlockLabel(block) {
 	const title = block?.querySelector('.code-title');
-	const text = title?.textContent?.trim();
-
-	return text || 'this code example';
+	return title?.textContent?.trim() || 'this code snippet';
 }
 
 function syncLauncherState() {
@@ -24,13 +27,28 @@ function syncLauncherState() {
 
 	const drawer = activeBlock?.querySelector('.ai-assistant-drawer');
 	const isOpen = Boolean(drawer && !drawer.hidden);
+	const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
 
 	launcher.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+	const showFocusedCta =
+		Boolean(expandedFocusBlock && expandedFocusBlock === activeBlock) ||
+		launcher.matches(':hover');
+
+	if (label) {
+		label.textContent = showFocusedCta ? 'Ask about this code' : 'Code Assistant';
+	}
+
+	launcher.classList.toggle(
+		'has-active-context',
+		Boolean(expandedFocusBlock && expandedFocusBlock === activeBlock)
+	);
+
 	launcher.setAttribute(
 		'aria-label',
 		activeBlock
-			? `Open AI Assistant for ${getBlockLabel(activeBlock)}`
-			: 'Open AI Assistant'
+			? `Open Code Assistant for ${getBlockLabel(activeBlock)}`
+			: 'Open Code Assistant'
 	);
 }
 
@@ -41,8 +59,7 @@ function closeAssistantFor(block) {
 		return;
 	}
 
-	const closeButton = drawer.querySelector('.ai-assistant-header .explanation-close-btn');
-	closeButton?.click();
+	drawer.querySelector('.ai-assistant-header .explanation-close-btn')?.click();
 }
 
 function setActiveBlock(nextBlock) {
@@ -54,6 +71,7 @@ function setActiveBlock(nextBlock) {
 	if (activeBlock) {
 		activeBlock.removeAttribute(ACTIVE_ATTRIBUTE);
 		activeBlock.classList.remove('is-ai-assistant-focused');
+		activeBlock.classList.remove('is-ai-assistant-visible-highlight');
 		closeAssistantFor(activeBlock);
 	}
 
@@ -61,6 +79,7 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.setAttribute(ACTIVE_ATTRIBUTE, 'true');
+		activeBlock.classList.add('is-ai-assistant-visible-highlight');
 	}
 
 	if (launcher) {
@@ -86,7 +105,8 @@ function isMeaningfullyVisible(block) {
 	}
 
 	const rect = block.getBoundingClientRect();
-	const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+	const viewportHeight =
+		window.innerHeight || document.documentElement.clientHeight;
 	const activationTop = viewportHeight * 0.12;
 	const activationBottom = viewportHeight * 0.88;
 
@@ -114,6 +134,17 @@ function chooseActiveBlock() {
 		}
 	});
 
+	if (expandedFocusBlock && isMeaningfullyVisible(expandedFocusBlock)) {
+		setActiveBlock(expandedFocusBlock);
+		return;
+	}
+
+	if (expandedFocusBlock) {
+		expandedFocusBlock.classList.remove('is-ai-assistant-focused');
+		expandedFocusBlock.classList.remove('is-ai-assistant-visible-highlight');
+		expandedFocusBlock = null;
+	}
+
 	setActiveBlock(bestBlock);
 }
 
@@ -131,7 +162,12 @@ function scheduleActiveBlockUpdate() {
 function scheduleLauncherReminder() {
 	window.clearTimeout(launcherReminderTimer);
 
-	if (!launcher || launcher.hidden || launcher.getAttribute('aria-expanded') === 'true') {
+	if (
+		!launcher ||
+		launcher.hidden ||
+		!activeBlock ||
+		launcher.getAttribute('aria-expanded') === 'true'
+	) {
 		return;
 	}
 
@@ -189,19 +225,45 @@ function createLauncher() {
 	launcher.className = LAUNCHER_CLASS;
 	launcher.hidden = true;
 	launcher.setAttribute('aria-expanded', 'false');
-	launcher.innerHTML = '<span aria-hidden="true">✦</span><span>AI Assistant</span>';
+	launcher.setAttribute('aria-label', 'Open Code Assistant');
+	launcher.innerHTML =
+		'<span aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Code Assistant</span>';
+
+	launcher.addEventListener('mouseenter', () => {
+		if (!activeBlock) {
+			return;
+		}
+
+		launcher.classList.add('has-active-context');
+		const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
+		if (label) {
+			label.textContent = 'Ask about this code';
+		}
+	});
+
+	launcher.addEventListener('mouseleave', () => {
+		if (expandedFocusBlock && expandedFocusBlock === activeBlock) {
+			syncLauncherState();
+			return;
+		}
+
+		launcher.classList.remove('has-active-context');
+		const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
+		if (label) {
+			label.textContent = 'Code Assistant';
+		}
+	});
 
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);
+
 		if (!activeBlock || !isMeaningfullyVisible(activeBlock)) {
 			setActiveBlock(null);
 			return;
 		}
 
 		activeBlock.classList.add('is-ai-assistant-focused');
-
-		const blockLauncher = activeBlock.querySelector('.ai-assistant-button');
-		blockLauncher?.click();
+		activeBlock.querySelector('.ai-assistant-button')?.click();
 
 		window.setTimeout(() => {
 			syncLauncherState();
@@ -224,10 +286,46 @@ function observeBlocks() {
 
 	createLauncher();
 
+	// Expanding a block is an explicit focus action and immediately makes that
+	// block the current context. Normal viewport selection resumes on scroll.
+	blocks.forEach((block) => {
+		const panel = block.querySelector('.editor-inner-blocks-wrapper');
+		if (!panel) {
+			return;
+		}
+
+		const expansionObserver = new MutationObserver(() => {
+			if (isBlockExpanded(block) && isMeaningfullyVisible(block)) {
+				expandedFocusBlock = block;
+				setActiveBlock(block);
+				block.classList.add('is-ai-assistant-focused');
+				block.classList.add('is-ai-assistant-visible-highlight');
+				launcher?.classList.add('has-active-context');
+				const label = launcher?.querySelector('.wpe-floating-ai-assistant__label');
+				if (label) {
+					label.textContent = 'Ask about this code';
+				}
+			} else {
+				if (expandedFocusBlock === block) {
+					expandedFocusBlock = null;
+					syncLauncherState();
+				}
+				scheduleActiveBlockUpdate();
+			}
+		});
+
+		expansionObserver.observe(panel, {
+			attributes: true,
+			attributeFilter: ['class'],
+		});
+	});
+
 	if (!('IntersectionObserver' in window)) {
 		blocks.forEach((block) => visibleBlocks.set(block, 1));
 		chooseActiveBlock();
-		window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
+		window.addEventListener('scroll', scheduleActiveBlockUpdate, {
+			passive: true,
+		});
 		window.addEventListener('resize', scheduleActiveBlockUpdate);
 		return;
 	}
@@ -271,7 +369,10 @@ function observeBlocks() {
 	blocks.forEach((block) => {
 		const drawer = block.querySelector('.ai-assistant-drawer');
 		if (drawer) {
-			drawerObserver.observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
+			drawerObserver.observe(drawer, {
+				attributes: true,
+				attributeFilter: ['hidden'],
+			});
 		}
 	});
 

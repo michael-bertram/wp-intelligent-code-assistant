@@ -3,10 +3,10 @@
   "apiVersion": 3,
   "name": "wpe/intelligent-code-assistant",
   "version": "0.1.0",
-  "title": "Code Dropdown",
+  "title": "Intelligent Code",
   "category": "widgets",
   "icon": "screenoptions",
-  "description": "An interactive block with the Interactivity API.",
+  "description": "Interactive code snippets with contextual reader assistance.",
   "example": {},
   "supports": {
     "interactivity": true

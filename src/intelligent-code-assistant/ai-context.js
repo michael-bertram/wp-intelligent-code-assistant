@@ -42,7 +42,6 @@ export async function requestAICapability(capability, payload) {
         'All tasks are returned',
         'Only completed tasks are returned',
         'Only incomplete tasks are returned',
-        'The task list is cleared',
       ],
       correctAnswer: 1,
       explanation:

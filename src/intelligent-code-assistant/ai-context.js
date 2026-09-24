@@ -216,15 +216,16 @@ export async function requestAICapability(capability, payload) {
 
   if (capability === 'check-understanding') {
     return {
-      question: `Why does Code Assistant offer a "Check understanding" feature after reading ${filename}?`,
+      question: 'What happens when currentFilter is set to "completed"?',
       options: [
-        'To help the reader actively test whether they understood the concept',
-        'To automatically rewrite the code in the article',
-        'To replace the explanation with a generic programming quiz',
+        'All tasks are returned',
+        'Only completed tasks are returned',
+        'Only incomplete tasks are returned',
+        'The task list is cleared',
       ],
-      correctAnswer: 0,
+      correctAnswer: 1,
       explanation:
-        'Correct. The knowledge check turns passive reading into active learning. It uses the code the reader is already studying, so the question reinforces the same concept rather than taking them away from the article.',
+        'When currentFilter is "completed", the filter callback returns task.completed. This means only tasks whose completed value is true are included in filteredTasks.',
     };
   }
 

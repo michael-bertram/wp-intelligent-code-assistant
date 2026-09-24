@@ -12,7 +12,8 @@
     "lint:js": "wp-scripts lint-js",
     "packages-update": "wp-scripts packages-update",
     "plugin-zip": "wp-scripts plugin-zip",
-    "start": "wp-scripts start --experimental-modules --webpack-src-dir=src"
+    "start": "wp-scripts start --experimental-modules --webpack-src-dir=src",
+    "release": "npm run build && npm run plugin-zip"
   },
   "dependencies": {
     "@wordpress/interactivity": "latest",

@@ -30,6 +30,29 @@ export function buildAIContext(context, extras = {}) {
  * @return {Promise<Object|null>} Capability response or null on failure.
  */
 export async function requestAICapability(capability, payload) {
+  // ==========================================
+  // DEMO MOCK RESPONSE — REMOVE AFTER DEMO
+  // ==========================================
+  if (capability === 'check-understanding') {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+
+    return {
+      question: 'What happens when currentFilter is set to "completed"?',
+      options: [
+        'All tasks are returned',
+        'Only completed tasks are returned',
+        'Only incomplete tasks are returned',
+        'The task list is cleared',
+      ],
+      correctAnswer: 1,
+      explanation:
+        'When currentFilter is "completed", the filter callback returns task.completed. This means only tasks whose completed value is true are included in filteredTasks.',
+    };
+  }
+  // ==========================================
+  // END DEMO MOCK
+  // ==========================================
+
   const directResponse = await fetch(
     `/wp-json/intelligent-code-assistant/v1/${capability}`,
     {

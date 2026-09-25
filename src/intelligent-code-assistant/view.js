@@ -209,50 +209,23 @@ const { state } = store('wpe', {
       }
     },
 
-    *explainCode() {
+    explainCode() {
       const context = getContext();
 
-      recordAnalyticsEvent(
-        ANALYTICS_EVENTS.EXPLAIN_CODE,
-        context
-      );
-
+      recordAnalyticsEvent(ANALYTICS_EVENTS.EXPLAIN_CODE, context);
       context.aiAssistantOpen = true;
       context.aiAssistantView = 'explain';
       context.isExplaining = true;
-
-      if (context.explanationText && !context.explanationError) {
-        return;
-      }
-
-      context.isAnalyzingExplanation = true;
-      context.explanationError = '';
-      context.explanationText = '';
-      context.explanationItems = [];
-
-      const response = yield requestAICapability(
-        'explain-code',
-        buildAIContext(context)
-      );
-
-      if (response?.error) {
-        context.explanationError = getAIErrorMessage(response);
-      } else if (
-        response &&
-        typeof response.explanation === 'string' &&
-        response.explanation.trim()
-      ) {
-        context.explanationText = response.explanation.trim();
-        context.explanationItems = formatAIItems(response.explanation);
-      } else {
-        context.explanationError =
-          'Unable to generate a code explanation right now.';
-      }
-
       context.isAnalyzingExplanation = false;
+      context.explanationError = '';
+
+      if (!context.explanationItems?.length) {
+        context.explanationError =
+          'No stored explanation is available for this code example yet.';
+      }
     },
 
-    *explainLine() {
+    explainLine() {
       const context = getContext();
 
       if (!context.selectedLineNumber || !context.selectedLineText) {
@@ -260,55 +233,28 @@ const { state } = store('wpe', {
         return;
       }
 
-      context.aiAssistantOpen = true;
-      context.aiAssistantView = 'explain-line';
-      context.isExplainingLine = true;
-      context.isAnalyzingLine = true;
-      context.lineExplanation = '';
-      context.lineExplanationError = '';
-
-      const lines = (context.rawCodeText || '').split('\n');
       const selectedLineNumber = Number(context.selectedLineNumber);
-
       recordAnalyticsEvent(
         ANALYTICS_EVENTS.EXPLAIN_LINE,
         context,
         { lineNumber: selectedLineNumber }
       );
 
-      const start = Math.max(1, selectedLineNumber - 2);
-      const end = Math.min(lines.length, selectedLineNumber + 2);
-
-      const surroundingCode = lines
-        .slice(start - 1, end)
-        .map((line, index) => {
-          const lineNumber = start + index;
-          const marker = lineNumber === selectedLineNumber ? '>>>' : '   ';
-          return `${marker} ${lineNumber}: ${line}`;
-        })
-        .join('\n');
-
-      const payload = buildAIContext(context, {
-        selectedLineNumber,
-        selectedLine: context.selectedLineText,
-        surroundingCode,
-      });
-
-      const response = yield requestAICapability('explain-line', payload);
-
-      if (response?.error) {
-        context.lineExplanationError = getAIErrorMessage(response);
-      } else if (
-        response &&
-        typeof response.explanation === 'string' &&
-        response.explanation.trim()
-      ) {
-        context.lineExplanation = response.explanation.trim();
-      } else {
-        context.lineExplanationError = 'Unable to explain this line right now.';
-      }
-
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'explain-line';
+      context.isExplainingLine = true;
       context.isAnalyzingLine = false;
+      context.lineExplanationError = '';
+
+      const stored =
+        context.generatedLineExplanations?.[String(selectedLineNumber)] || '';
+
+      context.lineExplanation = stored;
+
+      if (!stored) {
+        context.lineExplanationError =
+          'No stored explanation is available for this line yet.';
+      }
     },
 
     handleCodeQuestionInput(event) {
@@ -377,70 +323,18 @@ const { state } = store('wpe', {
       }
     },
 
-    *generateUnderstandingCheck() {
+    generateUnderstandingCheck() {
       const context = getContext();
 
       context.aiAssistantOpen = true;
       context.aiAssistantView = 'check';
-
-      if (context.isGeneratingCheck) {
-        return;
-      }
-
-      if (context.checkQuestion) {
-        context.isCheckingUnderstanding = true;
-        return;
-      }
-
       context.isCheckingUnderstanding = true;
-      context.isGeneratingCheck = true;
+      context.isGeneratingCheck = false;
       context.checkError = '';
-      context.checkQuestion = '';
-      context.checkOptions = [];
-      context.checkOption0 = '';
-      context.checkOption1 = '';
-      context.checkOption2 = '';
-      context.checkCorrectAnswer = null;
-      context.checkExplanation = '';
-      context.selectedCheckAnswer = null;
-      context.hasAnsweredCheck = false;
-      context.isCheckCorrect = false;
 
-      try {
-        const response = yield requestAICapability(
-          'check-understanding',
-          buildAIContext(context)
-        );
-
-        const hasValidResponse =
-          response &&
-          typeof response.question === 'string' &&
-          response.question.trim() &&
-          Array.isArray(response.options) &&
-          response.options.length === 3 &&
-          Number.isInteger(response.correctAnswer) &&
-          response.correctAnswer >= 0 &&
-          response.correctAnswer <= 2 &&
-          typeof response.explanation === 'string';
-
-        if (!hasValidResponse) {
-          context.checkError =
-            'Unable to generate a knowledge check right now.';
-          return;
-        }
-
-        context.checkQuestion = response.question.trim();
-        context.checkOptions = response.options;
-        context.checkOption0 = response.options[0];
-        context.checkOption1 = response.options[1];
-        context.checkOption2 = response.options[2];
-        context.checkCorrectAnswer = response.correctAnswer;
-        context.checkExplanation = response.explanation.trim();
-      } catch (error) {
+      if (!context.checkQuestion || context.checkOptions?.length !== 3) {
         context.checkError =
-          'Unable to generate a knowledge check right now.';
-      } finally {
-        context.isGeneratingCheck = false;
+          'No stored knowledge check is available for this code example yet.';
       }
     },
 
@@ -557,8 +451,8 @@ const { state } = store('wpe', {
 
       context.isExplaining = false;
       context.isAnalyzingExplanation = false;
-      context.explanationText = '';
-      context.explanationItems = [];
+      context.explanationText = context.explanationText || '';
+      context.explanationItems = context.explanationItems || [];
       context.explanationError = '';
 
       context.selectedLineNumber = 0;
@@ -567,6 +461,7 @@ const { state } = store('wpe', {
       context.isAnalyzingLine = false;
       context.lineExplanation = '';
       context.lineExplanationError = '';
+      context.generatedLineExplanations = context.generatedLineExplanations || {};
 
       context.isAskingCode = false;
       context.isSubmittingQuestion = false;
@@ -576,13 +471,15 @@ const { state } = store('wpe', {
 
       context.isCheckingUnderstanding = false;
       context.isGeneratingCheck = false;
-      context.checkQuestion = '';
-      context.checkOptions = [];
-      context.checkOption0 = '';
-      context.checkOption1 = '';
-      context.checkOption2 = '';
-      context.checkCorrectAnswer = null;
-      context.checkExplanation = '';
+      context.checkQuestion = context.checkQuestion || '';
+      context.checkOptions = context.checkOptions || [];
+      context.checkOption0 = context.checkOption0 || '';
+      context.checkOption1 = context.checkOption1 || '';
+      context.checkOption2 = context.checkOption2 || '';
+      context.checkCorrectAnswer = Number.isInteger(context.checkCorrectAnswer)
+        ? context.checkCorrectAnswer
+        : null;
+      context.checkExplanation = context.checkExplanation || '';
       context.selectedCheckAnswer = null;
       context.hasAnsweredCheck = false;
       context.isCheckCorrect = false;
@@ -633,7 +530,7 @@ const { state } = store('wpe', {
       panel.setAttribute(
         'aria-label',
         context.aiAssistantEnabled
-          ? 'Code. Select a line to explain it with AI.'
+          ? 'Code. Select a line to view its explanation.'
           : 'Code.'
       );
 

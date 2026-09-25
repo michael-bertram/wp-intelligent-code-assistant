@@ -24,6 +24,14 @@ $enable_ai_assistant       = $attributes['enableAIAssistant'] ?? false;
 $tutorial_context_override = isset( $attributes['tutorialContextOverride'] )
 	? sanitize_textarea_field( $attributes['tutorialContextOverride'] )
 	: '';
+$generated_explanation       = isset( $attributes['generatedExplanation'] ) ? sanitize_textarea_field( $attributes['generatedExplanation'] ) : '';
+$generated_line_explanations = isset( $attributes['generatedLineExplanations'] ) && is_array( $attributes['generatedLineExplanations'] ) ? $attributes['generatedLineExplanations'] : array();
+$generated_knowledge_check   = isset( $attributes['generatedKnowledgeCheck'] ) && is_array( $attributes['generatedKnowledgeCheck'] ) ? $attributes['generatedKnowledgeCheck'] : array();
+
+$generated_line_explanations = array_map( 'sanitize_textarea_field', $generated_line_explanations );
+$generated_check_options     = isset( $generated_knowledge_check['options'] ) && is_array( $generated_knowledge_check['options'] )
+	? array_values( array_map( 'sanitize_text_field', $generated_knowledge_check['options'] ) )
+	: array();
 
 $theme_class   = $is_dark ? 'dark-theme' : '';
 $compact_class = $is_compact ? 'is-compact' : '';
@@ -119,8 +127,8 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'aiAssistantView'          => 'menu',
 			'isExplaining'             => false,
 			'isAnalyzingExplanation'   => false,
-			'explanationText'          => '',
-			'explanationItems'         => array(),
+			'explanationText'          => $generated_explanation,
+			'explanationItems'         => array_values( array_filter( array_map( 'trim', preg_split( '/\\R+/', $generated_explanation ) ) ) ),
 			'explanationError'         => '',
 			'selectedLineNumber'       => 0,
 			'selectedLineText'         => '',
@@ -128,6 +136,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'isAnalyzingLine'          => false,
 			'lineExplanation'          => '',
 			'lineExplanationError'     => '',
+			'generatedLineExplanations'=> $generated_line_explanations,
 			'activeCodeText'           => $raw_code_text,
 			'rawCodeText'              => $raw_code_text,
 			'postId'                   => get_the_ID(),
@@ -145,13 +154,13 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'codeQuestionError'        => '',
 			'isCheckingUnderstanding'  => false,
 			'isGeneratingCheck'        => false,
-			'checkQuestion'            => '',
-			'checkOptions'             => array(),
-			'checkOption0'             => '',
-			'checkOption1'             => '',
-			'checkOption2'             => '',
-			'checkCorrectAnswer'       => null,
-			'checkExplanation'         => '',
+			'checkQuestion'            => isset( $generated_knowledge_check['question'] ) ? sanitize_text_field( $generated_knowledge_check['question'] ) : '',
+			'checkOptions'             => $generated_check_options,
+			'checkOption0'             => $generated_check_options[0] ?? '',
+			'checkOption1'             => $generated_check_options[1] ?? '',
+			'checkOption2'             => $generated_check_options[2] ?? '',
+			'checkCorrectAnswer'       => isset( $generated_knowledge_check['correctAnswer'] ) ? absint( $generated_knowledge_check['correctAnswer'] ) : null,
+			'checkExplanation'         => isset( $generated_knowledge_check['explanation'] ) ? sanitize_textarea_field( $generated_knowledge_check['explanation'] ) : '',
 			'selectedCheckAnswer'      => null,
 			'hasAnsweredCheck'         => false,
 			'isCheckCorrect'           => false,
@@ -243,10 +252,10 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 									data-wp-bind--disabled="context.isAnalyzingLine"
 								>
 									<span data-wp-bind--hidden="context.isAnalyzingLine">
-										<?php esc_html_e( 'Ask AI about this line', 'intelligent-code-assistant' ); ?>
+										<?php esc_html_e( 'Explain this line', 'intelligent-code-assistant' ); ?>
 									</span>
 									<span data-wp-bind--hidden="!context.isAnalyzingLine">
-										<?php esc_html_e( 'Explaining…', 'intelligent-code-assistant' ); ?>
+										<?php esc_html_e( 'Opening explanation…', 'intelligent-code-assistant' ); ?>
 									</span>
 								</button>
 							</div>

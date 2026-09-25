@@ -24,6 +24,9 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         fontSize,
         enableAIAssistant,
         tutorialContextOverride,
+        generatedExplanation,
+        generatedLineExplanations,
+        generatedKnowledgeCheck,
     } = attributes;
 
     const isEditingCanonicalEntity = useContext(CanonicalCodeExampleContext);
@@ -33,6 +36,8 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     const [isChangingCodeExample, setIsChangingCodeExample] = useState(false);
     const [isConverting, setIsConverting] = useState(false);
     const [conversionError, setConversionError] = useState('');
+    const [isGeneratingAssistance, setIsGeneratingAssistance] = useState(false);
+    const [assistanceError, setAssistanceError] = useState('');
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
     const { saveEntityRecord } = useDispatch('core');
@@ -149,6 +154,82 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             setAiError(rawMessage.includes('<p>') ? __('Server error occurred during execution. Check WP debug log.', 'intelligent-code-assistant') : rawMessage);
         } finally {
             setIsAnalyzing(false);
+        }
+    };
+
+    const handleGenerateReaderAssistance = async () => {
+        if (!cleanRawText || !cleanRawText.trim() || isGeneratingAssistance) return;
+
+        setIsGeneratingAssistance(true);
+        setAssistanceError('');
+
+        const base = {
+            code: cleanRawText,
+            language: codeLanguage || 'code',
+            filename: filename || '',
+            title: headerTitle || '',
+            tutorialTitle,
+            tutorialContext: effectiveTutorialContext,
+        };
+
+        const runAbility = async (slug, data) => {
+            try {
+                return await apiFetch({
+                    path: `/wp/v2/abilities/intelligent-code-assistant/${slug}/run`,
+                    method: 'POST',
+                    data,
+                });
+            } catch (routeErr) {
+                if (routeErr.code !== 'rest_no_route' && routeErr.status !== 404) throw routeErr;
+                return apiFetch({
+                    path: `/intelligent-code-assistant/v1/${slug}`,
+                    method: 'POST',
+                    data,
+                });
+            }
+        };
+
+        try {
+            const explanation = await runAbility('explain-code', base);
+            const lines = cleanRawText.replace(/\r/g, '').split('\n');
+            const lineExplanations = {};
+
+            for (let index = 0; index < lines.length; index += 1) {
+                if (!lines[index].trim()) continue;
+                const lineNumber = index + 1;
+                const start = Math.max(0, index - 2);
+                const end = Math.min(lines.length, index + 3);
+                const surroundingCode = lines
+                    .slice(start, end)
+                    .map((line, offset) => {
+                        const number = start + offset + 1;
+                        return `${number === lineNumber ? '>>>' : '   '} ${number}: ${line}`;
+                    })
+                    .join('\n');
+
+                const response = await runAbility('explain-line', {
+                    ...base,
+                    selectedLineNumber: lineNumber,
+                    selectedLine: lines[index],
+                    surroundingCode,
+                });
+
+                if (response?.explanation) {
+                    lineExplanations[String(lineNumber)] = response.explanation.trim();
+                }
+            }
+
+            const knowledgeCheck = await runAbility('check-understanding', base);
+
+            setAttributes({
+                generatedExplanation: explanation?.explanation?.trim() || '',
+                generatedLineExplanations: lineExplanations,
+                generatedKnowledgeCheck: knowledgeCheck || {},
+            });
+        } catch (err) {
+            setAssistanceError(err?.message || __('Unable to generate reader assistance.', 'intelligent-code-assistant'));
+        } finally {
+            setIsGeneratingAssistance(false);
         }
     };
 
@@ -271,6 +352,22 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                                 {isAnalyzing ? <Spinner /> : __('Auto-Fill Code Details', 'intelligent-code-assistant')}
                             </Button>
                             {aiError && <p style={{ color: '#cc1818', fontSize: '12px', marginBottom: '12px' }}>{aiError}</p>}
+                            <Button
+                                variant="primary"
+                                isBusy={isGeneratingAssistance}
+                                disabled={isGeneratingAssistance || !cleanRawText.trim()}
+                                onClick={handleGenerateReaderAssistance}
+                                style={{ width: '100%', justifyContent: 'center', marginBottom: '12px' }}
+                            >
+                                {isGeneratingAssistance ? <Spinner /> : __('Generate Reader Assistance', 'intelligent-code-assistant')}
+                            </Button>
+                            <p style={{ fontSize: '12px', marginTop: 0 }}>
+                                {__('Generates and stores the code explanation, line explanations and knowledge check now, so readers do not spend AI credits for these predictable interactions.', 'intelligent-code-assistant')}
+                            </p>
+                            {generatedExplanation && <p style={{ fontSize: '12px' }}><strong>{__('Stored explanation ready.', 'intelligent-code-assistant')}</strong></p>}
+                            {Object.keys(generatedLineExplanations || {}).length > 0 && <p style={{ fontSize: '12px' }}>{Object.keys(generatedLineExplanations).length} {__('line explanations stored.', 'intelligent-code-assistant')}</p>}
+                            {generatedKnowledgeCheck?.question && <p style={{ fontSize: '12px' }}>{__('Knowledge check stored.', 'intelligent-code-assistant')}</p>}
+                            {assistanceError && <p style={{ color: '#cc1818', fontSize: '12px', marginBottom: '12px' }}>{assistanceError}</p>}
                             <div style={{ marginTop: '16px' }}>
                                 <strong style={{ display: 'block', marginBottom: '6px' }}>{__('Tutorial title', 'intelligent-code-assistant')}</strong>
                                 <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', marginBottom: '14px' }}>{tutorialTitle || __('No tutorial title detected.', 'intelligent-code-assistant')}</div>

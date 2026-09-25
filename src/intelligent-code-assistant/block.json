@@ -62,6 +62,18 @@
     "tutorialContextOverride": {
       "type": "string",
       "default": ""
+    },
+    "generatedExplanation": {
+      "type": "string",
+      "default": ""
+    },
+    "generatedLineExplanations": {
+      "type": "object",
+      "default": {}
+    },
+    "generatedKnowledgeCheck": {
+      "type": "object",
+      "default": {}
     }
   },
   "textdomain": "intelligent-code-assistant",

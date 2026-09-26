@@ -1,8 +1,7 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
-import { code } from '@wordpress/icons';
-import { PluginDocumentSettingPanel, PluginSidebar } from '@wordpress/editor';
+import { PluginDocumentSettingPanel } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
@@ -232,27 +231,6 @@ function ArticleAIWorkspace() {
 
     return (
         <>
-            <PluginSidebar
-                name="code-assistant-sidebar"
-                title={__('Code Assistant', 'intelligent-code-assistant')}
-                icon={code}
-                isPinnable={true}
-                className="ica-plugin-sidebar"
-            >
-                <div className="ica-plugin-sidebar__content">
-                    <div className="ica-ai-sidebar-summary__heading">
-                        <span className="ica-ai-sidebar-summary__mark">✦</span>
-                        <div>
-                            <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
-                            <p>{sprintfSafe(__('%d code snippets in this article', 'intelligent-code-assistant'), snippets.length)}</p>
-                        </div>
-                    </div>
-                    <p>{__('Generate, review and manage reader assistance for the code examples in this article.', 'intelligent-code-assistant')}</p>
-                    <Button variant="primary" onClick={openWorkspace}>
-                        {__('Open article workspace', 'intelligent-code-assistant')}
-                    </Button>
-                </div>
-            </PluginSidebar>
             <PluginDocumentSettingPanel
                 name="ica-article-ai"
                 title={sprintfSafe(__('✦ Code Assistant · %d snippets', 'intelligent-code-assistant'), snippets.length)}
@@ -262,18 +240,18 @@ function ArticleAIWorkspace() {
                     <div className="ica-ai-sidebar-summary__heading">
                         <span className="ica-ai-sidebar-summary__mark">✦</span>
                         <div>
-                            <strong>{__('Code Assistant available', 'intelligent-code-assistant')}</strong>
+                            <strong>{__('Code Assistant is active', 'intelligent-code-assistant')}</strong>
                             <p>{sprintfSafe(__('%d code snippets in this article', 'intelligent-code-assistant'), snippets.length)}</p>
                         </div>
                     </div>
                     <div className="ica-ai-sidebar-summary__counts">
-                        {readyCount > 0 && <span className="is-ready">{readyCount} {__('ready', 'intelligent-code-assistant')}</span>}
-                        {incompleteCount > 0 && <span className="is-incomplete">{incompleteCount} {__('incomplete', 'intelligent-code-assistant')}</span>}
-                        {unconfiguredCount > 0 && <span>{unconfiguredCount} {__('not configured', 'intelligent-code-assistant')}</span>}
-                        {linkedCount > 0 && <span>{linkedCount} {__('linked snippets', 'intelligent-code-assistant')}</span>}
+                        {readyCount > 0 && <span className="is-ready">● {readyCount} {__('ready', 'intelligent-code-assistant')}</span>}
+                        {incompleteCount > 0 && <span className="is-incomplete">⚠ {incompleteCount} {__('incomplete', 'intelligent-code-assistant')}</span>}
+                        {unconfiguredCount > 0 && <span>○ {unconfiguredCount} {__('not configured', 'intelligent-code-assistant')}</span>}
+                        {linkedCount > 0 && <span>↗ {linkedCount} {__('linked', 'intelligent-code-assistant')}</span>}
                     </div>
                     <Button variant="primary" onClick={openWorkspace}>
-                        {__('Configure Code Assistant', 'intelligent-code-assistant')}
+                        {__('Open Code Assistant', 'intelligent-code-assistant')}
                     </Button>
                 </div>
             </PluginDocumentSettingPanel>

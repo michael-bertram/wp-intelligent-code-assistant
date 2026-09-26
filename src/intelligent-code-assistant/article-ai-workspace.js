@@ -2,11 +2,11 @@ import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
 import { code } from '@wordpress/icons';
-import { PluginDocumentSettingPanel, PluginPostStatusInfo } from '@wordpress/editor';
+import { PluginDocumentSettingPanel } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
-import { registerPlugin } from '@wordpress/plugins';
-import { PluginToolbarButton } from '@wordpress/edit-post';
+import { registerPlugin, PluginArea } from '@wordpress/plugins';
+import { createPortal } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 
 const BLOCK_NAME = 'wpe/intelligent-code-assistant';
@@ -211,6 +211,34 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
     );
 }
 
+function EditorToolbarEntry({ onClick }) {
+    const [target, setTarget] = useState(null);
+
+    useEffect(() => {
+        const findTarget = () => {
+            const editorHeader = document.querySelector('.editor-header__toolbar, .edit-post-header-toolbar');
+            if (editorHeader) setTarget(editorHeader);
+        };
+        findTarget();
+        const observer = new MutationObserver(findTarget);
+        observer.observe(document.body, { childList: true, subtree: true });
+        return () => observer.disconnect();
+    }, []);
+
+    if (!target) return null;
+
+    return createPortal(
+        <Button
+            className="ica-editor-toolbar-button"
+            icon={code}
+            label={__('Code Assistant', 'intelligent-code-assistant')}
+            showTooltip
+            onClick={onClick}
+        />,
+        target
+    );
+}
+
 function ArticleAIWorkspace() {
     const [open, setOpen] = useState(false);
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
@@ -233,18 +261,12 @@ function ArticleAIWorkspace() {
 
     return (
         <>
-            <PluginToolbarButton
-                icon={code}
-                label={__('Code Assistant', 'intelligent-code-assistant')}
-                onClick={openWorkspace}
-            />
-            <PluginPostStatusInfo className="ica-ai-post-status">
-                <span className="ica-ai-post-status__label">✦ {__('Code Assistant', 'intelligent-code-assistant')}</span>
-                <Button variant="link" onClick={openWorkspace}>
-                    {sprintfSafe(__('%d snippets', 'intelligent-code-assistant'), snippets.length)}
-                </Button>
-            </PluginPostStatusInfo>
-            <PluginDocumentSettingPanel name="ica-article-ai" title={__('Code Assistant', 'intelligent-code-assistant')} initialOpen={true}>
+            <EditorToolbarEntry onClick={openWorkspace} />
+            <PluginDocumentSettingPanel
+                name="ica-article-ai"
+                title={sprintfSafe(__('✦ Code Assistant · %d snippets', 'intelligent-code-assistant'), snippets.length)}
+                initialOpen={true}
+            >
                 <div className="ica-ai-sidebar-summary">
                     <div className="ica-ai-sidebar-summary__heading">
                         <span className="ica-ai-sidebar-summary__mark">✦</span>

@@ -5,7 +5,7 @@ import { code } from '@wordpress/icons';
 import { PluginDocumentSettingPanel } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
-import { registerPlugin, PluginArea } from '@wordpress/plugins';
+import { registerPlugin } from '@wordpress/plugins';
 import { createPortal } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 
@@ -215,10 +215,20 @@ function EditorToolbarEntry({ onClick }) {
     const [target, setTarget] = useState(null);
 
     useEffect(() => {
+        const selectors = [
+            '.editor-header__settings',
+            '.edit-post-header__settings',
+            '.editor-header',
+            '.edit-post-header',
+        ];
+
         const findTarget = () => {
-            const editorHeader = document.querySelector('.editor-header__toolbar, .edit-post-header-toolbar');
-            if (editorHeader) setTarget(editorHeader);
+            const nextTarget = selectors
+                .map((selector) => document.querySelector(selector))
+                .find(Boolean);
+            setTarget((current) => current === nextTarget ? current : nextTarget || null);
         };
+
         findTarget();
         const observer = new MutationObserver(findTarget);
         observer.observe(document.body, { childList: true, subtree: true });
@@ -232,6 +242,7 @@ function EditorToolbarEntry({ onClick }) {
             className="ica-editor-toolbar-button"
             icon={code}
             label={__('Code Assistant', 'intelligent-code-assistant')}
+            aria-label={__('Open Code Assistant', 'intelligent-code-assistant')}
             showTooltip
             onClick={onClick}
         />,

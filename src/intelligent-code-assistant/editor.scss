@@ -608,3 +608,29 @@
     background: #fcf0e3;
     color: #8a4b08;
 }
+
+
+.ica-ai-post-status-row {
+    .ica-ai-post-status-row__label {
+        font-weight: 500;
+    }
+
+    .components-button.is-link {
+        margin-left: auto;
+        text-decoration: none;
+        font-weight: 500;
+    }
+}
+
+.ica-code-assistant-sidebar__inner {
+    padding: 16px;
+
+    .ica-ai-sidebar-summary__counts {
+        margin: 16px 0;
+    }
+
+    > .components-button {
+        width: 100%;
+        justify-content: center;
+    }
+}

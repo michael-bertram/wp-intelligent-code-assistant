@@ -49,7 +49,7 @@ async function generateAssistance(block, tutorialTitle) {
     if (!code.trim()) throw new Error(__('This snippet has no code to analyse.', 'intelligent-code-assistant'));
 
     const attrs = block.attributes || {};
-    const base = {
+    const payload = {
         code,
         language: attrs.codeLanguage || 'code',
         filename: attrs.filename || '',
@@ -58,38 +58,28 @@ async function generateAssistance(block, tutorialTitle) {
         tutorialContext: attrs.tutorialContextOverride || '',
     };
 
-    const explanation = await runAbility('explain-code', base);
-    const lines = code.replace(/\r/g, '').split('\n');
-    const lineExplanations = {};
+    const assistance = await runAbility('generate-reader-assistance', payload);
+    const expectedLines = code.replace(/\r/g, '').split('\n')
+        .reduce((numbers, line, index) => {
+            if (line.trim()) numbers.push(String(index + 1));
+            return numbers;
+        }, []);
+    const lineExplanations = assistance?.lineExplanations || {};
+    const missingLines = expectedLines.filter((lineNumber) => !lineExplanations[lineNumber]?.trim());
 
-    for (let index = 0; index < lines.length; index += 1) {
-        if (!lines[index].trim()) continue;
-        const lineNumber = index + 1;
-        const start = Math.max(0, index - 2);
-        const end = Math.min(lines.length, index + 3);
-        const surroundingCode = lines.slice(start, end).map((line, offset) => {
-            const number = start + offset + 1;
-            return `${number === lineNumber ? '>>>' : '   '} ${number}: ${line}`;
-        }).join('\n');
-
-        const response = await runAbility('explain-line', {
-            ...base,
-            selectedLineNumber: lineNumber,
-            selectedLine: lines[index],
-            surroundingCode,
-        });
-
-        if (response?.explanation?.trim()) {
-            lineExplanations[String(lineNumber)] = response.explanation.trim();
-        }
+    if (missingLines.length) {
+        throw new Error(
+            sprintfSafe(
+                __('Generation was incomplete. Missing explanations for lines: %s', 'intelligent-code-assistant'),
+                missingLines.join(', ')
+            )
+        );
     }
 
-    const knowledgeCheck = await runAbility('check-understanding', base);
-
     return {
-        generatedExplanation: explanation?.explanation?.trim() || '',
+        generatedExplanation: assistance?.explanation?.trim() || '',
         generatedLineExplanations: lineExplanations,
-        generatedKnowledgeCheck: knowledgeCheck || {},
+        generatedKnowledgeCheck: assistance?.knowledgeCheck || {},
         enableAIAssistant: true,
     };
 }
@@ -107,7 +97,7 @@ function Status({ block }) {
 }
 
 function sprintfSafe(template, value) {
-    return template.replace('%d', String(value));
+    return template.replace(/%[ds]/, String(value));
 }
 
 function SnippetCard({ item, tutorialTitle, onChanged }) {

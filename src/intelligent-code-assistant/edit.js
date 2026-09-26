@@ -344,40 +344,12 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         {conversionError && <p style={{ color: '#cc1818', fontSize: '12px', marginTop: '10px' }} role="alert">{conversionError}</p>}
                     </PanelBody>
                 )}
-                <PanelBody title={__('AI Features', 'intelligent-code-assistant')} initialOpen={true}>
+                <PanelBody title={__('AI Assistance', 'intelligent-code-assistant')} initialOpen={true}>
                     <ToggleControl label={__('Enable AI Features', 'intelligent-code-assistant')} checked={enableAIAssistant} onChange={(value) => setAttributes({ enableAIAssistant: value })} />
-                    {enableAIAssistant && (
-                        <>
-                            <Button variant="secondary" isBusy={isAnalyzing} disabled={isAnalyzing || !cleanRawText.trim()} onClick={handleAutoFill} style={{ width: '100%', justifyContent: 'center', marginBottom: '12px' }}>
-                                {isAnalyzing ? <Spinner /> : __('Auto-Fill Code Details', 'intelligent-code-assistant')}
-                            </Button>
-                            {aiError && <p style={{ color: '#cc1818', fontSize: '12px', marginBottom: '12px' }}>{aiError}</p>}
-                            <Button
-                                variant="primary"
-                                isBusy={isGeneratingAssistance}
-                                disabled={isGeneratingAssistance || !cleanRawText.trim()}
-                                onClick={handleGenerateReaderAssistance}
-                                style={{ width: '100%', justifyContent: 'center', marginBottom: '12px' }}
-                            >
-                                {isGeneratingAssistance ? <Spinner /> : __('Generate Reader Assistance', 'intelligent-code-assistant')}
-                            </Button>
-                            <p style={{ fontSize: '12px', marginTop: 0 }}>
-                                {__('Generates and stores the code explanation, line explanations and knowledge check now, so readers do not spend AI credits for these predictable interactions.', 'intelligent-code-assistant')}
-                            </p>
-                            {generatedExplanation && <p style={{ fontSize: '12px' }}><strong>{__('Stored explanation ready.', 'intelligent-code-assistant')}</strong></p>}
-                            {Object.keys(generatedLineExplanations || {}).length > 0 && <p style={{ fontSize: '12px' }}>{Object.keys(generatedLineExplanations).length} {__('line explanations stored.', 'intelligent-code-assistant')}</p>}
-                            {generatedKnowledgeCheck?.question && <p style={{ fontSize: '12px' }}>{__('Knowledge check stored.', 'intelligent-code-assistant')}</p>}
-                            {assistanceError && <p style={{ color: '#cc1818', fontSize: '12px', marginBottom: '12px' }}>{assistanceError}</p>}
-                            <div style={{ marginTop: '16px' }}>
-                                <strong style={{ display: 'block', marginBottom: '6px' }}>{__('Tutorial title', 'intelligent-code-assistant')}</strong>
-                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', marginBottom: '14px' }}>{tutorialTitle || __('No tutorial title detected.', 'intelligent-code-assistant')}</div>
-                                <strong style={{ display: 'block', marginBottom: '6px' }}>{__('Tutorial context', 'intelligent-code-assistant')}</strong>
-                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', whiteSpace: 'pre-wrap', marginBottom: '10px' }}>{effectiveTutorialContext || __('No nearby tutorial context detected.', 'intelligent-code-assistant')}</div>
-                                {!isEditingContext && <Button variant="secondary" onClick={() => setIsEditingContext(true)}>{__('Edit context', 'intelligent-code-assistant')}</Button>}
-                                {isEditingContext && <><TextareaControl label={__('Edit tutorial context', 'intelligent-code-assistant')} value={tutorialContextOverride || derivedTutorialContext} onChange={(value) => setAttributes({ tutorialContextOverride: value })} /><Button variant="primary" onClick={() => setIsEditingContext(false)}>{__('Done', 'intelligent-code-assistant')}</Button></>}
-                            </div>
-                        </>
-                    )}
+                    <p style={{ marginTop: '8px', marginBottom: 0, color: '#50575e' }}>
+                        {__('Reader assistance is now configured from the article-level Code Assistant workspace.', 'intelligent-code-assistant')}
+                    </p>
+                    {generatedExplanation && <p style={{ fontSize: '12px', marginBottom: 0 }}><strong>{__('Reader assistance configured.', 'intelligent-code-assistant')}</strong></p>}
                 </PanelBody>
                 <PanelBody title={__('Code Display Settings', 'intelligent-code-assistant')} initialOpen={false}>
                     <TextControl label={__('Filename / Label', 'intelligent-code-assistant')} value={filename || ''} onChange={(value) => setAttributes({ filename: value })} />

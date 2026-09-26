@@ -383,3 +383,93 @@
     background-color: #292929;
     color: #00e676;
 }
+
+/* ==========================================================================
+   ARTICLE AI WORKSPACE
+   ========================================================================== */
+.ica-ai-workspace {
+    .components-modal__content {
+        padding: 0 32px 32px;
+    }
+}
+
+.ica-ai-workspace__intro {
+    margin: 0 -32px 28px;
+    padding: 28px 32px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f6f7f7;
+
+    h2 {
+        margin: 4px 0 8px;
+        font-size: 24px;
+        line-height: 1.25;
+    }
+
+    p {
+        max-width: 720px;
+        margin: 0;
+        color: #50575e;
+    }
+
+    .ica-ai-workspace__eyebrow {
+        color: #3858e9;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .08em;
+    }
+}
+
+.ica-ai-workspace__grid {
+    display: grid;
+    gap: 16px;
+}
+
+.ica-ai-workspace__card {
+    padding: 20px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+
+    > .components-button.is-primary {
+        margin-top: 18px;
+    }
+}
+
+.ica-ai-workspace__card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+
+    h3 {
+        margin: 0 0 3px;
+        font-size: 16px;
+    }
+
+    p {
+        margin: 0;
+        color: #646970;
+        font-size: 12px;
+    }
+}
+
+.ica-ai-workspace__status {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 18px;
+
+    span {
+        padding: 10px 12px;
+        border-radius: 4px;
+        background: #f6f7f7;
+        font-size: 12px;
+        font-weight: 600;
+    }
+}
+
+@media (max-width: 782px) {
+    .ica-ai-workspace__status {
+        grid-template-columns: 1fr;
+    }
+}

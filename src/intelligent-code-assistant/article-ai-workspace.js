@@ -2,11 +2,10 @@ import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
 import { code } from '@wordpress/icons';
-import { PluginDocumentSettingPanel } from '@wordpress/editor';
+import { PluginDocumentSettingPanel, PluginSidebar } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
-import { createPortal } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 
 const BLOCK_NAME = 'wpe/intelligent-code-assistant';
@@ -211,45 +210,6 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
     );
 }
 
-function EditorToolbarEntry({ onClick }) {
-    const [target, setTarget] = useState(null);
-
-    useEffect(() => {
-        const selectors = [
-            '.editor-header__settings',
-            '.edit-post-header__settings',
-            '.editor-header',
-            '.edit-post-header',
-        ];
-
-        const findTarget = () => {
-            const nextTarget = selectors
-                .map((selector) => document.querySelector(selector))
-                .find(Boolean);
-            setTarget((current) => current === nextTarget ? current : nextTarget || null);
-        };
-
-        findTarget();
-        const observer = new MutationObserver(findTarget);
-        observer.observe(document.body, { childList: true, subtree: true });
-        return () => observer.disconnect();
-    }, []);
-
-    if (!target) return null;
-
-    return createPortal(
-        <Button
-            className="ica-editor-toolbar-button"
-            icon={code}
-            label={__('Code Assistant', 'intelligent-code-assistant')}
-            aria-label={__('Open Code Assistant', 'intelligent-code-assistant')}
-            showTooltip
-            onClick={onClick}
-        />,
-        target
-    );
-}
-
 function ArticleAIWorkspace() {
     const [open, setOpen] = useState(false);
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
@@ -272,7 +232,27 @@ function ArticleAIWorkspace() {
 
     return (
         <>
-            <EditorToolbarEntry onClick={openWorkspace} />
+            <PluginSidebar
+                name="code-assistant-sidebar"
+                title={__('Code Assistant', 'intelligent-code-assistant')}
+                icon={code}
+                isPinnable={true}
+                className="ica-plugin-sidebar"
+            >
+                <div className="ica-plugin-sidebar__content">
+                    <div className="ica-ai-sidebar-summary__heading">
+                        <span className="ica-ai-sidebar-summary__mark">✦</span>
+                        <div>
+                            <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
+                            <p>{sprintfSafe(__('%d code snippets in this article', 'intelligent-code-assistant'), snippets.length)}</p>
+                        </div>
+                    </div>
+                    <p>{__('Generate, review and manage reader assistance for the code examples in this article.', 'intelligent-code-assistant')}</p>
+                    <Button variant="primary" onClick={openWorkspace}>
+                        {__('Open article workspace', 'intelligent-code-assistant')}
+                    </Button>
+                </div>
+            </PluginSidebar>
             <PluginDocumentSettingPanel
                 name="ica-article-ai"
                 title={sprintfSafe(__('✦ Code Assistant · %d snippets', 'intelligent-code-assistant'), snippets.length)}

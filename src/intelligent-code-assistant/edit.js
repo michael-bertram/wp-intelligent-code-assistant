@@ -344,12 +344,35 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         {conversionError && <p style={{ color: '#cc1818', fontSize: '12px', marginTop: '10px' }} role="alert">{conversionError}</p>}
                     </PanelBody>
                 )}
-                <PanelBody title={__('AI Assistance', 'intelligent-code-assistant')} initialOpen={true}>
-                    <ToggleControl label={__('Enable AI Features', 'intelligent-code-assistant')} checked={enableAIAssistant} onChange={(value) => setAttributes({ enableAIAssistant: value })} />
-                    <p style={{ marginTop: '8px', marginBottom: 0, color: '#50575e' }}>
-                        {__('Reader assistance is now configured from the article-level Code Assistant workspace.', 'intelligent-code-assistant')}
-                    </p>
-                    {generatedExplanation && <p style={{ fontSize: '12px', marginBottom: 0 }}><strong>{__('Reader assistance configured.', 'intelligent-code-assistant')}</strong></p>}
+                <PanelBody title={__('✦ Code Assistant', 'intelligent-code-assistant')} initialOpen={true}>
+                    {(() => {
+                        const expectedLines = cleanRawText.replace(/\r/g, '').split('\n').filter((line) => line.trim()).length;
+                        const storedLines = Object.keys(generatedLineExplanations || {}).filter((key) => generatedLineExplanations?.[key]?.trim()).length;
+                        const explanationReady = Boolean(generatedExplanation?.trim());
+                        const knowledgeReady = Boolean(generatedKnowledgeCheck?.question);
+                        const linesReady = expectedLines > 0 && storedLines >= expectedLines;
+                        const ready = explanationReady && linesReady && knowledgeReady;
+                        const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
+                        return (
+                            <div className={`ica-block-ai-card ${ready ? 'is-ready' : (hasAny ? 'is-incomplete' : 'is-unconfigured')}`}>
+                                <div className="ica-block-ai-card__headline">
+                                    <span className="ica-block-ai-card__mark">✦</span>
+                                    <div>
+                                        <strong>{ready ? __('Ready for readers', 'intelligent-code-assistant') : (hasAny ? __('Assistance incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant'))}</strong>
+                                        <p>{__('Manage generated reader assistance from the article Code Assistant.', 'intelligent-code-assistant')}</p>
+                                    </div>
+                                </div>
+                                <div className="ica-block-ai-card__checks">
+                                    <span>{explanationReady ? '✓' : '—'} {__('Explain Code', 'intelligent-code-assistant')}</span>
+                                    <span>{linesReady ? '✓' : (storedLines ? '⚠' : '—')} {__('Explain This Line', 'intelligent-code-assistant')} · {storedLines}/{expectedLines}</span>
+                                    <span>{knowledgeReady ? '✓' : '—'} {__('Knowledge Check', 'intelligent-code-assistant')}</span>
+                                </div>
+                                <p className="ica-block-ai-card__hint">
+                                    {__('Use the Code Assistant icon in the editor toolbar or the Post sidebar to configure this snippet.', 'intelligent-code-assistant')}
+                                </p>
+                            </div>
+                        );
+                    })()}
                 </PanelBody>
                 <PanelBody title={__('Code Display Settings', 'intelligent-code-assistant')} initialOpen={false}>
                     <TextControl label={__('Filename / Label', 'intelligent-code-assistant')} value={filename || ''} onChange={(value) => setAttributes({ filename: value })} />

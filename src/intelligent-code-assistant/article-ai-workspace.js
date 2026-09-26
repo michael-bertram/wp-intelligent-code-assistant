@@ -1,10 +1,12 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
-import { PluginDocumentSettingPanel } from '@wordpress/editor';
+import { code } from '@wordpress/icons';
+import { PluginDocumentSettingPanel, PluginPostStatusInfo } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
+import { PluginToolbarButton } from '@wordpress/edit-post';
 import apiFetch from '@wordpress/api-fetch';
 
 const BLOCK_NAME = 'wpe/intelligent-code-assistant';
@@ -84,14 +86,39 @@ async function generateAssistance(block, tutorialTitle) {
     };
 }
 
-function Status({ block }) {
+function getAssistanceStatus(block) {
     const attrs = block?.attributes || {};
-    const lineCount = Object.keys(attrs.generatedLineExplanations || {}).length;
+    const codeText = getCode(block);
+    const expectedLines = codeText.replace(/\r/g, '').split('\n').filter((line) => line.trim()).length;
+    const storedLines = Object.keys(attrs.generatedLineExplanations || {}).filter(
+        (key) => attrs.generatedLineExplanations?.[key]?.trim()
+    ).length;
+    const explanationReady = Boolean(attrs.generatedExplanation?.trim());
+    const knowledgeReady = Boolean(attrs.generatedKnowledgeCheck?.question);
+    const linesReady = expectedLines > 0 && storedLines >= expectedLines;
+    const ready = explanationReady && linesReady && knowledgeReady;
+    const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
+
+    return {
+        expectedLines,
+        storedLines,
+        explanationReady,
+        knowledgeReady,
+        linesReady,
+        ready,
+        state: ready ? 'ready' : (hasAny ? 'incomplete' : 'not-configured'),
+    };
+}
+
+function Status({ block }) {
+    const status = getAssistanceStatus(block);
     return (
-        <div className="ica-ai-workspace__status">
-            <span>{attrs.generatedExplanation ? '✓' : '—'} {__('Explanation', 'intelligent-code-assistant')}</span>
-            <span>{lineCount ? '✓' : '—'} {sprintfSafe(__('%d line explanations', 'intelligent-code-assistant'), lineCount)}</span>
-            <span>{attrs.generatedKnowledgeCheck?.question ? '✓' : '—'} {__('Knowledge check', 'intelligent-code-assistant')}</span>
+        <div className={`ica-ai-workspace__status is-${status.state}`}>
+            <span>{status.explanationReady ? '✓' : '—'} {__('Explanation', 'intelligent-code-assistant')}</span>
+            <span>
+                {status.linesReady ? '✓' : (status.storedLines ? '⚠' : '—')} {__('Explain This Line', 'intelligent-code-assistant')} · {status.storedLines}/{status.expectedLines}
+            </span>
+            <span>{status.knowledgeReady ? '✓' : '—'} {__('Knowledge check', 'intelligent-code-assistant')}</span>
         </div>
     );
 }
@@ -196,13 +223,46 @@ function ArticleAIWorkspace() {
 
     if (!snippets.length) return null;
 
+    const localStatuses = snippets.map((item) => item.codeExampleId ? null : getAssistanceStatus(item.block));
+    const readyCount = localStatuses.filter((status) => status?.ready).length;
+    const incompleteCount = localStatuses.filter((status) => status?.state === 'incomplete').length;
+    const unconfiguredCount = localStatuses.filter((status) => status?.state === 'not-configured').length;
+    const linkedCount = snippets.filter((item) => item.codeExampleId).length;
+
+    const openWorkspace = () => setOpen(true);
+
     return (
         <>
-            <PluginDocumentSettingPanel name="ica-article-ai" title={__('Code Assistant', 'intelligent-code-assistant')} initialOpen={true}>
-                <p>{sprintfSafe(__('%d code snippets found in this article.', 'intelligent-code-assistant'), snippets.length)}</p>
-                <Button variant="primary" onClick={() => setOpen(true)}>
-                    {__('Configure Code Assistant', 'intelligent-code-assistant')}
+            <PluginToolbarButton
+                icon={code}
+                label={__('Code Assistant', 'intelligent-code-assistant')}
+                onClick={openWorkspace}
+            />
+            <PluginPostStatusInfo className="ica-ai-post-status">
+                <span className="ica-ai-post-status__label">✦ {__('Code Assistant', 'intelligent-code-assistant')}</span>
+                <Button variant="link" onClick={openWorkspace}>
+                    {sprintfSafe(__('%d snippets', 'intelligent-code-assistant'), snippets.length)}
                 </Button>
+            </PluginPostStatusInfo>
+            <PluginDocumentSettingPanel name="ica-article-ai" title={__('Code Assistant', 'intelligent-code-assistant')} initialOpen={true}>
+                <div className="ica-ai-sidebar-summary">
+                    <div className="ica-ai-sidebar-summary__heading">
+                        <span className="ica-ai-sidebar-summary__mark">✦</span>
+                        <div>
+                            <strong>{__('Code Assistant available', 'intelligent-code-assistant')}</strong>
+                            <p>{sprintfSafe(__('%d code snippets in this article', 'intelligent-code-assistant'), snippets.length)}</p>
+                        </div>
+                    </div>
+                    <div className="ica-ai-sidebar-summary__counts">
+                        {readyCount > 0 && <span className="is-ready">{readyCount} {__('ready', 'intelligent-code-assistant')}</span>}
+                        {incompleteCount > 0 && <span className="is-incomplete">{incompleteCount} {__('incomplete', 'intelligent-code-assistant')}</span>}
+                        {unconfiguredCount > 0 && <span>{unconfiguredCount} {__('not configured', 'intelligent-code-assistant')}</span>}
+                        {linkedCount > 0 && <span>{linkedCount} {__('linked snippets', 'intelligent-code-assistant')}</span>}
+                    </div>
+                    <Button variant="primary" onClick={openWorkspace}>
+                        {__('Configure Code Assistant', 'intelligent-code-assistant')}
+                    </Button>
+                </div>
             </PluginDocumentSettingPanel>
             {open && (
                 <Modal

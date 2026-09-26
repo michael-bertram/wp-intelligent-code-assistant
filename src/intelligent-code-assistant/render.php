@@ -137,6 +137,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'lineExplanation'          => '',
 			'lineExplanationError'     => '',
 			'generatedLineExplanations'=> $generated_line_explanations,
+			'generatedLineExplanationsJson' => wp_json_encode( $generated_line_explanations ),
 			'activeCodeText'           => $raw_code_text,
 			'rawCodeText'              => $raw_code_text,
 			'postId'                   => get_the_ID(),
@@ -424,13 +425,13 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 
 							<div class="understanding-check-options" role="group" aria-label="<?php esc_attr_e( 'Choose an answer', 'intelligent-code-assistant' ); ?>">
 								<button type="button" class="understanding-check-option" data-answer-index="0" data-wp-on--click="actions.selectCheckAnswer" data-wp-bind--disabled="context.hasAnsweredCheck" data-wp-class--is-correct="state.isCheckOption0Correct" data-wp-class--is-incorrect="state.isCheckOption0Incorrect">
-									<span data-wp-text="context.checkOption0"></span>
+									<span><?php echo esc_html( $generated_check_options[0] ?? '' ); ?></span>
 								</button>
 								<button type="button" class="understanding-check-option" data-answer-index="1" data-wp-on--click="actions.selectCheckAnswer" data-wp-bind--disabled="context.hasAnsweredCheck" data-wp-class--is-correct="state.isCheckOption1Correct" data-wp-class--is-incorrect="state.isCheckOption1Incorrect">
-									<span data-wp-text="context.checkOption1"></span>
+									<span><?php echo esc_html( $generated_check_options[1] ?? '' ); ?></span>
 								</button>
 								<button type="button" class="understanding-check-option" data-answer-index="2" data-wp-on--click="actions.selectCheckAnswer" data-wp-bind--disabled="context.hasAnsweredCheck" data-wp-class--is-correct="state.isCheckOption2Correct" data-wp-class--is-incorrect="state.isCheckOption2Incorrect">
-									<span data-wp-text="context.checkOption2"></span>
+									<span><?php echo esc_html( $generated_check_options[2] ?? '' ); ?></span>
 								</button>
 							</div>
 

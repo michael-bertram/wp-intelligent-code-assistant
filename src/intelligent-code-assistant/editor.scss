@@ -473,3 +473,151 @@
         grid-template-columns: 1fr;
     }
 }
+
+
+/* Code Assistant editor discovery and status */
+.ica-ai-post-status {
+    .ica-ai-post-status__label {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-weight: 600;
+    }
+
+    .components-button.is-link {
+        margin-left: auto;
+    }
+}
+
+.ica-ai-sidebar-summary {
+    padding: 4px 0;
+
+    &__heading {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+
+        p {
+            margin: 3px 0 0;
+            color: #646970;
+            font-size: 12px;
+        }
+    }
+
+    &__mark {
+        display: grid;
+        place-items: center;
+        flex: 0 0 30px;
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        background: #3858e9;
+        color: #fff;
+        font-size: 17px;
+    }
+
+    &__counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 14px 0;
+
+        span {
+            padding: 4px 7px;
+            border-radius: 999px;
+            background: #f0f0f0;
+            color: #50575e;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .is-ready {
+            background: #edfaef;
+            color: #116329;
+        }
+
+        .is-incomplete {
+            background: #fcf0e3;
+            color: #8a4b08;
+        }
+    }
+
+    > .components-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.ica-block-ai-card {
+    margin: 0 -16px -16px;
+    padding: 16px;
+    border-top: 1px solid #e0e0e0;
+    background: #f6f7f7;
+
+    &__headline {
+        display: flex;
+        gap: 10px;
+
+        p {
+            margin: 3px 0 0;
+            color: #646970;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+    }
+
+    &__mark {
+        display: grid;
+        place-items: center;
+        flex: 0 0 32px;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: #3858e9;
+        color: #fff;
+        font-size: 18px;
+    }
+
+    &__checks {
+        display: grid;
+        gap: 6px;
+        margin-top: 14px;
+
+        span {
+            padding: 7px 9px;
+            border-radius: 4px;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    }
+
+    &__hint {
+        margin: 12px 0 0;
+        color: #646970;
+        font-size: 11px;
+        line-height: 1.4;
+    }
+
+    &.is-ready {
+        border-left: 3px solid #00a32a;
+    }
+
+    &.is-incomplete {
+        border-left: 3px solid #dba617;
+    }
+
+    &.is-unconfigured {
+        border-left: 3px solid #8c8f94;
+    }
+}
+
+.ica-ai-workspace__status.is-ready span {
+    background: #edfaef;
+    color: #116329;
+}
+
+.ica-ai-workspace__status.is-incomplete span:nth-child(2) {
+    background: #fcf0e3;
+    color: #8a4b08;
+}

@@ -247,22 +247,28 @@ const { state } = store('wpe', {
       context.lineExplanationError = '';
 
       let stored = '';
+      let storedLineExplanations = context.generatedLineExplanations || {};
 
-      try {
-        const storedLineExplanations =
-          typeof context.generatedLineExplanationsJson === 'string'
-            ? JSON.parse(context.generatedLineExplanationsJson || '{}')
-            : (context.generatedLineExplanations || {});
-
-        stored = storedLineExplanations?.[String(selectedLineNumber)] || '';
-      } catch (error) {
-        stored =
-          context.generatedLineExplanations?.[String(selectedLineNumber)] || '';
+      if (typeof context.generatedLineExplanationsJson === 'string') {
+        try {
+          storedLineExplanations = JSON.parse(
+            context.generatedLineExplanationsJson || '{}'
+          );
+        } catch (error) {
+          storedLineExplanations = context.generatedLineExplanations || {};
+        }
       }
 
-      context.lineExplanation = stored;
+      const lineKey = String(selectedLineNumber);
+      stored =
+        storedLineExplanations?.[lineKey] ??
+        storedLineExplanations?.[selectedLineNumber] ??
+        '';
 
-      if (!stored) {
+      context.lineExplanation =
+        typeof stored === 'string' ? stored.trim() : '';
+
+      if (!context.lineExplanation) {
         context.lineExplanationError =
           'No stored explanation is available for this line yet.';
       }

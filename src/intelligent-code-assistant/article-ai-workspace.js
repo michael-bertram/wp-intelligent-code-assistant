@@ -1,10 +1,11 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
-import { PluginDocumentSettingPanel } from '@wordpress/editor';
+import { PluginDocumentSettingPanel, PluginPostStatusInfo, PluginSidebar } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
+import { code } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
 
 const BLOCK_NAME = 'wpe/intelligent-code-assistant';
@@ -231,6 +232,38 @@ function ArticleAIWorkspace() {
 
     return (
         <>
+            <PluginPostStatusInfo className="ica-ai-post-status-row">
+                <span className="ica-ai-post-status-row__label">{__('Code Assistant', 'intelligent-code-assistant')}</span>
+                <Button variant="link" onClick={openWorkspace}>
+                    ↗ {linkedCount || snippets.length} {linkedCount ? __('linked', 'intelligent-code-assistant') : __('snippets', 'intelligent-code-assistant')}
+                </Button>
+            </PluginPostStatusInfo>
+            <PluginSidebar
+                name="code-assistant"
+                title={__('Code Assistant', 'intelligent-code-assistant')}
+                icon={code}
+                isPinnable={true}
+                className="ica-code-assistant-sidebar"
+            >
+                <div className="ica-code-assistant-sidebar__inner">
+                    <div className="ica-ai-sidebar-summary__heading">
+                        <span className="ica-ai-sidebar-summary__mark">✦</span>
+                        <div>
+                            <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
+                            <p>{sprintfSafe(__('%d code snippets in this article', 'intelligent-code-assistant'), snippets.length)}</p>
+                        </div>
+                    </div>
+                    <div className="ica-ai-sidebar-summary__counts">
+                        {readyCount > 0 && <span className="is-ready">● {readyCount} {__('ready', 'intelligent-code-assistant')}</span>}
+                        {incompleteCount > 0 && <span className="is-incomplete">⚠ {incompleteCount} {__('incomplete', 'intelligent-code-assistant')}</span>}
+                        {unconfiguredCount > 0 && <span>○ {unconfiguredCount} {__('not configured', 'intelligent-code-assistant')}</span>}
+                        {linkedCount > 0 && <span>↗ {linkedCount} {__('linked', 'intelligent-code-assistant')}</span>}
+                    </div>
+                    <Button variant="primary" onClick={openWorkspace}>
+                        {__('Open Code Assistant', 'intelligent-code-assistant')}
+                    </Button>
+                </div>
+            </PluginSidebar>
             <PluginDocumentSettingPanel
                 name="ica-article-ai"
                 title={sprintfSafe(__('✦ Code Assistant · %d snippets', 'intelligent-code-assistant'), snippets.length)}

@@ -476,16 +476,17 @@
 
 
 /* Code Assistant editor discovery and status */
-.ica-ai-post-status {
-    .ica-ai-post-status__label {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        font-weight: 600;
+.ica-editor-toolbar-button.components-button {
+    margin-left: 4px;
+    border-radius: 4px;
+
+    &:hover,
+    &:focus-visible {
+        background: #f0f0f0;
     }
 
-    .components-button.is-link {
-        margin-left: auto;
+    svg {
+        fill: none;
     }
 }
 

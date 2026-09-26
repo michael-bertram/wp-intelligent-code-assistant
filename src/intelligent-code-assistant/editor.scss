@@ -476,17 +476,18 @@
 
 
 /* Code Assistant editor discovery and status */
-.ica-editor-toolbar-button.components-button {
-    margin-left: 4px;
-    border-radius: 4px;
+.ica-plugin-sidebar__content {
+    padding: 16px;
 
-    &:hover,
-    &:focus-visible {
-        background: #f0f0f0;
+    > p {
+        color: #646970;
+        line-height: 1.5;
     }
 
-    svg {
-        fill: none;
+    > .components-button {
+        width: 100%;
+        justify-content: center;
+        margin-top: 8px;
     }
 }
 

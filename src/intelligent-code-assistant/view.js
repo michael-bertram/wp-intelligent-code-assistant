@@ -246,8 +246,19 @@ const { state } = store('wpe', {
       context.isAnalyzingLine = false;
       context.lineExplanationError = '';
 
-      const stored =
-        context.generatedLineExplanations?.[String(selectedLineNumber)] || '';
+      let stored = '';
+
+      try {
+        const storedLineExplanations =
+          typeof context.generatedLineExplanationsJson === 'string'
+            ? JSON.parse(context.generatedLineExplanationsJson || '{}')
+            : (context.generatedLineExplanations || {});
+
+        stored = storedLineExplanations?.[String(selectedLineNumber)] || '';
+      } catch (error) {
+        stored =
+          context.generatedLineExplanations?.[String(selectedLineNumber)] || '';
+      }
 
       context.lineExplanation = stored;
 

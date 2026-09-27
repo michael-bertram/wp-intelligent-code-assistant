@@ -248,7 +248,13 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
             {loading ? <Spinner /> : canonical && <Status block={canonical} />}
             {error && <Notice status="error" isDismissible={false}>{error}</Notice>}
             <Button variant="primary" disabled={loading || !canonical || generating} isBusy={generating} onClick={handleGenerate}>
-                {generating ? __('Generating…', 'intelligent-code-assistant') : (canonical?.attributes?.generatedExplanation ? __('Regenerate assistance', 'intelligent-code-assistant') : __('Generate assistance', 'intelligent-code-assistant'))}
+                {generating
+                    ? __('Generating…', 'intelligent-code-assistant')
+                    : (canonical && getAssistanceStatus(canonical).state === 'incomplete'
+                        ? __('Complete assistance', 'intelligent-code-assistant')
+                        : (canonical?.attributes?.generatedExplanation
+                            ? __('Regenerate assistance', 'intelligent-code-assistant')
+                            : __('Generate assistance', 'intelligent-code-assistant')))}
             </Button>
         </section>
     );
@@ -273,6 +279,12 @@ function ArticleAIWorkspace() {
     const linkedCount = snippets.filter((item) => item.codeExampleId).length;
 
     const openWorkspace = () => setOpen(true);
+
+    useEffect(() => {
+        const handleOpenWorkspace = () => setOpen(true);
+        window.addEventListener('ica:open-code-assistant', handleOpenWorkspace);
+        return () => window.removeEventListener('ica:open-code-assistant', handleOpenWorkspace);
+    }, []);
 
     return (
         <>

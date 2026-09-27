@@ -1,29 +1,58 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
-import { PluginDocumentSettingPanel, PluginSidebar } from '@wordpress/editor';
+import { PluginDocumentSettingPanel } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
-import { code } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
 
 const BLOCK_NAME = 'wpe/intelligent-code-assistant';
 
 function decodeEntities(value = '') {
-    if (typeof document === 'undefined') return value;
+    if (typeof document === 'undefined') return String(value);
     const textarea = document.createElement('textarea');
-    textarea.innerHTML = value;
-    return textarea.value;
+    let decoded = String(value);
+    for (let pass = 0; pass < 2; pass += 1) {
+        textarea.innerHTML = decoded;
+        const next = textarea.value;
+        if (next === decoded) break;
+        decoded = next;
+    }
+    return decoded;
 }
 
 function normalizeCodeText(value = '') {
-    return decodeEntities(String(value))
+    const raw = String(value)
         .replace(/<br\s*\/?\s*>/gi, '\n')
-        .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
+        .replace(/<\/p>\s*<p[^>]*>/gi, '\n');
+    return decodeEntities(raw)
         .replace(/<[^>]+>/g, '')
         .replace(/\u00a0/g, ' ')
         .replace(/\r/g, '');
+}
+
+function getInnerBlock(block, name) {
+    return (block?.innerBlocks || []).find((item) => item.name === name) || null;
+}
+
+function extractCanonicalSnippet(block) {
+    const attrs = block?.attributes || {};
+    const content = getInnerBlock(block, 'wpe/code-content');
+    const header = getInnerBlock(block, 'wpe/code-header');
+    const rawCode = content?.attributes?.code
+        ?? content?.attributes?.content
+        ?? attrs.code
+        ?? attrs.content
+        ?? '';
+
+    return {
+        block,
+        code: normalizeCodeText(rawCode),
+        title: decodeEntities(header?.attributes?.title || attrs.title || attrs.filename || __('Code snippet', 'intelligent-code-assistant')),
+        language: attrs.codeLanguage || content?.attributes?.codeLanguage || '',
+        filename: attrs.filename || '',
+    };
 }
 
 function flattenBlocks(blocks, result = []) {
@@ -35,13 +64,11 @@ function flattenBlocks(blocks, result = []) {
 }
 
 function getCode(block) {
-    const content = (block?.innerBlocks || []).find((item) => item.name === 'wpe/code-content');
-    return normalizeCodeText(content?.attributes?.code ?? content?.attributes?.content ?? '');
+    return extractCanonicalSnippet(block).code;
 }
 
 function getTitle(block) {
-    const header = (block?.innerBlocks || []).find((item) => item.name === 'wpe/code-header');
-    return header?.attributes?.title || block?.attributes?.filename || __('Code snippet', 'intelligent-code-assistant');
+    return extractCanonicalSnippet(block).title;
 }
 
 async function runAbility(slug, data) {
@@ -66,11 +93,12 @@ async function generateAssistance(block, tutorialTitle) {
     if (!code.trim()) throw new Error(__('This snippet has no code to analyse.', 'intelligent-code-assistant'));
 
     const attrs = block.attributes || {};
+    const snippet = extractCanonicalSnippet(block);
     const payload = {
         code,
-        language: attrs.codeLanguage || 'code',
-        filename: attrs.filename || '',
-        title: getTitle(block),
+        language: snippet.language || 'code',
+        filename: snippet.filename,
+        title: snippet.title,
         tutorialTitle,
         tutorialContext: attrs.tutorialContextOverride || '',
     };
@@ -210,8 +238,8 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         <section className="ica-ai-workspace__card">
             <div className="ica-ai-workspace__card-heading">
                 <div>
-                    <h3>{canonical ? getTitle(canonical) : __('Code snippet', 'intelligent-code-assistant')}</h3>
-                    <p>{canonical?.attributes?.codeLanguage || __('Language not set', 'intelligent-code-assistant')}</p>
+                    <h3>{canonical ? extractCanonicalSnippet(canonical).title : __('Code snippet', 'intelligent-code-assistant')}</h3>
+                    <p>{canonical ? (extractCanonicalSnippet(canonical).language || __('Language not set', 'intelligent-code-assistant')) : __('Language not set', 'intelligent-code-assistant')}</p>
                 </div>
                 <Button variant="tertiary" onClick={() => selectBlock(item.clientId)}>
                     {__('Show in article', 'intelligent-code-assistant')}
@@ -248,21 +276,6 @@ function ArticleAIWorkspace() {
 
     return (
         <>
-            <PluginSidebar
-                name="ica-code-assistant"
-                title={__('Code Assistant', 'intelligent-code-assistant')}
-                icon={code}
-                isPinnable
-                className="ica-code-assistant-plugin-sidebar"
-            >
-                <div className="ica-code-assistant-plugin-sidebar__content">
-                    <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
-                    <p>{sprintfSafe(__('%d code snippets in this article', 'intelligent-code-assistant'), snippets.length)}</p>
-                    <Button variant="primary" onClick={openWorkspace}>
-                        {__('Open Code Assistant', 'intelligent-code-assistant')}
-                    </Button>
-                </div>
-            </PluginSidebar>
             <PluginDocumentSettingPanel
                 name="ica-article-ai"
                 title={sprintfSafe(__('✦ Code Assistant · %d snippets', 'intelligent-code-assistant'), snippets.length)}

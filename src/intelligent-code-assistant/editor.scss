@@ -669,3 +669,56 @@
         justify-content: center;
     }
 }
+
+
+/* Current post-editor chrome integrations. These use stable core wrapper classes
+ * because the corresponding SlotFills are not exposed by every editor shell. */
+.ica-editor-summary-row {
+    appearance: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover .ica-editor-summary-row__value,
+    &:focus-visible .ica-editor-summary-row__value {
+        color: var(--wp-admin-theme-color, #3858e9);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+        outline-offset: 2px;
+    }
+}
+
+.ica-editor-summary-row__label {
+    font-weight: 400;
+}
+
+.ica-editor-summary-row__value {
+    color: var(--wp-admin-theme-color, #3858e9);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ica-editor-toolbar-button.components-button {
+    min-width: 40px;
+    height: 40px;
+    padding: 8px;
+    justify-content: center;
+}
+
+.ica-editor-toolbar-button__mark {
+    display: block;
+    font-size: 20px;
+    line-height: 1;
+}

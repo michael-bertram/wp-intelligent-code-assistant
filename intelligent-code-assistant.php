@@ -798,6 +798,172 @@ add_action( 'rest_api_init', function() {
 	) );
 } );
 
+
+/* ==========================================================================
+   AUTHOR-TIME READER ASSISTANCE BATCHES
+   Keep large snippets below provider timeouts by generating overview content
+   separately from bounded groups of line explanations.
+   ========================================================================== */
+
+if ( ! function_exists( 'intelligent_code_assistant_prepare_generation_code' ) ) {
+	function intelligent_code_assistant_prepare_generation_code( array $args ) {
+		$raw_code = isset( $args['code'] ) && is_string( $args['code'] ) ? $args['code'] : '';
+		return wp_unslash( trim( html_entity_decode( $raw_code, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) );
+	}
+}
+
+if ( ! function_exists( 'intelligent_code_assistant_execute_generate_reader_overview' ) ) {
+	function intelligent_code_assistant_execute_generate_reader_overview( array $args ) {
+		$code = intelligent_code_assistant_prepare_generation_code( $args );
+		if ( '' === $code ) return new WP_Error( 'empty_code', __( 'Code snippet cannot be empty.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+		if ( ! function_exists( 'wp_ai_client_prompt' ) ) return new WP_Error( 'ai_client_unavailable', __( 'The WordPress AI Client is not available.', 'intelligent-code-assistant' ), array( 'status' => 503 ) );
+
+		$language = isset( $args['language'] ) ? sanitize_text_field( $args['language'] ) : 'code';
+		$context = intelligent_code_assistant_build_tutorial_context_prompt( $args );
+		$schema = array(
+			'type' => 'object',
+			'properties' => array(
+				'explanation' => array( 'type' => 'string' ),
+				'knowledgeCheck' => array(
+					'type' => 'object',
+					'properties' => array(
+						'question' => array( 'type' => 'string' ),
+						'options' => array( 'type' => 'array', 'minItems' => 3, 'maxItems' => 3, 'items' => array( 'type' => 'string' ) ),
+						'correctAnswer' => array( 'type' => 'integer', 'minimum' => 0, 'maximum' => 2 ),
+						'explanation' => array( 'type' => 'string' ),
+					),
+					'required' => array( 'question', 'options', 'correctAnswer', 'explanation' ),
+					'additionalProperties' => false,
+				),
+			),
+			'required' => array( 'explanation', 'knowledgeCheck' ),
+			'additionalProperties' => false,
+		);
+		$prompt = "Prepare stored reader assistance for this tutorial code.\n\n{$context}\n\nLanguage: {$language}\n\nCode:\n{$code}\n\nReturn JSON with: (1) explanation: exactly three concise bullet points explaining the complete code; (2) knowledgeCheck: one multiple-choice question with exactly three options, zero-based correctAnswer, and a concise explanation. Treat the code as authoritative and do not invent article facts.";
+
+		try {
+			$result = wp_ai_client_prompt( $prompt )->as_json_response( $schema )->generate_text();
+			if ( is_wp_error( $result ) ) return $result;
+			$data = is_string( $result ) ? json_decode( $result, true ) : null;
+			$check = is_array( $data ) && isset( $data['knowledgeCheck'] ) ? $data['knowledgeCheck'] : null;
+			if ( ! is_array( $data ) || empty( $data['explanation'] ) || ! is_array( $check ) || empty( $check['question'] ) || ! isset( $check['options'], $check['correctAnswer'], $check['explanation'] ) || ! is_array( $check['options'] ) || 3 !== count( $check['options'] ) ) {
+				return new WP_Error( 'ai_invalid_response', __( 'The AI provider returned invalid reader assistance.', 'intelligent-code-assistant' ), array( 'status' => 502 ) );
+			}
+			return array(
+				'explanation' => sanitize_textarea_field( $data['explanation'] ),
+				'knowledgeCheck' => array(
+					'question' => sanitize_text_field( $check['question'] ),
+					'options' => array_values( array_map( 'sanitize_text_field', $check['options'] ) ),
+					'correctAnswer' => max( 0, min( 2, (int) $check['correctAnswer'] ) ),
+					'explanation' => sanitize_textarea_field( $check['explanation'] ),
+				),
+			);
+		} catch ( Throwable $e ) {
+			return new WP_Error( 'ai_generation_exception', __( 'Unable to generate the reader overview right now.', 'intelligent-code-assistant' ), array( 'status' => 500 ) );
+		}
+	}
+}
+
+if ( ! function_exists( 'intelligent_code_assistant_execute_generate_line_batch' ) ) {
+	function intelligent_code_assistant_execute_generate_line_batch( array $args ) {
+		$code = intelligent_code_assistant_prepare_generation_code( $args );
+		$requested = isset( $args['lineNumbers'] ) && is_array( $args['lineNumbers'] ) ? array_values( array_unique( array_map( 'intval', $args['lineNumbers'] ) ) ) : array();
+		$requested = array_values( array_filter( $requested, function( $line ) { return $line > 0; } ) );
+		if ( '' === $code || empty( $requested ) ) return new WP_Error( 'invalid_line_batch', __( 'Code and line numbers are required.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+		if ( count( $requested ) > 40 ) return new WP_Error( 'line_batch_too_large', __( 'A maximum of 40 line explanations can be generated at once.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+		if ( ! function_exists( 'wp_ai_client_prompt' ) ) return new WP_Error( 'ai_client_unavailable', __( 'The WordPress AI Client is not available.', 'intelligent-code-assistant' ), array( 'status' => 503 ) );
+
+		$lines = preg_split( '/\R/', $code );
+		$selected = array();
+		foreach ( $requested as $line_number ) {
+			if ( ! isset( $lines[ $line_number - 1 ] ) || '' === trim( $lines[ $line_number - 1 ] ) ) continue;
+			$selected[] = $line_number . ': ' . $lines[ $line_number - 1 ];
+		}
+		if ( empty( $selected ) ) return new WP_Error( 'invalid_line_batch', __( 'None of the requested lines contain code.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+
+		$language = isset( $args['language'] ) ? sanitize_text_field( $args['language'] ) : 'code';
+		$context = intelligent_code_assistant_build_tutorial_context_prompt( $args );
+		$schema = array( 'type' => 'object', 'additionalProperties' => array( 'type' => 'string' ) );
+		$line_list = implode( "\n", $selected );
+		$numbers = implode( ', ', $requested );
+		$prompt = "Explain only the requested non-empty lines from this tutorial code.\n\n{$context}\n\nLanguage: {$language}\n\nComplete code for context:\n{$code}\n\nRequested lines:\n{$line_list}\n\nReturn one JSON object keyed by one-based line number as a string. Required keys: {$numbers}. Each value must explain that exact line in context in no more than 60 words. Include every requested line and no other keys.";
+
+		try {
+			$result = wp_ai_client_prompt( $prompt )->as_json_response( $schema )->generate_text();
+			if ( is_wp_error( $result ) ) return $result;
+			$data = is_string( $result ) ? json_decode( $result, true ) : null;
+			if ( ! is_array( $data ) ) return new WP_Error( 'ai_invalid_response', __( 'The AI provider returned invalid line explanations.', 'intelligent-code-assistant' ), array( 'status' => 502 ) );
+			$output = array();
+			foreach ( $requested as $line_number ) {
+				$key = (string) $line_number;
+				$value = isset( $data[ $key ] ) && is_string( $data[ $key ] ) ? trim( $data[ $key ] ) : '';
+				if ( '' === $value ) return new WP_Error( 'ai_incomplete_line_explanations', sprintf( __( 'Line %s did not receive an explanation.', 'intelligent-code-assistant' ), $key ), array( 'status' => 502 ) );
+				$output[ $key ] = sanitize_textarea_field( $value );
+			}
+			return array( 'lineExplanations' => $output );
+		} catch ( Throwable $e ) {
+			return new WP_Error( 'ai_generation_exception', __( 'Unable to generate this line explanation batch right now.', 'intelligent-code-assistant' ), array( 'status' => 500 ) );
+		}
+	}
+}
+
+add_action( 'wp_abilities_api_init', function() {
+	if ( ! function_exists( 'wp_register_ability' ) ) return;
+	$common_input = array(
+		'type' => 'object',
+		'properties' => array(
+			'code' => array( 'type' => 'string', 'minLength' => 1 ),
+			'language' => array( 'type' => 'string' ),
+			'filename' => array( 'type' => 'string' ),
+			'title' => array( 'type' => 'string' ),
+			'tutorialTitle' => array( 'type' => 'string' ),
+			'tutorialContext' => array( 'type' => 'string' ),
+		),
+		'required' => array( 'code' ),
+		'additionalProperties' => false,
+	);
+	wp_register_ability( 'intelligent-code-assistant/generate-reader-overview', array(
+		'category' => 'intelligent-code-assistant-tools', 'label' => __( 'Generate Reader Overview', 'intelligent-code-assistant' ),
+		'description' => __( 'Generates the stored explanation and knowledge check.', 'intelligent-code-assistant' ),
+		'show_in_rest' => true, 'show_in_mcp' => true,
+		'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
+		'input_schema' => $common_input,
+		'output_schema' => array( 'type' => 'object', 'properties' => array(
+			'explanation' => array( 'type' => 'string' ),
+			'knowledgeCheck' => array( 'type' => 'object' ),
+		), 'required' => array( 'explanation', 'knowledgeCheck' ) ),
+		'execute_callback' => 'intelligent_code_assistant_execute_generate_reader_overview',
+	) );
+	$batch_input = $common_input;
+	$batch_input['properties']['lineNumbers'] = array( 'type' => 'array', 'minItems' => 1, 'maxItems' => 40, 'items' => array( 'type' => 'integer', 'minimum' => 1 ) );
+	$batch_input['required'][] = 'lineNumbers';
+	wp_register_ability( 'intelligent-code-assistant/generate-line-explanations-batch', array(
+		'category' => 'intelligent-code-assistant-tools', 'label' => __( 'Generate Line Explanation Batch', 'intelligent-code-assistant' ),
+		'description' => __( 'Generates stored explanations for up to 40 requested source lines.', 'intelligent-code-assistant' ),
+		'show_in_rest' => true, 'show_in_mcp' => true,
+		'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
+		'input_schema' => $batch_input,
+		'output_schema' => array( 'type' => 'object', 'properties' => array( 'lineExplanations' => array( 'type' => 'object', 'additionalProperties' => array( 'type' => 'string' ) ) ), 'required' => array( 'lineExplanations' ) ),
+		'execute_callback' => 'intelligent_code_assistant_execute_generate_line_batch',
+	) );
+} );
+
+add_action( 'rest_api_init', function() {
+	foreach ( array(
+		'generate-reader-overview' => 'intelligent_code_assistant_execute_generate_reader_overview',
+		'generate-line-explanations-batch' => 'intelligent_code_assistant_execute_generate_line_batch',
+	) as $route => $callback ) {
+		register_rest_route( 'intelligent-code-assistant/v1', '/' . $route, array(
+			'methods' => 'POST',
+			'callback' => function( WP_REST_Request $request ) use ( $callback ) {
+				$params = $request->get_json_params();
+				return call_user_func( $callback, is_array( $params ) ? $params : array() );
+			},
+			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
+		) );
+	}
+} );
+
 /* ========================================================================== 
    ABILITY - ASK ABOUT THIS CODE
    ========================================================================== */

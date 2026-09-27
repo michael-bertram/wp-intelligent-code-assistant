@@ -3,7 +3,7 @@ import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
 import { PluginDocumentSettingPanel } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useMemo, useState } from '@wordpress/element';
+import { useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
 import apiFetch from '@wordpress/api-fetch';
 

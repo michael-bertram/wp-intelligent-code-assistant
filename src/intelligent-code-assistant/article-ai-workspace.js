@@ -1,13 +1,30 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
-import { PluginDocumentSettingPanel } from '@wordpress/editor';
+import { PluginDocumentSettingPanel, PluginSidebar } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
+import { code } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
 
 const BLOCK_NAME = 'wpe/intelligent-code-assistant';
+
+function decodeEntities(value = '') {
+    if (typeof document === 'undefined') return value;
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = value;
+    return textarea.value;
+}
+
+function normalizeCodeText(value = '') {
+    return decodeEntities(String(value))
+        .replace(/<br\s*\/?\s*>/gi, '\n')
+        .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\r/g, '');
+}
 
 function flattenBlocks(blocks, result = []) {
     (blocks || []).forEach((block) => {
@@ -19,7 +36,7 @@ function flattenBlocks(blocks, result = []) {
 
 function getCode(block) {
     const content = (block?.innerBlocks || []).find((item) => item.name === 'wpe/code-content');
-    return content?.attributes?.code ?? content?.attributes?.content ?? '';
+    return normalizeCodeText(content?.attributes?.code ?? content?.attributes?.content ?? '');
 }
 
 function getTitle(block) {
@@ -231,6 +248,21 @@ function ArticleAIWorkspace() {
 
     return (
         <>
+            <PluginSidebar
+                name="ica-code-assistant"
+                title={__('Code Assistant', 'intelligent-code-assistant')}
+                icon={code}
+                isPinnable
+                className="ica-code-assistant-plugin-sidebar"
+            >
+                <div className="ica-code-assistant-plugin-sidebar__content">
+                    <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
+                    <p>{sprintfSafe(__('%d code snippets in this article', 'intelligent-code-assistant'), snippets.length)}</p>
+                    <Button variant="primary" onClick={openWorkspace}>
+                        {__('Open Code Assistant', 'intelligent-code-assistant')}
+                    </Button>
+                </div>
+            </PluginSidebar>
             <PluginDocumentSettingPanel
                 name="ica-article-ai"
                 title={sprintfSafe(__('✦ Code Assistant · %d snippets', 'intelligent-code-assistant'), snippets.length)}
@@ -264,7 +296,7 @@ function ArticleAIWorkspace() {
                 >
                     <header className="ica-ai-workspace__intro">
                         <p className="ica-ai-workspace__eyebrow">{__('ARTICLE AI WORKSPACE', 'intelligent-code-assistant')}</p>
-                        <h2>{tutorialTitle || __('Untitled article', 'intelligent-code-assistant')}</h2>
+                        <h2>{decodeEntities(tutorialTitle) || __('Untitled article', 'intelligent-code-assistant')}</h2>
                         <p>{__('Generate and review reader assistance for every Code Snippet in this article from one place.', 'intelligent-code-assistant')}</p>
                     </header>
                     <div className="ica-ai-workspace__grid">

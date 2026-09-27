@@ -219,6 +219,8 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         setCanonical(canonicalBlock);
     };
 
+    const assistanceStatus = canonical ? getAssistanceStatus(canonical) : null;
+
     const handleGenerate = async () => {
         if (!canonical || generating) return;
         setGenerating(true);
@@ -250,7 +252,7 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
             <Button variant="primary" disabled={loading || !canonical || generating} isBusy={generating} onClick={handleGenerate}>
                 {generating
                     ? __('Generating…', 'intelligent-code-assistant')
-                    : (canonical && getAssistanceStatus(canonical).state === 'incomplete'
+                    : (assistanceStatus && !assistanceStatus.ready && (assistanceStatus.explanationReady || assistanceStatus.storedLines > 0 || assistanceStatus.knowledgeReady)
                         ? __('Complete assistance', 'intelligent-code-assistant')
                         : (canonical?.attributes?.generatedExplanation
                             ? __('Regenerate assistance', 'intelligent-code-assistant')

@@ -302,10 +302,6 @@ function ArticleAIWorkspace() {
         return () => window.removeEventListener('ica:open-code-assistant', handleOpenWorkspace);
     }, []);
 
-;
-
-    if (!snippets.length) return null;
-
     const localStatuses = snippets.map((item) => item.codeExampleId ? null : getAssistanceStatus(item.block));
     const readyCount = localStatuses.filter((status) => status?.ready).length;
     const incompleteCount = localStatuses.filter((status) => status?.state === 'incomplete').length;
@@ -358,6 +354,8 @@ function ArticleAIWorkspace() {
             document.querySelector('.ica-editor-toolbar-button')?.remove();
         };
     }, [linkedCount, snippets.length]);
+
+    if (!snippets.length) return null;
 
     return (
         <>

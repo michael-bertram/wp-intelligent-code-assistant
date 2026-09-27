@@ -270,6 +270,12 @@ function ArticleAIWorkspace() {
         codeExampleId: Number(block.attributes?.codeExampleId || 0),
     })), [blocks]);
 
+    useEffect(() => {
+        const handleOpenWorkspace = () => setOpen(true);
+        window.addEventListener('ica:open-code-assistant', handleOpenWorkspace);
+        return () => window.removeEventListener('ica:open-code-assistant', handleOpenWorkspace);
+    }, []);
+
     if (!snippets.length) return null;
 
     const localStatuses = snippets.map((item) => item.codeExampleId ? null : getAssistanceStatus(item.block));
@@ -279,12 +285,6 @@ function ArticleAIWorkspace() {
     const linkedCount = snippets.filter((item) => item.codeExampleId).length;
 
     const openWorkspace = () => setOpen(true);
-
-    useEffect(() => {
-        const handleOpenWorkspace = () => setOpen(true);
-        window.addEventListener('ica:open-code-assistant', handleOpenWorkspace);
-        return () => window.removeEventListener('ica:open-code-assistant', handleOpenWorkspace);
-    }, []);
 
     return (
         <>

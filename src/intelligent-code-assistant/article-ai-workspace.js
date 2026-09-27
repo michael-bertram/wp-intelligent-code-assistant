@@ -1,10 +1,11 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
-import { PluginDocumentSettingPanel } from '@wordpress/editor';
+import { PluginDocumentSettingPanel, PluginPostStatusInfo, PluginSidebar } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
+import { code } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
 
 const BLOCK_NAME = 'wpe/intelligent-code-assistant';
@@ -302,6 +303,15 @@ function ArticleAIWorkspace() {
         return () => window.removeEventListener('ica:open-code-assistant', handleOpenWorkspace);
     }, []);
 
+    useEffect(() => {
+        const editPost = wp?.data?.select?.('core/edit-post');
+        const dispatchEditPost = wp?.data?.dispatch?.('core/edit-post');
+        const itemName = 'ica-article-ai-workspace/ica-code-assistant';
+        if (editPost?.isPluginItemPinned && dispatchEditPost?.togglePinnedPluginItem && !editPost.isPluginItemPinned(itemName)) {
+            dispatchEditPost.togglePinnedPluginItem(itemName);
+        }
+    }, []);
+
     if (!snippets.length) return null;
 
     const localStatuses = snippets.map((item) => item.codeExampleId ? null : getAssistanceStatus(item.block));
@@ -314,6 +324,39 @@ function ArticleAIWorkspace() {
 
     return (
         <>
+            <PluginPostStatusInfo className="ica-post-status-info">
+                <span className="ica-post-status-info__label">{__('Code Assistant', 'intelligent-code-assistant')}</span>
+                <Button
+                    variant="link"
+                    className="ica-post-status-info__value"
+                    onClick={openWorkspace}
+                >
+                    ↗ {linkedCount || snippets.length} {linkedCount ? __('linked', 'intelligent-code-assistant') : __('snippets', 'intelligent-code-assistant')}
+                </Button>
+            </PluginPostStatusInfo>
+
+            <PluginSidebar
+                name="ica-code-assistant"
+                title={__('Code Assistant', 'intelligent-code-assistant')}
+                icon={code}
+                isPinnable
+                className="ica-code-assistant-toolbar-sidebar"
+            >
+                <div className="ica-code-assistant-toolbar-sidebar__content">
+                    <div className="ica-ai-sidebar-summary__heading">
+                        <span className="ica-ai-sidebar-summary__mark">✦</span>
+                        <div>
+                            <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
+                            <p>{sprintfSafe(__('%d code snippets in this article', 'intelligent-code-assistant'), snippets.length)}</p>
+                        </div>
+                    </div>
+                    {linkedCount > 0 && <span className="ica-code-assistant-toolbar-sidebar__linked">↗ {linkedCount} {__('linked', 'intelligent-code-assistant')}</span>}
+                    <Button variant="primary" onClick={openWorkspace}>
+                        {__('Open Code Assistant', 'intelligent-code-assistant')}
+                    </Button>
+                </div>
+            </PluginSidebar>
+
             <PluginDocumentSettingPanel
                 name="ica-article-ai"
                 title={sprintfSafe(__('✦ Code Assistant · %d snippets', 'intelligent-code-assistant'), snippets.length)}

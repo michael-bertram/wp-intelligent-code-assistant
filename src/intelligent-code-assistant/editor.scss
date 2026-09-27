@@ -611,26 +611,6 @@
 
 
 
-.ica-code-assistant-plugin-sidebar__content {
-    padding: 16px;
-
-    > strong {
-        display: block;
-        margin-bottom: 4px;
-        font-size: 15px;
-    }
-
-    > p {
-        margin: 0 0 16px;
-        color: #646970;
-    }
-
-    > .components-button {
-        width: 100%;
-        justify-content: center;
-    }
-}
-
 .ica-ai-workspace .components-modal__content {
     max-height: calc(100vh - 96px);
     overflow-y: auto;

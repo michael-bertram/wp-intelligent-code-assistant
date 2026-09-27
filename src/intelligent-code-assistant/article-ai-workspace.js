@@ -88,7 +88,7 @@ async function runAbility(slug, data) {
     }
 }
 
-async function generateAssistance(block, tutorialTitle) {
+async function generateAssistance(block, tutorialTitle, onProgress) {
     const code = getCode(block);
     if (!code.trim()) throw new Error(__('This snippet has no code to analyse.', 'intelligent-code-assistant'));
 
@@ -102,29 +102,47 @@ async function generateAssistance(block, tutorialTitle) {
         tutorialTitle,
         tutorialContext: attrs.tutorialContextOverride || '',
     };
-
-    const assistance = await runAbility('generate-reader-assistance', payload);
     const expectedLines = code.replace(/\r/g, '').split('\n')
         .reduce((numbers, line, index) => {
-            if (line.trim()) numbers.push(String(index + 1));
+            if (line.trim()) numbers.push(index + 1);
             return numbers;
         }, []);
-    const lineExplanations = assistance?.lineExplanations || {};
-    const missingLines = expectedLines.filter((lineNumber) => !lineExplanations[lineNumber]?.trim());
 
+    onProgress?.(__('Generating explanation and knowledge check…', 'intelligent-code-assistant'));
+    const overview = await runAbility('generate-reader-overview', payload);
+
+    const lineExplanations = {};
+    const batchSize = 40;
+    for (let offset = 0; offset < expectedLines.length; offset += batchSize) {
+        const batch = expectedLines.slice(offset, offset + batchSize);
+        const first = offset + 1;
+        const last = Math.min(offset + batch.length, expectedLines.length);
+        onProgress?.(
+            sprintfSafe(
+                __('Generating line explanations %s of %s…', 'intelligent-code-assistant'),
+                `${first}–${last}|${expectedLines.length}`
+            )
+        );
+        const result = await runAbility('generate-line-explanations-batch', {
+            ...payload,
+            lineNumbers: batch,
+        });
+        Object.assign(lineExplanations, result?.lineExplanations || {});
+    }
+
+    const missingLines = expectedLines
+        .map(String)
+        .filter((lineNumber) => !lineExplanations[lineNumber]?.trim());
     if (missingLines.length) {
         throw new Error(
-            sprintfSafe(
-                __('Generation was incomplete. Missing explanations for lines: %s', 'intelligent-code-assistant'),
-                missingLines.join(', ')
-            )
+            __('Generation was incomplete. Some line explanations are missing.', 'intelligent-code-assistant')
         );
     }
 
     return {
-        generatedExplanation: assistance?.explanation?.trim() || '',
+        generatedExplanation: overview?.explanation?.trim() || '',
         generatedLineExplanations: lineExplanations,
-        generatedKnowledgeCheck: assistance?.knowledgeCheck || {},
+        generatedKnowledgeCheck: overview?.knowledgeCheck || {},
         enableAIAssistant: true,
     };
 }
@@ -167,7 +185,9 @@ function Status({ block }) {
 }
 
 function sprintfSafe(template, value) {
-    return template.replace(/%[ds]/, String(value));
+    const values = String(value).split('|');
+    let index = 0;
+    return template.replace(/%[ds]/g, () => String(values[index++] ?? values[values.length - 1] ?? ''));
 }
 
 function SnippetCard({ item, tutorialTitle, onChanged }) {
@@ -175,6 +195,7 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
     const [loading, setLoading] = useState(Boolean(item.codeExampleId));
     const [generating, setGenerating] = useState(false);
     const [error, setError] = useState('');
+    const [progress, setProgress] = useState('');
     const { updateBlockAttributes, selectBlock } = useDispatch('core/block-editor');
 
     useEffect(() => {
@@ -225,14 +246,16 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         if (!canonical || generating) return;
         setGenerating(true);
         setError('');
+        setProgress(__('Preparing assistance…', 'intelligent-code-assistant'));
         try {
-            const generated = await generateAssistance(canonical, tutorialTitle);
+            const generated = await generateAssistance(canonical, tutorialTitle, setProgress);
             await saveGenerated(generated);
             onChanged?.();
         } catch (err) {
             setError(err?.message || __('Unable to generate reader assistance.', 'intelligent-code-assistant'));
         } finally {
             setGenerating(false);
+            setProgress('');
         }
     };
 
@@ -249,6 +272,7 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
             </div>
             {loading ? <Spinner /> : canonical && <Status block={canonical} />}
             {error && <Notice status="error" isDismissible={false}>{error}</Notice>}
+            {generating && progress && <p className="ica-ai-workspace__progress" role="status" aria-live="polite">{progress}</p>}
             <Button variant="primary" disabled={loading || !canonical || generating} isBusy={generating} onClick={handleGenerate}>
                 {generating
                     ? __('Generating…', 'intelligent-code-assistant')

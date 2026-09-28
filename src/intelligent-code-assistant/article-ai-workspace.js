@@ -1,7 +1,7 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
-import { Button, Modal, Notice, Spinner } from '@wordpress/components';
-import { PluginDocumentSettingPanel } from '@wordpress/editor';
+import { Button, Dropdown, Modal, Notice, Spinner } from '@wordpress/components';
+import { PluginDocumentSettingPanel, PluginHeaderEnd } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
@@ -363,9 +363,8 @@ function ArticleAIWorkspace() {
 
 
 /**
- * The editor header is owned by Gutenberg's React tree. Never insert a node
- * into .editor-header__settings: doing so can break React's insertBefore.
- * This independent control lives under document.body instead.
+ * Gutenberg owns the editor header. PluginHeaderEnd is its supported SlotFill,
+ * so the button participates in the toolbar layout rather than floating over it.
  */
 function CodeAssistantToolbar() {
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
@@ -375,7 +374,6 @@ function CodeAssistantToolbar() {
     })), [blocks]);
     const [linked, setLinked] = useState({});
     const [loading, setLoading] = useState(true);
-    const [open, setOpen] = useState(false);
     const linkedIds = useMemo(() => [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))], [snippets]);
 
     useEffect(() => {
@@ -408,52 +406,54 @@ function CodeAssistantToolbar() {
     const lineCount = statuses.reduce((sum, item) => sum + (item?.expectedLines || 0), 0);
     const storedLines = statuses.reduce((sum, item) => sum + (item?.storedLines || 0), 0);
 
-    useEffect(() => {
-        if (!snippets.length) return undefined;
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'components-button ica-floating-toolbar-button';
-        button.setAttribute('aria-label', __('Code Assistant overview', 'intelligent-code-assistant'));
-        button.setAttribute('aria-expanded', String(open));
-        const mark = document.createElement('span');
-        mark.textContent = '✦';
-        const dot = document.createElement('span');
-        dot.className = `ica-floating-toolbar-status ${loading ? 'is-checking' : complete ? 'is-ready' : 'needs-attention'}`;
-        button.append(mark, dot);
-        button.addEventListener('click', () => setOpen((value) => !value));
-        document.body.appendChild(button);
+    if (!snippets.length) return null;
 
-        let panel;
-        if (open) {
-            panel = document.createElement('section');
-            panel.className = 'ica-floating-toolbar-overview';
-            panel.setAttribute('role', 'dialog');
-            panel.setAttribute('aria-label', __('Code Assistant overview', 'intelligent-code-assistant'));
-            const heading = document.createElement('strong');
-            heading.textContent = __('✦ Code Assistant', 'intelligent-code-assistant');
-            const summary = document.createElement('p');
-            summary.textContent = loading
-                ? __('Checking reader assistance…', 'intelligent-code-assistant')
-                : `${ready}/${snippets.length} ${__('snippets complete', 'intelligent-code-assistant')} · ${storedLines}/${lineCount} ${__('line explanations', 'intelligent-code-assistant')}`;
-            const action = document.createElement('button');
-            action.type = 'button';
-            action.className = 'components-button is-primary';
-            action.textContent = __('Open Code Assistant', 'intelligent-code-assistant');
-            action.addEventListener('click', () => {
-                setOpen(false);
-                window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
-            });
-            panel.append(heading, summary, action);
-            document.body.appendChild(panel);
-        }
-
-        return () => {
-            button.remove();
-            panel?.remove();
-        };
-    }, [snippets.length, loading, complete, ready, storedLines, lineCount, open]);
-
-    return null;
+    return (
+        <PluginHeaderEnd>
+            <Dropdown
+                className="ica-header-toolbar"
+                contentClassName="ica-header-toolbar__popover"
+                position="bottom right"
+                renderToggle={({ isOpen, onToggle }) => (
+                    <Button
+                        className="ica-header-toolbar__button"
+                        aria-label={__('Code Assistant overview', 'intelligent-code-assistant')}
+                        aria-expanded={isOpen}
+                        aria-haspopup="dialog"
+                        onClick={onToggle}
+                        title={__('Code Assistant', 'intelligent-code-assistant')}
+                    >
+                        <span className="ica-header-toolbar__icon" aria-hidden="true">✦</span>
+                        <span className={`ica-header-toolbar__status ${loading ? 'is-checking' : complete ? 'is-ready' : 'needs-attention'}`} aria-hidden="true" />
+                    </Button>
+                )}
+                renderContent={({ onClose }) => (
+                    <div className="ica-header-toolbar__content" role="region" aria-label={__('Code Assistant overview', 'intelligent-code-assistant')}>
+                        <div className="ica-header-toolbar__heading">
+                            <span className="ica-header-toolbar__icon" aria-hidden="true">✦</span>
+                            <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
+                        </div>
+                        <div className="ica-header-toolbar__details">
+                            <strong>{__('ARTICLE STATUS', 'intelligent-code-assistant')}</strong>
+                            <p>{snippets.length} {__('code snippets', 'intelligent-code-assistant')}</p>
+                            <p className={complete ? 'is-ready' : ''}>
+                                {loading ? __('Checking reader assistance…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('complete', 'intelligent-code-assistant')}`}
+                            </p>
+                            <p className={complete ? 'is-ready' : ''}>
+                                {loading ? '…' : `${storedLines}/${lineCount} ${__('line explanations', 'intelligent-code-assistant')}`}
+                            </p>
+                        </div>
+                        <Button variant="primary" onClick={() => {
+                            onClose();
+                            window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+                        }}>
+                            {__('Open Code Assistant', 'intelligent-code-assistant')}
+                        </Button>
+                    </div>
+                )}
+            />
+        </PluginHeaderEnd>
+    );
 }
 
 registerPlugin('ica-article-ai-workspace', {

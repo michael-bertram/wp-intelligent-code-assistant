@@ -1,6 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
-import { Button, Modal, Notice, Spinner } from '@wordpress/components';
+import { Button, Dropdown, Modal, Notice, Spinner } from '@wordpress/components';
 import { createPortal } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
@@ -375,7 +375,7 @@ function useArticleCodeStatus() {
     const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block));
     const ready = statuses.filter((item) => item?.ready).length;
     const complete = !loading && ready === snippets.length && snippets.length > 0;
-    return { snippets, linked, loading, ready, complete };
+    return { snippets, linked, loading, ready, complete, statuses };
 }
 
 /**
@@ -458,9 +458,9 @@ function ArticlePostSummary() {
     );
 }
 
-/** Keep one compact toolbar action, with no duplicate overview popover. */
+/** The header icon is a status overview; only its explicit action opens the workspace. */
 function CodeAssistantToolbar() {
-    const { snippets, loading, complete } = useArticleCodeStatus();
+    const { snippets, loading, ready, complete, statuses } = useArticleCodeStatus();
     const [toolbarHost, setToolbarHost] = useState(null);
 
     useEffect(() => {
@@ -492,16 +492,72 @@ function CodeAssistantToolbar() {
 
     if (!snippets.length || !toolbarHost) return null;
 
+    const lineCount = statuses.reduce((total, status) => total + (status?.expectedLines || 0), 0);
+    const storedLines = statuses.reduce((total, status) => total + (status?.storedLines || 0), 0);
+    const missingExplanations = statuses.filter((status) => status && !status.explanationReady).length;
+    const missingLines = statuses.filter((status) => status && !status.linesReady).length;
+    const missingChecks = statuses.filter((status) => status && !status.knowledgeReady).length;
+    const unavailable = statuses.filter((status) => !status).length;
+
     return createPortal(
-        <Button
-            className="ica-header-toolbar__button"
-            aria-label={__('Open Code Assistant', 'intelligent-code-assistant')}
-            title={__('Open Code Assistant', 'intelligent-code-assistant')}
-            onClick={() => window.dispatchEvent(new CustomEvent('ica:open-code-assistant'))}
-        >
-            <span className="ica-header-toolbar__icon" aria-hidden="true">✦</span>
-            <span className={`ica-header-toolbar__status ${loading ? 'is-checking' : complete ? 'is-ready' : 'needs-attention'}`} aria-hidden="true" />
-        </Button>,
+        <Dropdown
+            className="ica-header-toolbar"
+            contentClassName="ica-header-toolbar__popover"
+            position="bottom right"
+            renderToggle={({ isOpen, onToggle }) => (
+                <Button
+                    className="ica-header-toolbar__button"
+                    aria-label={__('Code Assistant article status', 'intelligent-code-assistant')}
+                    aria-expanded={isOpen}
+                    aria-haspopup="dialog"
+                    title={__('Code Assistant article status', 'intelligent-code-assistant')}
+                    onClick={onToggle}
+                >
+                    <span className="ica-header-toolbar__icon" aria-hidden="true">✦</span>
+                    <span className={`ica-header-toolbar__status ${loading ? 'is-checking' : complete ? 'is-ready' : 'needs-attention'}`} aria-hidden="true" />
+                </Button>
+            )}
+            renderContent={({ onClose }) => (
+                <section className="ica-header-toolbar__content" aria-label={__('Code Assistant article status', 'intelligent-code-assistant')}>
+                    <div className="ica-header-toolbar__heading">
+                        <span className="ica-header-toolbar__icon" aria-hidden="true">✦</span>
+                        <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
+                    </div>
+                    <div className="ica-header-toolbar__details">
+                        <strong>{__('ARTICLE STATUS', 'intelligent-code-assistant')}</strong>
+                        <p>{snippets.length} {__('code snippets', 'intelligent-code-assistant')}</p>
+                        {loading ? (
+                            <p role="status">{__('Checking reader assistance…', 'intelligent-code-assistant')}</p>
+                        ) : (
+                            <>
+                                <p className={complete ? 'is-ready' : 'needs-attention'}>
+                                    {complete ? '✓ ' : '⚠ '}{ready}/{snippets.length} {__('snippets complete', 'intelligent-code-assistant')}
+                                </p>
+                                <p className={storedLines >= lineCount && lineCount > 0 ? 'is-ready' : 'needs-attention'}>
+                                    {storedLines}/{lineCount} {__('line explanations', 'intelligent-code-assistant')}
+                                </p>
+                                {!complete && (
+                                    <div className="ica-header-toolbar__missing">
+                                        <strong>{__('Needs attention', 'intelligent-code-assistant')}</strong>
+                                        {missingExplanations > 0 && <p>⚠ {missingExplanations} {__('missing explanations', 'intelligent-code-assistant')}</p>}
+                                        {missingLines > 0 && <p>⚠ {missingLines} {__('snippets need line explanations', 'intelligent-code-assistant')}</p>}
+                                        {missingChecks > 0 && <p>⚠ {missingChecks} {__('missing knowledge checks', 'intelligent-code-assistant')}</p>}
+                                        {unavailable > 0 && <p>⚠ {unavailable} {__('linked Code Examples could not be checked', 'intelligent-code-assistant')}</p>}
+                                    </div>
+                                )}
+                                {complete && <p className="is-ready">{__('Reader assistance complete', 'intelligent-code-assistant')}</p>}
+                            </>
+                        )}
+                    </div>
+                    <Button variant="primary" onClick={() => {
+                        onClose();
+                        window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+                    }}>
+                        {__('Open Code Assistant', 'intelligent-code-assistant')}
+                    </Button>
+                </section>
+            )}
+        />,
         toolbarHost
     );
 }

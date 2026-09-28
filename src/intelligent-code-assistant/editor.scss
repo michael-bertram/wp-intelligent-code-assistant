@@ -923,3 +923,47 @@
     width: 100%;
     justify-content: center;
 }
+
+/* Article assistance belongs to the native Post summary, not a second panel. */
+.ica-post-summary-host {
+    padding: 16px 0 4px;
+    margin-top: 12px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.ica-post-summary {
+    display: grid;
+    gap: 10px;
+    font-size: 13px;
+
+    p { margin: 0; }
+    .is-ready { color: #008a20; font-weight: 600; }
+
+    &__heading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+    }
+
+    &__links {
+        display: grid;
+        gap: 8px;
+
+        > strong { font-size: 12px; }
+        ul { margin: 0; padding: 0; list-style: none; }
+        li {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 4px 12px;
+            padding: 7px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        li span:first-child { overflow-wrap: anywhere; }
+        li span:last-child { color: #646970; font-size: 12px; }
+        li span.is-ready { color: #008a20; }
+    }
+
+    > .components-button { width: 100%; justify-content: center; }
+}

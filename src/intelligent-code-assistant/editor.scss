@@ -838,45 +838,88 @@
     margin-top: 8px;
 }
 
-/* Floating beside, not inside, Gutenberg's React-owned editor header. */
-.ica-floating-toolbar-button.components-button {
-    position: fixed;
-    z-index: 100000;
-    top: 64px;
-    right: 18px;
-    width: 40px;
-    height: 40px;
+/* Gutenberg header SlotFill: stays aligned with the editor's own controls. */
+.ica-header-toolbar {
     display: flex;
     align-items: center;
-    justify-content: center;
-    border: 1px solid #dcdcde;
-    border-radius: 6px;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
-    font-size: 20px;
 }
-.ica-floating-toolbar-status {
+
+.ica-header-toolbar__button.components-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 6px;
+    border-radius: 4px;
+}
+
+.ica-header-toolbar__icon {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #3858e9;
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.ica-header-toolbar__status {
     position: absolute;
-    top: 4px;
-    right: 3px;
+    top: 3px;
+    right: 2px;
     width: 10px;
     height: 10px;
     border: 2px solid #fff;
     border-radius: 50%;
     background: #dba617;
 }
-.ica-floating-toolbar-status.is-ready { background: #00a32a; }
-.ica-floating-toolbar-status.is-checking { background: #a7aaad; }
-.ica-floating-toolbar-overview {
-    position: fixed;
-    z-index: 100001;
-    top: 108px;
-    right: 18px;
-    width: min(340px, calc(100vw - 36px));
-    padding: 18px;
-    border: 1px solid #dcdcde;
-    border-radius: 6px;
-    background: #fff;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+
+.ica-header-toolbar__status.is-ready { background: #00a32a; }
+.ica-header-toolbar__status.is-checking { background: #a7aaad; }
+
+.ica-header-toolbar__popover .components-popover__content {
+    width: min(340px, calc(100vw - 32px));
+    min-width: 0;
+    padding: 0;
 }
-.ica-floating-toolbar-overview p { margin: 12px 0; }
+
+.ica-header-toolbar__content {
+    padding: 20px;
+    color: #1e1e1e;
+}
+
+.ica-header-toolbar__heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 16px;
+}
+
+.ica-header-toolbar__details {
+    padding: 16px 0;
+}
+
+.ica-header-toolbar__details > strong {
+    font-size: 11px;
+    letter-spacing: .08em;
+}
+
+.ica-header-toolbar__details p {
+    margin: 10px 0 0;
+}
+
+.ica-header-toolbar__details .is-ready {
+    color: #008a20;
+    font-weight: 600;
+}
+
+.ica-header-toolbar__content > .components-button {
+    width: 100%;
+    justify-content: center;
+}

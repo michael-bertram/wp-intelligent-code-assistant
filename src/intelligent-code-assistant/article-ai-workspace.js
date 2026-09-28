@@ -2,7 +2,7 @@ import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Dropdown, Modal, Notice, Spinner } from '@wordpress/components';
 import { PluginDocumentSettingPanel } from '@wordpress/editor';
-import { PluginHeaderEnd } from '@wordpress/edit-post';
+import { createPortal } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
@@ -364,8 +364,9 @@ function ArticleAIWorkspace() {
 
 
 /**
- * Gutenberg owns the editor header. PluginHeaderEnd is its supported SlotFill,
- * so the button participates in the toolbar layout rather than floating over it.
+ * WordPress does not expose a stable PluginHeaderEnd SlotFill in every editor.
+ * Mount into a dedicated node adjacent to the editor's toolbar controls, and
+ * render through a portal so React manages only our own subtree.
  */
 function CodeAssistantToolbar() {
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
@@ -375,6 +376,35 @@ function CodeAssistantToolbar() {
     })), [blocks]);
     const [linked, setLinked] = useState({});
     const [loading, setLoading] = useState(true);
+    const [toolbarHost, setToolbarHost] = useState(null);
+
+    useEffect(() => {
+        let mountedHost = null;
+        const ensureHost = () => {
+            const toolbar = document.querySelector('.editor-header__settings, .edit-post-header__settings');
+            if (!toolbar) {
+                if (mountedHost && !mountedHost.isConnected) {
+                    mountedHost = null;
+                    setToolbarHost(null);
+                }
+                return;
+            }
+            if (mountedHost?.parentElement === toolbar) return;
+            if (mountedHost) mountedHost.remove();
+            mountedHost = document.createElement('div');
+            mountedHost.className = 'ica-header-toolbar-host';
+            toolbar.appendChild(mountedHost);
+            setToolbarHost(mountedHost);
+        };
+        ensureHost();
+        const observer = new MutationObserver(ensureHost);
+        observer.observe(document.body, { childList: true, subtree: true });
+        return () => {
+            observer.disconnect();
+            mountedHost?.remove();
+        };
+    }, []);
+
     const linkedIds = useMemo(() => [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))], [snippets]);
 
     useEffect(() => {
@@ -407,10 +437,10 @@ function CodeAssistantToolbar() {
     const lineCount = statuses.reduce((sum, item) => sum + (item?.expectedLines || 0), 0);
     const storedLines = statuses.reduce((sum, item) => sum + (item?.storedLines || 0), 0);
 
-    if (!snippets.length) return null;
+    if (!snippets.length || !toolbarHost) return null;
 
-    return (
-        <PluginHeaderEnd>
+    return createPortal(
+        (
             <Dropdown
                 className="ica-header-toolbar"
                 contentClassName="ica-header-toolbar__popover"
@@ -453,7 +483,8 @@ function CodeAssistantToolbar() {
                     </div>
                 )}
             />
-        </PluginHeaderEnd>
+        ),
+        toolbarHost
     );
 }
 

@@ -837,3 +837,46 @@
 .ica-toolbar-overview > .components-button {
     margin-top: 8px;
 }
+
+/* Floating beside, not inside, Gutenberg's React-owned editor header. */
+.ica-floating-toolbar-button.components-button {
+    position: fixed;
+    z-index: 100000;
+    top: 64px;
+    right: 18px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
+    font-size: 20px;
+}
+.ica-floating-toolbar-status {
+    position: absolute;
+    top: 4px;
+    right: 3px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #dba617;
+}
+.ica-floating-toolbar-status.is-ready { background: #00a32a; }
+.ica-floating-toolbar-status.is-checking { background: #a7aaad; }
+.ica-floating-toolbar-overview {
+    position: fixed;
+    z-index: 100001;
+    top: 108px;
+    right: 18px;
+    width: min(340px, calc(100vw - 36px));
+    padding: 18px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+}
+.ica-floating-toolbar-overview p { margin: 12px 0; }

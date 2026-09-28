@@ -826,3 +826,14 @@
 .ica-editor-toolbar-floating.components-button:hover {
     background: #f0f0f0;
 }
+
+/* Ensure the floating, DOM-owned overview respects its closed state. */
+.ica-toolbar-overview[hidden] {
+    display: none !important;
+}
+.ica-toolbar-overview > p {
+    margin: 10px 0;
+}
+.ica-toolbar-overview > .components-button {
+    margin-top: 8px;
+}

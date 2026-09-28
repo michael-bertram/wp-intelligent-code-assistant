@@ -426,7 +426,8 @@ function ArticlePostSummary() {
         const adminBase = typeof window.ajaxurl === 'string' && window.ajaxurl
             ? window.ajaxurl
             : window.location.href;
-        const url = new URL('post.php', adminBase);
+        const absoluteAdminBase = new URL(adminBase, window.location.href);
+        const url = new URL('post.php', absoluteAdminBase);
         url.searchParams.set('post', String(id));
         url.searchParams.set('action', 'edit');
         return url.href;

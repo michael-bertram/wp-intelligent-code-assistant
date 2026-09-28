@@ -310,6 +310,51 @@ function ArticleAIWorkspace() {
 
     const openWorkspace = () => setOpen(true);
 
+    useEffect(() => {
+        const openFromChrome = () => window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+
+        const mountEditorChrome = () => {
+            const summary = document.querySelector('.editor-post-summary');
+            if (summary && !summary.querySelector('.ica-editor-summary-row')) {
+                const row = document.createElement('button');
+                row.type = 'button';
+                row.className = 'ica-editor-summary-row';
+                row.setAttribute('aria-label', __('Open Code Assistant', 'intelligent-code-assistant'));
+                row.innerHTML = `<span class="ica-editor-summary-row__label">${__('Code Assistant', 'intelligent-code-assistant')}</span><span class="ica-editor-summary-row__value">↗ ${linkedCount || snippets.length} ${linkedCount ? __('linked', 'intelligent-code-assistant') : __('snippets', 'intelligent-code-assistant')}</span>`;
+                row.addEventListener('click', openFromChrome);
+
+                const stacks = summary.querySelectorAll(':scope > div, :scope > div > div');
+                const target = stacks.length ? stacks[stacks.length - 1] : summary;
+                target.appendChild(row);
+            }
+
+            const settings = document.querySelector('.editor-header__settings, .edit-post-header__settings');
+            if (settings && !settings.querySelector('.ica-editor-toolbar-button')) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'components-button has-icon ica-editor-toolbar-button';
+                button.setAttribute('aria-label', __('Open Code Assistant', 'intelligent-code-assistant'));
+                button.setAttribute('title', __('Code Assistant', 'intelligent-code-assistant'));
+                button.innerHTML = '<span aria-hidden="true" class="ica-editor-toolbar-button__mark">✦</span>';
+                button.addEventListener('click', openFromChrome);
+
+                const settingsToggle = settings.querySelector('button[aria-label*="Settings"], button[aria-label*="settings"]');
+                if (settingsToggle) settings.insertBefore(button, settingsToggle);
+                else settings.insertBefore(button, settings.firstChild);
+            }
+        };
+
+        mountEditorChrome();
+        const observer = new MutationObserver(mountEditorChrome);
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        return () => {
+            observer.disconnect();
+            document.querySelector('.ica-editor-summary-row')?.remove();
+            document.querySelector('.ica-editor-toolbar-button')?.remove();
+        };
+    }, [linkedCount, snippets.length]);
+
     if (!snippets.length) return null;
 
     return (
@@ -361,163 +406,6 @@ function ArticleAIWorkspace() {
     );
 }
 
-
-function useArticleAssistanceStatus(snippets) {
-    const [linkedStatuses, setLinkedStatuses] = useState({});
-    const [loading, setLoading] = useState(true);
-
-    const linkedIds = snippets.filter((item) => item.codeExampleId).map((item) => item.codeExampleId);
-    const linkedKey = [...new Set(linkedIds)].sort((a, b) => a - b).join(',');
-
-    useEffect(() => {
-        let active = true;
-        const linked = linkedKey ? linkedKey.split(',').map(Number) : [];
-
-        if (!linked.length) {
-            setLinkedStatuses({});
-            setLoading(false);
-            return () => { active = false; };
-        }
-
-        setLoading(true);
-        Promise.all(linked.map(async (codeExampleId) => {
-            try {
-                const record = await apiFetch({ path: `/wp/v2/ica_code_example/${codeExampleId}?context=edit` });
-                const canonical = flattenBlocks(parse(record?.content?.raw || ''))[0];
-                return [codeExampleId, canonical ? getAssistanceStatus(canonical) : null];
-            } catch {
-                return [codeExampleId, null];
-            }
-        })).then((entries) => {
-            if (!active) return;
-            setLinkedStatuses(Object.fromEntries(entries));
-            setLoading(false);
-        });
-
-        return () => { active = false; };
-    }, [linkedKey]);
-
-    const statuses = snippets.map((item) => (
-        item.codeExampleId ? linkedStatuses[item.codeExampleId] : getAssistanceStatus(item.block)
-    ));
-    const resolved = statuses.filter(Boolean);
-    const ready = resolved.filter((status) => status.ready).length;
-    const incomplete = resolved.filter((status) => status.state === 'incomplete').length;
-    const unconfigured = resolved.filter((status) => status.state === 'not-configured').length;
-    const expectedLines = resolved.reduce((total, status) => total + status.expectedLines, 0);
-    const storedLines = resolved.reduce((total, status) => total + status.storedLines, 0);
-    const fullyLoaded = !loading && resolved.length === snippets.length;
-    const complete = fullyLoaded && snippets.length > 0 && ready === snippets.length;
-
-    return { loading: !fullyLoaded, complete, ready, incomplete, unconfigured, expectedLines, storedLines };
-}
-
-function CodeAssistantToolbar() {
-    const [overviewOpen, setOverviewOpen] = useState(false);
-    const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
-    const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
-    const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
-        block,
-        clientId: block.clientId,
-        codeExampleId: Number(block.attributes?.codeExampleId || 0),
-    })), [blocks]);
-    const status = useArticleAssistanceStatus(snippets);
-    const linkedCount = snippets.filter((item) => item.codeExampleId).length;
-
-    useEffect(() => {
-        const openWorkspace = () => {
-            setOverviewOpen(false);
-            window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
-        };
-        const toggleOverview = () => setOverviewOpen((current) => !current);
-
-        const mount = () => {
-            const summary = document.querySelector('.editor-post-summary');
-            if (summary && !summary.querySelector('.ica-editor-summary-row')) {
-                const row = document.createElement('button');
-                row.type = 'button';
-                row.className = 'ica-editor-summary-row';
-                row.setAttribute('aria-label', __('Open Code Assistant', 'intelligent-code-assistant'));
-                row.innerHTML = `<span class="ica-editor-summary-row__label">${__('Code Assistant', 'intelligent-code-assistant')}</span><span class="ica-editor-summary-row__value">↗ ${linkedCount || snippets.length} ${linkedCount ? __('linked', 'intelligent-code-assistant') : __('snippets', 'intelligent-code-assistant')}</span>`;
-                row.addEventListener('click', openWorkspace);
-                const stacks = summary.querySelectorAll(':scope > div, :scope > div > div');
-                (stacks.length ? stacks[stacks.length - 1] : summary).appendChild(row);
-            }
-
-            const settings = document.querySelector('.editor-header__settings, .edit-post-header__settings');
-            if (settings && !settings.querySelector('.ica-editor-toolbar-wrap')) {
-                const wrap = document.createElement('div');
-                wrap.className = 'ica-editor-toolbar-wrap';
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'components-button has-icon ica-editor-toolbar-button';
-                button.setAttribute('aria-label', __('Code Assistant overview', 'intelligent-code-assistant'));
-                button.setAttribute('title', __('Code Assistant', 'intelligent-code-assistant'));
-                button.innerHTML = '<span aria-hidden="true" class="ica-editor-toolbar-button__mark">✦</span><span aria-hidden="true" class="ica-editor-toolbar-button__status"></span>';
-                button.addEventListener('click', toggleOverview);
-                wrap.appendChild(button);
-                const settingsToggle = settings.querySelector('button[aria-label*="Settings"], button[aria-label*="settings"]');
-                if (settingsToggle) settings.insertBefore(wrap, settingsToggle);
-                else settings.insertBefore(wrap, settings.firstChild);
-            }
-
-            const dot = document.querySelector('.ica-editor-toolbar-button__status');
-            if (dot) {
-                dot.className = `ica-editor-toolbar-button__status ${status.loading ? 'is-checking' : (status.complete ? 'is-ready' : 'needs-attention')}`;
-            }
-        };
-
-        mount();
-        const observer = new MutationObserver(mount);
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        return () => {
-            observer.disconnect();
-            document.querySelector('.ica-editor-summary-row')?.remove();
-            document.querySelector('.ica-editor-toolbar-wrap')?.remove();
-        };
-    }, [linkedCount, snippets.length, status.loading, status.complete]);
-
-    if (!snippets.length) return null;
-
-    return overviewOpen ? (
-        <div className="ica-toolbar-overview" role="dialog" aria-label={__('Code Assistant overview', 'intelligent-code-assistant')}>
-            <div className="ica-toolbar-overview__header">
-                <span className="ica-ai-sidebar-summary__mark">✦</span>
-                <div>
-                    <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
-                    <p>{decodeEntities(tutorialTitle) || __('Untitled article', 'intelligent-code-assistant')}</p>
-                </div>
-            </div>
-            <div className="ica-toolbar-overview__status">
-                <strong>{__('Article status', 'intelligent-code-assistant')}</strong>
-                <span>↗ {linkedCount} {__('linked snippets', 'intelligent-code-assistant')}</span>
-                {status.loading ? (
-                    <span>{__('Checking assistance…', 'intelligent-code-assistant')}</span>
-                ) : (
-                    <>
-                        <span className={status.complete ? 'is-ready' : ''}>✓ {status.ready}/{snippets.length} {__('snippets complete', 'intelligent-code-assistant')}</span>
-                        <span className={status.storedLines === status.expectedLines ? 'is-ready' : 'needs-attention'}>✓ {status.storedLines}/{status.expectedLines} {__('line explanations', 'intelligent-code-assistant')}</span>
-                        {status.incomplete > 0 && <span className="needs-attention">⚠ {status.incomplete} {__('need completing', 'intelligent-code-assistant')}</span>}
-                        {status.unconfigured > 0 && <span className="needs-attention">○ {status.unconfigured} {__('not configured', 'intelligent-code-assistant')}</span>}
-                        {status.complete && <span className="is-ready">● {__('Reader assistance complete', 'intelligent-code-assistant')}</span>}
-                    </>
-                )}
-            </div>
-            <Button variant="primary" onClick={() => {
-                setOverviewOpen(false);
-                window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
-            }}>
-                {__('Open Code Assistant', 'intelligent-code-assistant')}
-            </Button>
-        </div>
-    ) : null;
-}
-
 registerPlugin('ica-article-ai-workspace', {
     render: ArticleAIWorkspace,
-});
-
-registerPlugin('ica-code-assistant-toolbar', {
-    render: CodeAssistantToolbar,
 });

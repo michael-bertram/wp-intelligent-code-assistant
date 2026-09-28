@@ -288,6 +288,7 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
 
 function ArticleAIWorkspace() {
     const [open, setOpen] = useState(false);
+    const [overviewOpen, setOverviewOpen] = useState(false);
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
     const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
     const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
@@ -308,10 +309,11 @@ function ArticleAIWorkspace() {
     const unconfiguredCount = localStatuses.filter((status) => status?.state === 'not-configured').length;
     const linkedCount = snippets.filter((item) => item.codeExampleId).length;
 
-    const openWorkspace = () => setOpen(true);
+    const openWorkspace = () => { setOverviewOpen(false); setOpen(true); };
 
     useEffect(() => {
         const openFromChrome = () => window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+        const toggleOverview = () => window.dispatchEvent(new CustomEvent('ica:toggle-code-assistant-overview'));
 
         const mountEditorChrome = () => {
             const summary = document.querySelector('.editor-post-summary');
@@ -336,7 +338,7 @@ function ArticleAIWorkspace() {
                 button.setAttribute('aria-label', __('Open Code Assistant', 'intelligent-code-assistant'));
                 button.setAttribute('title', __('Code Assistant', 'intelligent-code-assistant'));
                 button.innerHTML = '<span aria-hidden="true" class="ica-editor-toolbar-button__mark">✦</span>';
-                button.addEventListener('click', openFromChrome);
+                button.addEventListener('click', toggleOverview);
 
                 const settingsToggle = settings.querySelector('button[aria-label*="Settings"], button[aria-label*="settings"]');
                 if (settingsToggle) settings.insertBefore(button, settingsToggle);
@@ -355,10 +357,32 @@ function ArticleAIWorkspace() {
         };
     }, [linkedCount, snippets.length]);
 
+    useEffect(() => {
+        const toggle = () => setOverviewOpen((current) => !current);
+        window.addEventListener('ica:toggle-code-assistant-overview', toggle);
+        return () => window.removeEventListener('ica:toggle-code-assistant-overview', toggle);
+    }, []);
+
     if (!snippets.length) return null;
 
     return (
         <>
+            {overviewOpen && (
+                <div className="ica-toolbar-overview" role="dialog" aria-label={__('Code Assistant overview', 'intelligent-code-assistant')}>
+                    <div className="ica-toolbar-overview__header">
+                        <span className="ica-ai-sidebar-summary__mark">✦</span>
+                        <div><strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
+                            <p>{decodeEntities(tutorialTitle) || __('Untitled article', 'intelligent-code-assistant')}</p>
+                        </div>
+                    </div>
+                    <div className="ica-toolbar-overview__status">
+                        <strong>{__('Article status', 'intelligent-code-assistant')}</strong>
+                        <span>↗ {linkedCount} {__('linked snippets', 'intelligent-code-assistant')}</span>
+                        <span>{__('Open the workspace to review assistance for each snippet.', 'intelligent-code-assistant')}</span>
+                    </div>
+                    <Button variant="primary" onClick={openWorkspace}>{__('Open Code Assistant', 'intelligent-code-assistant')}</Button>
+                </div>
+            )}
             <PluginDocumentSettingPanel
                 name="ica-article-ai"
                 title={sprintfSafe(__('✦ Code Assistant · %d snippets', 'intelligent-code-assistant'), snippets.length)}

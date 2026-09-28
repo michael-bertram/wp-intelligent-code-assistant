@@ -310,51 +310,6 @@ function ArticleAIWorkspace() {
 
     const openWorkspace = () => setOpen(true);
 
-    useEffect(() => {
-        const openFromChrome = () => window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
-
-        const mountEditorChrome = () => {
-            const summary = document.querySelector('.editor-post-summary');
-            if (summary && !summary.querySelector('.ica-editor-summary-row')) {
-                const row = document.createElement('button');
-                row.type = 'button';
-                row.className = 'ica-editor-summary-row';
-                row.setAttribute('aria-label', __('Open Code Assistant', 'intelligent-code-assistant'));
-                row.innerHTML = `<span class="ica-editor-summary-row__label">${__('Code Assistant', 'intelligent-code-assistant')}</span><span class="ica-editor-summary-row__value">↗ ${linkedCount || snippets.length} ${linkedCount ? __('linked', 'intelligent-code-assistant') : __('snippets', 'intelligent-code-assistant')}</span>`;
-                row.addEventListener('click', openFromChrome);
-
-                const stacks = summary.querySelectorAll(':scope > div, :scope > div > div');
-                const target = stacks.length ? stacks[stacks.length - 1] : summary;
-                target.appendChild(row);
-            }
-
-            const settings = document.querySelector('.editor-header__settings, .edit-post-header__settings');
-            if (settings && !settings.querySelector('.ica-editor-toolbar-button')) {
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'components-button has-icon ica-editor-toolbar-button';
-                button.setAttribute('aria-label', __('Open Code Assistant', 'intelligent-code-assistant'));
-                button.setAttribute('title', __('Code Assistant', 'intelligent-code-assistant'));
-                button.innerHTML = '<span aria-hidden="true" class="ica-editor-toolbar-button__mark">✦</span>';
-                button.addEventListener('click', openFromChrome);
-
-                const settingsToggle = settings.querySelector('button[aria-label*="Settings"], button[aria-label*="settings"]');
-                if (settingsToggle) settings.insertBefore(button, settingsToggle);
-                else settings.insertBefore(button, settings.firstChild);
-            }
-        };
-
-        mountEditorChrome();
-        const observer = new MutationObserver(mountEditorChrome);
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        return () => {
-            observer.disconnect();
-            document.querySelector('.ica-editor-summary-row')?.remove();
-            document.querySelector('.ica-editor-toolbar-button')?.remove();
-        };
-    }, [linkedCount, snippets.length]);
-
     if (!snippets.length) return null;
 
     return (
@@ -406,6 +361,103 @@ function ArticleAIWorkspace() {
     );
 }
 
+
+/**
+ * The editor header is owned by Gutenberg's React tree. Never insert a node
+ * into .editor-header__settings: doing so can break React's insertBefore.
+ * This independent control lives under document.body instead.
+ */
+function CodeAssistantToolbar() {
+    const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
+    const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
+        block,
+        codeExampleId: Number(block.attributes?.codeExampleId || 0),
+    })), [blocks]);
+    const [linked, setLinked] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [open, setOpen] = useState(false);
+    const linkedIds = useMemo(() => [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))], [snippets]);
+
+    useEffect(() => {
+        let active = true;
+        if (!linkedIds.length) {
+            setLinked({});
+            setLoading(false);
+            return () => { active = false; };
+        }
+        setLoading(true);
+        Promise.all(linkedIds.map(async (id) => {
+            try {
+                const record = await apiFetch({ path: `/wp/v2/ica_code_example/${id}?context=edit` });
+                const canonical = flattenBlocks(parse(record?.content?.raw || ''))[0];
+                return [id, canonical ? getAssistanceStatus(canonical) : null];
+            } catch {
+                return [id, null];
+            }
+        })).then((entries) => {
+            if (!active) return;
+            setLinked(Object.fromEntries(entries));
+            setLoading(false);
+        });
+        return () => { active = false; };
+    }, [linkedIds]);
+
+    const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId] : getAssistanceStatus(item.block));
+    const ready = statuses.filter((item) => item?.ready).length;
+    const complete = !loading && ready === snippets.length && snippets.length > 0;
+    const lineCount = statuses.reduce((sum, item) => sum + (item?.expectedLines || 0), 0);
+    const storedLines = statuses.reduce((sum, item) => sum + (item?.storedLines || 0), 0);
+
+    useEffect(() => {
+        if (!snippets.length) return undefined;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'components-button ica-floating-toolbar-button';
+        button.setAttribute('aria-label', __('Code Assistant overview', 'intelligent-code-assistant'));
+        button.setAttribute('aria-expanded', String(open));
+        const mark = document.createElement('span');
+        mark.textContent = '✦';
+        const dot = document.createElement('span');
+        dot.className = `ica-floating-toolbar-status ${loading ? 'is-checking' : complete ? 'is-ready' : 'needs-attention'}`;
+        button.append(mark, dot);
+        button.addEventListener('click', () => setOpen((value) => !value));
+        document.body.appendChild(button);
+
+        let panel;
+        if (open) {
+            panel = document.createElement('section');
+            panel.className = 'ica-floating-toolbar-overview';
+            panel.setAttribute('role', 'dialog');
+            panel.setAttribute('aria-label', __('Code Assistant overview', 'intelligent-code-assistant'));
+            const heading = document.createElement('strong');
+            heading.textContent = __('✦ Code Assistant', 'intelligent-code-assistant');
+            const summary = document.createElement('p');
+            summary.textContent = loading
+                ? __('Checking reader assistance…', 'intelligent-code-assistant')
+                : `${ready}/${snippets.length} ${__('snippets complete', 'intelligent-code-assistant')} · ${storedLines}/${lineCount} ${__('line explanations', 'intelligent-code-assistant')}`;
+            const action = document.createElement('button');
+            action.type = 'button';
+            action.className = 'components-button is-primary';
+            action.textContent = __('Open Code Assistant', 'intelligent-code-assistant');
+            action.addEventListener('click', () => {
+                setOpen(false);
+                window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+            });
+            panel.append(heading, summary, action);
+            document.body.appendChild(panel);
+        }
+
+        return () => {
+            button.remove();
+            panel?.remove();
+        };
+    }, [snippets.length, loading, complete, ready, storedLines, lineCount, open]);
+
+    return null;
+}
+
 registerPlugin('ica-article-ai-workspace', {
     render: ArticleAIWorkspace,
 });
+
+registerPlugin('ica-code-assistant-toolbar', { render: CodeAssistantToolbar });

@@ -1188,7 +1188,10 @@ if ( ! function_exists( 'intelligent_code_assistant_resolve_public_code' ) ) {
             return new WP_Error( 'invalid_article', __( 'This article is not publicly available.', 'intelligent-code-assistant' ), array( 'status' => 403 ) );
         }
         $normalize = static function( $code ) {
-            return trim( str_replace( "\r", '', html_entity_decode( wp_strip_all_tags( (string) $code ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) );
+            $code = preg_replace( '/<br\\s*\\/?>/i', "\n", (string) $code );
+            $code = preg_replace( '/<\\/p>\\s*<p[^>]*>/i', "\n", $code );
+            $code = preg_replace( '/<\\/div>\\s*<div[^>]*>/i', "\n", $code );
+            return trim( str_replace( "\r", '', html_entity_decode( wp_strip_all_tags( $code ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) );
         };
         $find = static function( $blocks ) use ( &$find, $normalize, $code_example_id, $supplied_code ) {
             foreach ( $blocks as $block ) {
@@ -1211,7 +1214,7 @@ if ( ! function_exists( 'intelligent_code_assistant_resolve_public_code' ) ) {
                         $part = array_shift( $parts );
                         if ( 'wpe/code-content' === ( $part['blockName'] ?? '' ) ) {
                             $attrs = $part['attrs'] ?? array();
-                            $code = $attrs['code'] ?? $attrs['content'] ?? '';
+                            $code = $attrs['code'] ?? $attrs['content'] ?? ( $part['innerHTML'] ?? '' );
                             if ( '' !== $normalize( $code ) && hash_equals( $normalize( $code ), $normalize( $supplied_code ) ) ) return $code;
                         }
                         foreach ( $part['innerBlocks'] ?? array() as $inner ) $parts[] = $inner;

@@ -967,3 +967,27 @@
 
     > .components-button { width: 100%; justify-content: center; }
 }
+
+/* Prepend visually without moving React-owned header nodes (avoids insertBefore errors). */
+.editor-header__settings > .ica-header-toolbar-host,
+.edit-post-header__settings > .ica-header-toolbar-host {
+    order: -9999;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    margin-right: 6px;
+}
+
+.ica-header-toolbar__details .needs-attention {
+    color: #996800;
+    font-weight: 600;
+}
+
+.ica-header-toolbar__missing {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+
+    > strong { font-size: 12px; }
+    p { margin: 8px 0 0; color: #996800; font-size: 12px; }
+}

@@ -288,7 +288,6 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
 
 function ArticleAIWorkspace() {
     const [open, setOpen] = useState(false);
-    const [overviewOpen, setOverviewOpen] = useState(false);
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
     const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
     const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
@@ -309,7 +308,7 @@ function ArticleAIWorkspace() {
     const unconfiguredCount = localStatuses.filter((status) => status?.state === 'not-configured').length;
     const linkedCount = snippets.filter((item) => item.codeExampleId).length;
 
-    const openWorkspace = () => { setOverviewOpen(false); setOpen(true); };
+    const openWorkspace = () => setOpen(true);
 
     useEffect(() => {
         // Mount outside Gutenberg's React-managed editor tree. Inserting a node
@@ -320,9 +319,48 @@ function ArticleAIWorkspace() {
         button.setAttribute('aria-label', __('Code Assistant overview', 'intelligent-code-assistant'));
         button.setAttribute('title', __('Code Assistant', 'intelligent-code-assistant'));
         button.innerHTML = '<span aria-hidden="true" class="ica-editor-toolbar-button__mark">✦</span>';
-        const toggle = () => window.dispatchEvent(new CustomEvent('ica:toggle-code-assistant-overview'));
+        // Keep the popover outside Gutenberg's React tree, like the floating button.
+        // This avoids reconciliation errors and does not depend on plugin render state.
+        const panel = document.createElement('div');
+        panel.className = 'ica-toolbar-overview';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-label', __('Code Assistant overview', 'intelligent-code-assistant'));
+        panel.hidden = true;
+
+        const heading = document.createElement('strong');
+        heading.textContent = __('✦ Code Assistant', 'intelligent-code-assistant');
+        const description = document.createElement('p');
+        description.textContent = decodeEntities(tutorialTitle) || __('Untitled article', 'intelligent-code-assistant');
+        const summary = document.createElement('p');
+        summary.textContent = `${snippets.length} ${__('code snippets in this article', 'intelligent-code-assistant')}`;
+        const action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'components-button is-primary';
+        action.textContent = __('Open Code Assistant', 'intelligent-code-assistant');
+        action.addEventListener('click', () => {
+            panel.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+            window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+        });
+        panel.append(heading, description, summary, action);
+        document.body.appendChild(panel);
+
+        button.setAttribute('aria-expanded', 'false');
+        button.setAttribute('aria-haspopup', 'dialog');
+        const toggle = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            panel.hidden = !panel.hidden;
+            button.setAttribute('aria-expanded', String(!panel.hidden));
+        };
         button.addEventListener('click', toggle);
-        document.body.appendChild(button);
+        const dismiss = (event) => {
+            if (!panel.hidden && !panel.contains(event.target) && !button.contains(event.target)) {
+                panel.hidden = true;
+                button.setAttribute('aria-expanded', 'false');
+            }
+        };
+        document.addEventListener('pointerdown', dismiss);
 
         const position = () => {
             const settings = document.querySelector('.editor-header__settings, .edit-post-header__settings');
@@ -342,37 +380,17 @@ function ArticleAIWorkspace() {
         return () => {
             observer.disconnect();
             window.removeEventListener('resize', position);
+            document.removeEventListener('pointerdown', dismiss);
             button.removeEventListener('click', toggle);
+            panel.remove();
             button.remove();
         };
-    }, [snippets.length]);
-
-    useEffect(() => {
-        const toggle = () => setOverviewOpen((current) => !current);
-        window.addEventListener('ica:toggle-code-assistant-overview', toggle);
-        return () => window.removeEventListener('ica:toggle-code-assistant-overview', toggle);
-    }, []);
+    }, [snippets.length, tutorialTitle]);
 
     if (!snippets.length) return null;
 
     return (
         <>
-            {overviewOpen && (
-                <div className="ica-toolbar-overview" role="dialog" aria-label={__('Code Assistant overview', 'intelligent-code-assistant')}>
-                    <div className="ica-toolbar-overview__header">
-                        <span className="ica-ai-sidebar-summary__mark">✦</span>
-                        <div><strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
-                            <p>{decodeEntities(tutorialTitle) || __('Untitled article', 'intelligent-code-assistant')}</p>
-                        </div>
-                    </div>
-                    <div className="ica-toolbar-overview__status">
-                        <strong>{__('Article status', 'intelligent-code-assistant')}</strong>
-                        <span>↗ {linkedCount} {__('linked snippets', 'intelligent-code-assistant')}</span>
-                        <span>{__('Open the workspace to review assistance for each snippet.', 'intelligent-code-assistant')}</span>
-                    </div>
-                    <Button variant="primary" onClick={openWorkspace}>{__('Open Code Assistant', 'intelligent-code-assistant')}</Button>
-                </div>
-            )}
             <PluginDocumentSettingPanel
                 name="ica-article-ai"
                 title={sprintfSafe(__('✦ Code Assistant · %d snippets', 'intelligent-code-assistant'), snippets.length)}

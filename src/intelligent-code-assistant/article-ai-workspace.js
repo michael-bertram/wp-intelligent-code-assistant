@@ -438,6 +438,128 @@ function ArticleAIWorkspace() {
     );
 }
 
+
+/**
+ * Editor chrome is owned by Gutenberg's React tree. Mount our button on
+ * document.body instead of inserting nodes into editor-header__settings.
+ */
+function CodeAssistantToolbar() {
+    const [open, setOpen] = useState(false);
+    const [linkedStatuses, setLinkedStatuses] = useState({});
+    const [checking, setChecking] = useState(true);
+    const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
+    const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
+        block,
+        codeExampleId: Number(block.attributes?.codeExampleId || 0),
+    })), [blocks]);
+    const linkedIds = useMemo(() => [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))], [snippets]);
+    const linkedKey = linkedIds.join(',');
+
+    useEffect(() => {
+        let active = true;
+        if (!linkedIds.length) {
+            setLinkedStatuses({});
+            setChecking(false);
+            return () => { active = false; };
+        }
+        setChecking(true);
+        Promise.all(linkedIds.map(async (id) => {
+            try {
+                const record = await apiFetch({ path: `/wp/v2/ica_code_example/${id}?context=edit` });
+                const canonical = flattenBlocks(parse(record?.content?.raw || ''))[0];
+                return [id, canonical ? getAssistanceStatus(canonical) : null];
+            } catch {
+                return [id, null];
+            }
+        })).then((entries) => {
+            if (active) {
+                setLinkedStatuses(Object.fromEntries(entries));
+                setChecking(false);
+            }
+        });
+        return () => { active = false; };
+    }, [linkedKey]);
+
+    const statuses = snippets.map((item) => item.codeExampleId
+        ? linkedStatuses[item.codeExampleId]
+        : getAssistanceStatus(item.block));
+    const ready = statuses.filter((status) => status?.ready).length;
+    const complete = !checking && snippets.length > 0 && ready === snippets.length;
+    const pending = snippets.length - ready;
+
+    useEffect(() => {
+        if (!snippets.length) return undefined;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'components-button has-icon ica-editor-toolbar-button ica-external-toolbar-button';
+        button.setAttribute('aria-label', __('Code Assistant overview', 'intelligent-code-assistant'));
+        button.setAttribute('title', __('Code Assistant', 'intelligent-code-assistant'));
+        button.innerHTML = '<span aria-hidden="true" class="ica-editor-toolbar-button__mark">✦</span><span aria-hidden="true" class="ica-editor-toolbar-button__status"></span>';
+        button.addEventListener('click', toggle);
+        document.body.appendChild(button);
+
+        function toggle() { setOpen((value) => !value); }
+        function position() {
+            const header = document.querySelector('.editor-header__settings, .edit-post-header__settings');
+            if (!header) {
+                button.style.display = 'none';
+                return;
+            }
+            const bounds = header.getBoundingClientRect();
+            button.style.display = '';
+            button.style.position = 'fixed';
+            button.style.top = `${bounds.top + Math.max(0, (bounds.height - 40) / 2)}px`;
+            button.style.left = `${Math.max(8, bounds.left - 44)}px`;
+            button.style.zIndex = '100000';
+        }
+        position();
+        window.addEventListener('resize', position);
+        window.addEventListener('scroll', position, true);
+        return () => {
+            window.removeEventListener('resize', position);
+            window.removeEventListener('scroll', position, true);
+            button.removeEventListener('click', toggle);
+            button.remove();
+        };
+    }, [snippets.length]);
+
+    useEffect(() => {
+        const dot = document.querySelector('.ica-external-toolbar-button .ica-editor-toolbar-button__status');
+        if (dot) dot.className = `ica-editor-toolbar-button__status ${checking ? 'is-checking' : complete ? 'is-ready' : 'needs-attention'}`;
+    }, [checking, complete]);
+
+    if (!snippets.length || !open) return null;
+
+    return (
+        <div className="ica-toolbar-overview" role="dialog" aria-label={__('Code Assistant overview', 'intelligent-code-assistant')}>
+            <div className="ica-toolbar-overview__header">
+                <span className="ica-ai-sidebar-summary__mark">✦</span>
+                <div><strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong></div>
+                <Button variant="tertiary" onClick={() => setOpen(false)} aria-label={__('Close', 'intelligent-code-assistant')}>×</Button>
+            </div>
+            <div className="ica-toolbar-overview__status">
+                <strong>{__('Article status', 'intelligent-code-assistant')}</strong>
+                <span>{snippets.length} {__('code snippets', 'intelligent-code-assistant')}</span>
+                {checking ? <span>{__('Checking assistance…', 'intelligent-code-assistant')}</span> : (
+                    <>
+                        <span className={complete ? 'is-ready' : ''}>✓ {ready}/{snippets.length} {__('complete', 'intelligent-code-assistant')}</span>
+                        {pending > 0 && <span className="needs-attention">⚠ {pending} {__('need attention', 'intelligent-code-assistant')}</span>}
+                        {complete && <span className="is-ready">● {__('Reader assistance complete', 'intelligent-code-assistant')}</span>}
+                    </>
+                )}
+            </div>
+            <Button variant="primary" onClick={() => {
+                setOpen(false);
+                window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+            }}>{__('Open Code Assistant', 'intelligent-code-assistant')}</Button>
+        </div>
+    );
+}
+
 registerPlugin('ica-article-ai-workspace', {
     render: ArticleAIWorkspace,
+});
+
+registerPlugin('ica-code-assistant-toolbar', {
+    render: CodeAssistantToolbar,
 });

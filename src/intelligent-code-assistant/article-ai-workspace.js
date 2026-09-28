@@ -366,9 +366,12 @@ function useArticleAssistanceStatus(snippets) {
     const [linkedStatuses, setLinkedStatuses] = useState({});
     const [loading, setLoading] = useState(true);
 
+    const linkedIds = snippets.filter((item) => item.codeExampleId).map((item) => item.codeExampleId);
+    const linkedKey = [...new Set(linkedIds)].sort((a, b) => a - b).join(',');
+
     useEffect(() => {
         let active = true;
-        const linked = snippets.filter((item) => item.codeExampleId);
+        const linked = linkedKey ? linkedKey.split(',').map(Number) : [];
 
         if (!linked.length) {
             setLinkedStatuses({});
@@ -377,13 +380,13 @@ function useArticleAssistanceStatus(snippets) {
         }
 
         setLoading(true);
-        Promise.all(linked.map(async (item) => {
+        Promise.all(linked.map(async (codeExampleId) => {
             try {
-                const record = await apiFetch({ path: `/wp/v2/ica_code_example/${item.codeExampleId}?context=edit` });
+                const record = await apiFetch({ path: `/wp/v2/ica_code_example/${codeExampleId}?context=edit` });
                 const canonical = flattenBlocks(parse(record?.content?.raw || ''))[0];
-                return [item.codeExampleId, canonical ? getAssistanceStatus(canonical) : null];
+                return [codeExampleId, canonical ? getAssistanceStatus(canonical) : null];
             } catch {
-                return [item.codeExampleId, null];
+                return [codeExampleId, null];
             }
         })).then((entries) => {
             if (!active) return;
@@ -392,7 +395,7 @@ function useArticleAssistanceStatus(snippets) {
         });
 
         return () => { active = false; };
-    }, [snippets]);
+    }, [linkedKey]);
 
     const statuses = snippets.map((item) => (
         item.codeExampleId ? linkedStatuses[item.codeExampleId] : getAssistanceStatus(item.block)

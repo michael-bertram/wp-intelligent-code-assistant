@@ -312,50 +312,40 @@ function ArticleAIWorkspace() {
     const openWorkspace = () => { setOverviewOpen(false); setOpen(true); };
 
     useEffect(() => {
-        const openFromChrome = () => window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
-        const toggleOverview = () => window.dispatchEvent(new CustomEvent('ica:toggle-code-assistant-overview'));
+        // Mount outside Gutenberg's React-managed editor tree. Inserting a node
+        // into the header can break React reconciliation (insertBefore NotFoundError).
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'components-button has-icon ica-editor-toolbar-button ica-editor-toolbar-floating';
+        button.setAttribute('aria-label', __('Code Assistant overview', 'intelligent-code-assistant'));
+        button.setAttribute('title', __('Code Assistant', 'intelligent-code-assistant'));
+        button.innerHTML = '<span aria-hidden="true" class="ica-editor-toolbar-button__mark">✦</span>';
+        const toggle = () => window.dispatchEvent(new CustomEvent('ica:toggle-code-assistant-overview'));
+        button.addEventListener('click', toggle);
+        document.body.appendChild(button);
 
-        const mountEditorChrome = () => {
-            const summary = document.querySelector('.editor-post-summary');
-            if (summary && !summary.querySelector('.ica-editor-summary-row')) {
-                const row = document.createElement('button');
-                row.type = 'button';
-                row.className = 'ica-editor-summary-row';
-                row.setAttribute('aria-label', __('Open Code Assistant', 'intelligent-code-assistant'));
-                row.innerHTML = `<span class="ica-editor-summary-row__label">${__('Code Assistant', 'intelligent-code-assistant')}</span><span class="ica-editor-summary-row__value">↗ ${linkedCount || snippets.length} ${linkedCount ? __('linked', 'intelligent-code-assistant') : __('snippets', 'intelligent-code-assistant')}</span>`;
-                row.addEventListener('click', openFromChrome);
-
-                const stacks = summary.querySelectorAll(':scope > div, :scope > div > div');
-                const target = stacks.length ? stacks[stacks.length - 1] : summary;
-                target.appendChild(row);
-            }
-
+        const position = () => {
             const settings = document.querySelector('.editor-header__settings, .edit-post-header__settings');
-            if (settings && !settings.querySelector('.ica-editor-toolbar-button')) {
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'components-button has-icon ica-editor-toolbar-button';
-                button.setAttribute('aria-label', __('Open Code Assistant', 'intelligent-code-assistant'));
-                button.setAttribute('title', __('Code Assistant', 'intelligent-code-assistant'));
-                button.innerHTML = '<span aria-hidden="true" class="ica-editor-toolbar-button__mark">✦</span>';
-                button.addEventListener('click', toggleOverview);
-
-                const settingsToggle = settings.querySelector('button[aria-label*="Settings"], button[aria-label*="settings"]');
-                if (settingsToggle) settings.insertBefore(button, settingsToggle);
-                else settings.insertBefore(button, settings.firstChild);
+            const rect = settings?.getBoundingClientRect();
+            if (!rect || !snippets.length) {
+                button.style.display = 'none';
+                return;
             }
+            button.style.display = '';
+            button.style.top = `${Math.max(0, rect.top + (rect.height - 40) / 2)}px`;
+            button.style.left = `${Math.max(0, rect.left - 44)}px`;
         };
-
-        mountEditorChrome();
-        const observer = new MutationObserver(mountEditorChrome);
+        position();
+        const observer = new MutationObserver(position);
         observer.observe(document.body, { childList: true, subtree: true });
-
+        window.addEventListener('resize', position);
         return () => {
             observer.disconnect();
-            document.querySelector('.ica-editor-summary-row')?.remove();
-            document.querySelector('.ica-editor-toolbar-button')?.remove();
+            window.removeEventListener('resize', position);
+            button.removeEventListener('click', toggle);
+            button.remove();
         };
-    }, [linkedCount, snippets.length]);
+    }, [snippets.length]);
 
     useEffect(() => {
         const toggle = () => setOverviewOpen((current) => !current);

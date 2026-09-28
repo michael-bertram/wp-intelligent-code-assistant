@@ -384,8 +384,9 @@ function useArticleCodeStatus() {
  * summary markup, the toolbar remains available without a duplicate panel.
  */
 function ArticlePostSummary() {
-    const { snippets, linked, loading, ready, complete } = useArticleCodeStatus();
+    const { snippets, linked, loading, ready } = useArticleCodeStatus();
     const [host, setHost] = useState(null);
+    const [expanded, setExpanded] = useState(false);
 
     useEffect(() => {
         let mountedHost = null;
@@ -419,40 +420,82 @@ function ArticlePostSummary() {
     if (!host || !snippets.length) return null;
 
     const linkedItems = [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))];
+    const editUrl = (id) => {
+        // WordPress exposes the correct admin directory via ajaxurl, including
+        // subdirectory installations. Fall back to the current editor directory.
+        const adminBase = typeof window.ajaxurl === 'string' && window.ajaxurl
+            ? window.ajaxurl
+            : window.location.href;
+        const url = new URL('post.php', adminBase);
+        url.searchParams.set('post', String(id));
+        url.searchParams.set('action', 'edit');
+        return url.href;
+    };
+
     return createPortal(
         <section className="ica-post-summary" aria-label={__('Code Assistant article summary', 'intelligent-code-assistant')}>
-            <div className="ica-post-summary__heading">
-                <span aria-hidden="true">✦</span>
-                <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
-            </div>
-            <p>{snippets.length} {__('code snippets', 'intelligent-code-assistant')}</p>
-            <p className={complete ? 'is-ready' : ''}>
-                {loading
-                    ? __('Checking reader assistance…', 'intelligent-code-assistant')
-                    : `${ready}/${snippets.length} ${__('reader assistance complete', 'intelligent-code-assistant')}`}
-            </p>
-            {linkedItems.length > 0 && (
-                <div className="ica-post-summary__links">
-                    <strong>{__('Linked Code Examples', 'intelligent-code-assistant')} ({linkedItems.length})</strong>
-                    <ul>
-                        {linkedItems.map((id) => (
-                            <li key={id}>
-                                <span>{linked[id]?.title || `#${id}`}</span>
-                                <span className={linked[id]?.status?.ready ? 'is-ready' : ''}>
-                                    {loading ? '…' : linked[id]?.status?.ready
-                                        ? __('Complete', 'intelligent-code-assistant')
-                                        : linked[id]?.status
-                                            ? __('Needs assistance', 'intelligent-code-assistant')
-                                            : __('Status unavailable', 'intelligent-code-assistant')}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
+            <button
+                type="button"
+                className="ica-post-summary__toggle"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((previous) => !previous)}
+            >
+                <span className="ica-post-summary__heading">
+                    <span aria-hidden="true">✦</span>
+                    <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
+                </span>
+                <span className="ica-post-summary__toggle-right">
+                    <span>{linkedItems.length} {__('linked', 'intelligent-code-assistant')}</span>
+                    <span aria-hidden="true">{expanded ? '⌃' : '⌄'}</span>
+                </span>
+            </button>
+            {expanded && (
+                <div className="ica-post-summary__body">
+                    <div className="ica-post-summary__stat">
+                        <span>{__('Code snippets', 'intelligent-code-assistant')}</span>
+                        <strong>{snippets.length}</strong>
+                    </div>
+                    <div className="ica-post-summary__stat">
+                        <span>{__('Linked Code Examples', 'intelligent-code-assistant')}</span>
+                        <strong>{linkedItems.length}</strong>
+                    </div>
+                    <div className="ica-post-summary__stat">
+                        <span>{__('Reader assistance', 'intelligent-code-assistant')}</span>
+                        <strong className={!loading && ready === snippets.length ? 'is-ready' : ''}>
+                            {loading ? '…' : `${ready}/${snippets.length} ${__('complete', 'intelligent-code-assistant')}`}
+                        </strong>
+                    </div>
+                    {linkedItems.length > 0 && (
+                        <div className="ica-post-summary__links">
+                            <strong>{__('LINKED CODE EXAMPLES', 'intelligent-code-assistant')}</strong>
+                            <ul>
+                                {linkedItems.map((id) => {
+                                    const status = linked[id]?.status;
+                                    const stateLabel = loading
+                                        ? __('Checking…', 'intelligent-code-assistant')
+                                        : status?.ready
+                                            ? __('Complete', 'intelligent-code-assistant')
+                                            : status
+                                                ? __('Needs assistance', 'intelligent-code-assistant')
+                                                : __('Status unavailable', 'intelligent-code-assistant');
+                                    return (
+                                        <li key={id}>
+                                            <span className={`ica-post-summary__state ${status?.ready ? 'is-ready' : 'needs-attention'}`} aria-hidden="true">
+                                                {loading ? '○' : status?.ready ? '✓' : '⚠'}
+                                            </span>
+                                            <a href={editUrl(id)} title={__('Edit linked Code Example', 'intelligent-code-assistant')}>
+                                                {linked[id]?.title || `#${id}`}
+                                                <span className="ica-post-summary__external" aria-hidden="true">↗</span>
+                                            </a>
+                                            <span className="ica-post-summary__state-label">{stateLabel}</span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             )}
-            <Button variant="primary" onClick={() => window.dispatchEvent(new CustomEvent('ica:open-code-assistant'))}>
-                {__('Open Code Assistant', 'intelligent-code-assistant')}
-            </Button>
         </section>,
         host
     );

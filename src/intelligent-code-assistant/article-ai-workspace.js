@@ -1,7 +1,8 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Dropdown, Modal, Notice, Spinner } from '@wordpress/components';
-import { PluginDocumentSettingPanel, PluginHeaderEnd } from '@wordpress/editor';
+import { PluginDocumentSettingPanel } from '@wordpress/editor';
+import { PluginHeaderEnd } from '@wordpress/edit-post';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';

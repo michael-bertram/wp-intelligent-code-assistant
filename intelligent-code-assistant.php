@@ -1177,26 +1177,93 @@ PROMPT;
  * and token consumption vary. Transients are best-effort counters; enforce a
  * provider-level spending limit as an additional backstop.
  */
+/**
+ * Match public questions to a real published snippet; never trust browser code.
+ * Resolve linked canonical records only when the parent article references them.
+ */
+if ( ! function_exists( 'intelligent_code_assistant_resolve_public_code' ) ) {
+    function intelligent_code_assistant_resolve_public_code( $post_id, $code_example_id, $supplied_code ) {
+        $post = get_post( absint( $post_id ) );
+        if ( ! $post || 'publish' !== $post->post_status || ! is_post_type_viewable( $post->post_type ) ) {
+            return new WP_Error( 'invalid_article', __( 'This article is not publicly available.', 'intelligent-code-assistant' ), array( 'status' => 403 ) );
+        }
+        $normalize = static function( $code ) {
+            return trim( str_replace( "\r", '', html_entity_decode( wp_strip_all_tags( (string) $code ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) );
+        };
+        $find = static function( $blocks ) use ( &$find, $normalize, $code_example_id, $supplied_code ) {
+            foreach ( $blocks as $block ) {
+                if ( 'wpe/intelligent-code-assistant' === ( $block['blockName'] ?? '' ) ) {
+                    $attrs = $block['attrs'] ?? array();
+                    if ( absint( $attrs['codeExampleId'] ?? 0 ) !== absint( $code_example_id ) ) continue;
+                    $source = $block;
+                    if ( $code_example_id ) {
+                        $canonical = get_post( absint( $code_example_id ) );
+                        if ( ! $canonical || 'ica_code_example' !== $canonical->post_type || 'publish' !== $canonical->post_status ) continue;
+                        foreach ( parse_blocks( $canonical->post_content ) as $candidate ) {
+                            if ( 'wpe/intelligent-code-assistant' === ( $candidate['blockName'] ?? '' ) ) {
+                                $source = $candidate;
+                                break;
+                            }
+                        }
+                    }
+                    $parts = array( $source );
+                    while ( $parts ) {
+                        $part = array_shift( $parts );
+                        if ( 'wpe/code-content' === ( $part['blockName'] ?? '' ) ) {
+                            $attrs = $part['attrs'] ?? array();
+                            $code = $attrs['code'] ?? $attrs['content'] ?? '';
+                            if ( '' !== $normalize( $code ) && hash_equals( $normalize( $code ), $normalize( $supplied_code ) ) ) return $code;
+                        }
+                        foreach ( $part['innerBlocks'] ?? array() as $inner ) $parts[] = $inner;
+                    }
+                }
+                $nested = $find( $block['innerBlocks'] ?? array() );
+                if ( null !== $nested ) return $nested;
+            }
+            return null;
+        };
+        $code = $find( parse_blocks( $post->post_content ) );
+        if ( null === $code ) {
+            return new WP_Error( 'invalid_code_context', __( 'This code example could not be verified against the published article.', 'intelligent-code-assistant' ), array( 'status' => 403 ) );
+        }
+        return $code;
+    }
+}
+
+/**
+ * Serialize quota checks and increments with a database advisory lock.
+ * Store fixed-window counts as autoload-disabled options, not expiring transients.
+ */
 if ( ! function_exists( 'intelligent_code_assistant_check_reader_budget' ) ) {
     function intelligent_code_assistant_check_reader_budget( $question ) {
-        $visitor_limit = (int) apply_filters( 'intelligent_code_assistant_visitor_hourly_limit', 10 );
-        $site_limit = (int) apply_filters( 'intelligent_code_assistant_site_daily_limit', 250 );
-        // A secret-salted digest avoids storing raw IP addresses in transients.
+        global $wpdb;
+        $visitor_limit = max( 0, (int) apply_filters( 'intelligent_code_assistant_visitor_hourly_limit', 10 ) );
+        $site_limit = max( 0, (int) apply_filters( 'intelligent_code_assistant_site_daily_limit', 250 ) );
         $ip = isset( $_SERVER['REMOTE_ADDR'] ) ? (string) $_SERVER['REMOTE_ADDR'] : '';
-        $visitor_key = 'ica_reader_' . hash_hmac( 'sha256', $ip, wp_salt( 'auth' ) );
-        $site_key = 'ica_reader_site_' . gmdate( 'Ymd' );
-        $visitor_count = (int) get_transient( $visitor_key );
-        $site_count = (int) get_transient( $site_key );
-        if ( $visitor_limit > 0 && $visitor_count >= $visitor_limit ) {
-            return new WP_Error( 'reader_rate_limited', __( 'You have reached the hourly question limit. Please try again later.', 'intelligent-code-assistant' ), array( 'status' => 429 ) );
+        $hour = gmdate( 'YmdH' );
+        $day = gmdate( 'Ymd' );
+        $visitor_key = 'ica_reader_' . $hour . '_' . substr( hash_hmac( 'sha256', $ip, wp_salt( 'auth' ) ), 0, 32 );
+        $site_key = 'ica_reader_site_' . $day;
+        $lock_name = 'ica_reader_budget_' . substr( md5( $wpdb->prefix ), 0, 16 );
+        $locked = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 3)', $lock_name ) );
+        if ( 1 !== $locked ) {
+            return new WP_Error( 'reader_budget_busy', __( 'The assistant is busy. Please try again shortly.', 'intelligent-code-assistant' ), array( 'status' => 503 ) );
         }
-        if ( $site_limit > 0 && $site_count >= $site_limit ) {
-            return new WP_Error( 'reader_budget_exhausted', __( 'The daily question limit has been reached. Please try again tomorrow.', 'intelligent-code-assistant' ), array( 'status' => 429 ) );
+        try {
+            $visitor_count = (int) get_option( $visitor_key, 0 );
+            $site_count = (int) get_option( $site_key, 0 );
+            if ( $visitor_limit && $visitor_count >= $visitor_limit ) {
+                return new WP_Error( 'reader_rate_limited', __( 'You have reached the hourly question limit. Please try again later.', 'intelligent-code-assistant' ), array( 'status' => 429 ) );
+            }
+            if ( $site_limit && $site_count >= $site_limit ) {
+                return new WP_Error( 'reader_budget_exhausted', __( 'The daily question limit has been reached. Please try again tomorrow.', 'intelligent-code-assistant' ), array( 'status' => 429 ) );
+            }
+            update_option( $visitor_key, $visitor_count + 1, false );
+            update_option( $site_key, $site_count + 1, false );
+            return true;
+        } finally {
+            $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock_name ) );
         }
-        // Charge attempts, including rejected questions and provider failures.
-        set_transient( $visitor_key, $visitor_count + 1, HOUR_IN_SECONDS );
-        set_transient( $site_key, $site_count + 1, DAY_IN_SECONDS );
-        return true;
     }
 }
 
@@ -1212,6 +1279,14 @@ add_action( 'rest_api_init', function() {
 			'callback' => function( WP_REST_Request $request ) {
 
 				$params = $request->get_json_params();
+                $params = is_array( $params ) ? $params : array();
+                $verified_code = intelligent_code_assistant_resolve_public_code(
+                    $params['postId'] ?? 0,
+                    $params['codeExampleId'] ?? 0,
+                    $params['code'] ?? ''
+                );
+                if ( is_wp_error( $verified_code ) ) return $verified_code;
+                $params['code'] = $verified_code;
 
 				return intelligent_code_assistant_execute_ask_code_ability(
 					array(
@@ -1229,6 +1304,8 @@ add_action( 'rest_api_init', function() {
 			'permission_callback' => '__return_true',
 
 			'args' => array(
+                'postId' => array( 'required' => true, 'type' => 'integer', 'minimum' => 1 ),
+                'codeExampleId' => array( 'required' => false, 'type' => 'integer', 'minimum' => 0 ),
 				'code' => array(
 					'required'  => true,
 					'type'      => 'string',

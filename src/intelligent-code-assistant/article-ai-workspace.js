@@ -3,7 +3,7 @@ import { parse, serialize } from '@wordpress/blocks';
 import { Button, Modal, Notice, Spinner } from '@wordpress/components';
 import { PluginDocumentSettingPanel } from '@wordpress/editor';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { createPortal, useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
 import apiFetch from '@wordpress/api-fetch';
 
@@ -453,7 +453,7 @@ function CodeAssistantToolbar() {
 
     if (!snippets.length || !open) return null;
 
-    return (
+    return createPortal(
         <div className="ica-toolbar-overview" role="dialog" aria-label={__('Code Assistant overview', 'intelligent-code-assistant')}>
             <div className="ica-toolbar-overview__header">
                 <span className="ica-ai-sidebar-summary__mark">✦</span>
@@ -475,7 +475,8 @@ function CodeAssistantToolbar() {
                 setOpen(false);
                 window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
             }}>{__('Open Code Assistant', 'intelligent-code-assistant')}</Button>
-        </div>
+        </div>,
+        document.body
     );
 }
 

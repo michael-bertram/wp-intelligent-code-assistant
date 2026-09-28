@@ -5,7 +5,8 @@
 .wpe-floating-ai-assistant {
 	position: fixed !important;
 	right: 24px !important;
-	bottom: 24px !important;
+	// Reserve the lowest corner for the site's existing View Post control.
+	bottom: 96px !important;
 	left: auto !important;
 	top: auto !important;
 	z-index: 100000;
@@ -77,7 +78,7 @@
 [data-ai-assistant-enabled="true"][data-ai-assistant-active="true"] .ai-assistant-drawer {
 	position: fixed !important;
 	right: 24px !important;
-	bottom: 82px !important;
+	bottom: 154px !important;
 	left: auto !important;
 	top: auto !important;
 	z-index: 99999;
@@ -92,12 +93,12 @@
 @media (max-width: 600px) {
 	.wpe-floating-ai-assistant {
 		right: 16px !important;
-		bottom: 16px !important;
+		bottom: 88px !important;
 	}
 
 	[data-ai-assistant-enabled="true"][data-ai-assistant-active="true"] .ai-assistant-drawer {
 		right: 16px !important;
-		bottom: 74px !important;
+		bottom: 146px !important;
 		width: calc(100vw - 32px);
 		max-height: 72vh;
 	}

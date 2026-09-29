@@ -1,7 +1,6 @@
 import { useBlockProps, RichText } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useSelect, useDispatch } from '@wordpress/data';
-import { useEffect } from '@wordpress/element';
 
 const GENERIC_FILENAMES = /^(?:snippet|script|index|functions?|style|styles|data|query|code|example)\.(?:php|js|css|html|json|sql|sh|bash)$/i;
 
@@ -124,15 +123,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             isParentSelected: directParentId ? blockEditor.isBlockSelected(directParentId) : false,
         };
     }, [clientId]);
-
-    // The filename is author-owned. Never derive and overwrite it on every
-    // code/language change: doing so resets manual edits while typing.
-    // Keep the header's saved content in sync with the parent attribute.
-    useEffect(() => {
-        if (parentId && filename !== attributes.content) {
-            setAttributes({ content: filename });
-        }
-    }, [parentId, filename, attributes.content, setAttributes]);
 
     const selectAssistantFirst = (event) => {
         if (!parentId || isParentSelected) {

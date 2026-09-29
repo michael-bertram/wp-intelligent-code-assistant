@@ -136,38 +136,40 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_autofill_ability' ) 
 
 		$prompt = "You are a software engineer and code analyzer. Analyze the snippet below and return ONLY a raw JSON object (no markdown, no backticks) with these exact keys:\n- 'codeLanguage': The exact matching token from ['PHP', 'JS', 'CSS', 'HTML', 'JSON', 'SQL', 'Bash'].\n- 'filename': An idiomatic filename.\n- 'title': A concise 3-6 word summary title.\n- 'highlightLines': Important line numbers to highlight or empty string.\n- 'showLineNumbers': true if the snippet has more than 3 lines or structural logic, false otherwise.\n\nSnippet:\n{$code}";
 
-		if ( function_exists( 'wp_ai_client_prompt' ) ) {
-			try {
-				$ai_response = wp_ai_client_prompt( $prompt, array( 'response_format' => array( 'type' => 'json_object' ) ) );
-				if ( ! is_wp_error( $ai_response ) ) {
-					$raw_json = '';
-					if ( is_string( $ai_response ) ) {
-						$raw_json = $ai_response;
-					} elseif ( is_object( $ai_response ) ) {
-						if ( method_exists( $ai_response, 'generate' ) ) {
-							$generated = $ai_response->generate();
-							$raw_json  = is_string( $generated ) ? $generated : (string) $generated;
-						} elseif ( method_exists( $ai_response, 'get_text' ) ) {
-							$raw_json = (string) $ai_response->get_text();
-						} elseif ( method_exists( $ai_response, '__toString' ) ) {
-							$raw_json = (string) $ai_response;
-						}
-					}
-					$data = json_decode( trim( preg_replace( '/^```(json)?|```$/m', '', trim( $raw_json ) ) ), true );
-					if ( is_array( $data ) && isset( $data['codeLanguage'], $data['filename'], $data['title'] ) ) {
-						return array(
-							'codeLanguage'    => sanitize_text_field( $data['codeLanguage'] ),
-							'filename'        => sanitize_file_name( $data['filename'] ),
-							'title'           => sanitize_text_field( $data['title'] ),
-							'highlightLines'  => isset( $data['highlightLines'] ) ? sanitize_text_field( $data['highlightLines'] ) : '',
-							'showLineNumbers' => isset( $data['showLineNumbers'] ) ? (bool) $data['showLineNumbers'] : true,
-						);
-					}
-				}
-			} catch ( Throwable $e ) {
-				// Fall through to the deterministic fallback engine.
-			}
-		}
+        if ( function_exists( 'wp_ai_client_prompt' ) ) {
+            try {
+                // wp_ai_client_prompt returns a builder; generate_text actually
+                // invokes the provider. The previous generate/get_text probing
+                // silently skipped generation and always reached the fallback.
+                $schema = array(
+                    'type' => 'object',
+                    'properties' => array(
+                        'codeLanguage' => array( 'type' => 'string' ),
+                        'filename' => array( 'type' => 'string' ),
+                        'title' => array( 'type' => 'string' ),
+                        'highlightLines' => array( 'type' => 'string' ),
+                        'showLineNumbers' => array( 'type' => 'boolean' ),
+                    ),
+                    'required' => array( 'codeLanguage', 'filename', 'title', 'highlightLines', 'showLineNumbers' ),
+                    'additionalProperties' => false,
+                );
+                $generated = wp_ai_client_prompt( $prompt )->as_json_response( $schema )->generate_text();
+                if ( ! is_wp_error( $generated ) ) {
+                    $data = is_string( $generated ) ? json_decode( $generated, true ) : ( is_array( $generated ) ? $generated : null );
+                    if ( is_array( $data ) && ! empty( $data['filename'] ) && ! empty( $data['codeLanguage'] ) && isset( $data['title'] ) ) {
+                        return array(
+                            'codeLanguage' => sanitize_text_field( $data['codeLanguage'] ),
+                            'filename' => sanitize_file_name( $data['filename'] ),
+                            'title' => sanitize_text_field( $data['title'] ),
+                            'highlightLines' => isset( $data['highlightLines'] ) ? sanitize_text_field( $data['highlightLines'] ) : '',
+                            'showLineNumbers' => isset( $data['showLineNumbers'] ) ? (bool) $data['showLineNumbers'] : true,
+                        );
+                    }
+                }
+            } catch ( Throwable $e ) {
+                // Continue with deterministic metadata when the AI is unavailable.
+            }
+        }
 
 		$trimmed_code = trim( $code );
 		$lines_count  = count( explode( "\n", $trimmed_code ) );
@@ -184,7 +186,7 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_autofill_ability' ) 
 		if ( preg_match( '/(const|let|var|import|export|function)\s/', $trimmed_code ) ) {
 			return array( 'codeLanguage' => 'JS', 'filename' => 'script.js', 'title' => __( 'JavaScript Code', 'intelligent-code-assistant' ), 'highlightLines' => '', 'showLineNumbers' => $lines_count > 3 );
 		}
-		return array( 'codeLanguage' => 'PHP', 'filename' => 'snippet.php', 'title' => __( 'Code Snippet', 'intelligent-code-assistant' ), 'highlightLines' => '', 'showLineNumbers' => $lines_count > 3 );
+		return array( 'codeLanguage' => '', 'filename' => 'code-example.txt', 'title' => __( 'Code Snippet', 'intelligent-code-assistant' ), 'highlightLines' => '', 'showLineNumbers' => $lines_count > 3 );
 	}
 }
 

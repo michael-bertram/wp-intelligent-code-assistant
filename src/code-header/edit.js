@@ -125,27 +125,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         };
     }, [clientId]);
 
+    // The filename is author-owned. Never derive and overwrite it on every
+    // code/language change: doing so resets manual edits while typing.
+    // Keep the header's saved content in sync with the parent attribute.
     useEffect(() => {
-        if (!parentId || !filename || !code) return;
-
-        const expectedExtension = getExtension(codeLanguage);
-        const filenameExtension = filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
-        const hasWrongExtension = expectedExtension !== 'txt' && filenameExtension !== expectedExtension;
-        const isGenericFilename = GENERIC_FILENAMES.test(filename);
-
-        if (isGenericFilename || hasWrongExtension) {
-            const derivedFilename = deriveFilename(code, codeLanguage);
-            if (derivedFilename && derivedFilename !== filename) {
-                updateBlockAttributes(parentId, { filename: derivedFilename });
-                setAttributes({ content: derivedFilename });
-                return;
-            }
-        }
-
-        if (filename !== attributes.content) {
+        if (parentId && filename !== attributes.content) {
             setAttributes({ content: filename });
         }
-    }, [parentId, filename, codeLanguage, code, attributes.content, setAttributes, updateBlockAttributes]);
+    }, [parentId, filename, attributes.content, setAttributes]);
 
     const selectAssistantFirst = (event) => {
         if (!parentId || isParentSelected) {

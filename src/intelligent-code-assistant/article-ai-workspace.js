@@ -118,7 +118,7 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         const last = Math.min(offset + batch.length, expectedLines.length);
         onProgress?.(
             sprintfSafe(
-                // translators: The first value is the current line range; the second is the total number of lines.
+                // translators: 1: The current line range; 2: The total number of lines.
                 __('Generating line explanations %1$s of %2$s…', 'intelligent-code-assistant'),
                 `${first}–${last}|${expectedLines.length}`
             )

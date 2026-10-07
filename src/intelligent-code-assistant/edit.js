@@ -74,7 +74,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             currentPostType: postType,
             blockForConversion: block || null,
         };
-    }, [clientId, codeExampleId]);
+    }, [clientId]);
 
     const isCanonicalCodeExample = currentPostType === 'ica_code_example' || isEditingCanonicalEntity || isCodeExampleProxy;
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLocalBlockStructure;

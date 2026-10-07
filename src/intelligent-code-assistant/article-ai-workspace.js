@@ -119,7 +119,7 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         const last = Math.min(offset + batch.length, expectedLines.length);
         onProgress?.(
             sprintfSafe(
-                __('Generating line explanations %s of %s…', 'intelligent-code-assistant'),
+                // translators: The first value is the current line range; the second is the total number of lines.\n                __('Generating line explanations %s of %s…', 'intelligent-code-assistant'),
                 `${first}–${last}|${expectedLines.length}`
             )
         );
@@ -344,35 +344,12 @@ function useArticleCodeStatus() {
     const [loading, setLoading] = useState(true);
     const linkedIds = useMemo(() => [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))], [snippets]);
 
-    useEffect(() => {
+    const linkedIdsKey = linkedIds.join(',');\n\n    useEffect(() => {
         let active = true;
         if (!linkedIds.length) {
             setLinked({});
             setLoading(false);
-            return () => { active = false; };
-        }
-        setLoading(true);
-        Promise.all(linkedIds.map(async (id) => {
-            try {
-                const record = await apiFetch({ path: `/wp/v2/ica_code_example/${id}?context=edit` });
-                const canonical = flattenBlocks(parse(record?.content?.raw || ''))[0];
-                return [id, {
-                    title: decodeEntities(record?.title?.raw || record?.title?.rendered || ''),
-                    status: canonical ? getAssistanceStatus(canonical) : null,
-                    url: record?.link || '',
-                }];
-            } catch {
-                return [id, { title: '', status: null, url: '' }];
-            }
-        })).then((entries) => {
-            if (!active) return;
-            setLinked(Object.fromEntries(entries));
-            setLoading(false);
-        });
-        return () => { active = false; };
-    const linkedIdsKey = linkedIds.join(',');\n\n    useEffect(() => {
-
-    const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block));
+            return () => { active = false; };\n    }, [linkedIdsKey]);\n\n    const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block));
     const ready = statuses.filter((item) => item?.ready).length;
     const complete = !loading && ready === snippets.length && snippets.length > 0;
     return { snippets, linked, loading, ready, complete, statuses };

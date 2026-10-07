@@ -353,6 +353,27 @@ function useArticleCodeStatus() {
             setLinked({});
             setLoading(false);
             return () => { active = false; };
+        }
+
+        setLoading(true);
+        Promise.all(linkedIds.map(async (id) => {
+            try {
+                const record = await apiFetch({ path: `/wp/v2/ica_code_example/${id}?context=edit` });
+                const canonical = flattenBlocks(parse(record?.content?.raw || ''))[0];
+                return [id, {
+                    title: decodeEntities(record?.title?.raw || record?.title?.rendered || ''),
+                    status: canonical ? getAssistanceStatus(canonical) : null,
+                    url: record?.link || '',
+                }];
+            } catch {
+                return [id, { title: '', status: null, url: '' }];
+            }
+        })).then((entries) => {
+            if (!active) return;
+            setLinked(Object.fromEntries(entries));
+            setLoading(false);
+        });
+        return () => { active = false; };
     }, [linkedIdsKey]);
 
     const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block));

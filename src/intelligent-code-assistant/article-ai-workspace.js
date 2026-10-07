@@ -217,7 +217,7 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
             .finally(() => active && setLoading(false));
 
         return () => { active = false; };
-    }, [item.codeExampleId]);
+    }, [item.codeExampleId, item.block]);
 
     const saveGenerated = async (generated) => {
         if (!item.codeExampleId) {
@@ -370,7 +370,7 @@ function useArticleCodeStatus() {
             setLoading(false);
         });
         return () => { active = false; };
-    }, [linkedIds.join(',')]);
+    const linkedIdsKey = linkedIds.join(',');\n\n    useEffect(() => {
 
     const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block));
     const ready = statuses.filter((item) => item?.ready).length;

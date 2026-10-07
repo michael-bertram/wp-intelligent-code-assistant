@@ -44,11 +44,11 @@ export default function ReaderInsightsPanel() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [postId]);
 
     useEffect(() => {
         loadSummary();
-    }, [postId]);
+    }, [loadSummary]);
 
     return (
         <PanelBody

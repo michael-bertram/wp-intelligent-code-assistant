@@ -23,15 +23,15 @@ The assistant does not send code in isolation. Shared context can include the ac
 
 This keeps context construction in WordPress and allows the same AI abilities to be reused across multiple code examples.
 
-### Reusable canonical Code Snippets
+### Reusable canonical Code Examples
 
-The plugin registers the `ica_code_example` custom post type as **Code Snippets**.
+The plugin registers the `ica_code_example` custom post type for reusable **Code Examples**.
 
-Each Code Snippet owns one canonical Intelligent Code block and its code/configuration. Article blocks can reference that canonical snippet through `codeExampleId` instead of storing stale copies.
+Each Code Example owns one canonical Intelligent Code block and its code/configuration. Article blocks can reference that canonical example through `codeExampleId` instead of storing stale copies.
 
 This separates:
 
-- **semantic identity** — which Code Snippet the reader is working with;
+- **semantic identity** — which Code Example the reader is working with;
 - **article context** — where and why the snippet is being taught;
 - **rendered identity** — which particular block instance received the interaction.
 
@@ -56,10 +56,14 @@ The **Intelligent Code** admin workspace provides:
 
 - **Overview** — entry point for Code Snippets and analytics.
 - **Reader Insights** — article-level deterministic interaction data.
-- **Code Snippet Insights** — activity for reusable snippets across the articles where they appear.
+- **Code Example Insights** — activity for reusable examples across the articles where they appear.
 - **AI Editorial Insights** — AI interpretation of server-authoritative analytics to help authors investigate possible reader friction and opportunities to improve content.
 
 Generated reader-facing AI responses are not the analytics source of truth. WordPress records what happened; deterministic code aggregates it; AI helps interpret what it might mean.
+
+### Centralised authoring workspace
+
+The Block Editor includes an article-level Code Assistant workspace for managing the AI learning material associated with the article's Code Examples. Authors can review readiness and generate or regenerate predictable material such as Explain Code responses, line explanations and Knowledge Checks before publication. This keeps repeatable teaching content author-controlled rather than generating the same material independently for every reader.
 
 ## WordPress-native AI architecture
 
@@ -74,6 +78,10 @@ The plugin is designed around WordPress rather than treating AI as a separate ap
 - **WordPress analytics storage and aggregation** provide deterministic evidence before AI interpretation.
 
 The plugin also registers AI-assisted metadata generation as a WordPress Ability and exposes appropriate abilities through WordPress's AI/Abilities architecture.
+
+### Public AI hardening
+
+The reader-facing `Ask about this code` capability is deliberately treated as a public endpoint. Requests are bounded and validated before provider execution, cross-site requests are rejected, anonymous requests are rate-limited, and provider failures are normalised at the REST boundary. Questions are limited to 1,000 characters, while code and tutorial context have separate input limits. Explanations and Knowledge Checks are generated during authoring and stored with the Code Example, so they do not require a live provider request for every reader.
 
 The key architectural principle is:
 

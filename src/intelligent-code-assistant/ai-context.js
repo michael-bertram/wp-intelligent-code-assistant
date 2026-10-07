@@ -154,6 +154,8 @@ export function buildAIContext(context, extras = {}) {
 
   return {
     code,
+    postId: Number(context.postId || 0),
+    codeExampleId: Number(context.codeExampleId || 0),
     language: context.codeLanguage || 'code',
     filename: context.codeFilename || '',
     title: context.codeTitle || renderedCodeTitle,

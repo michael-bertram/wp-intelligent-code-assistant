@@ -1,9 +1,8 @@
 import { __ } from '@wordpress/i18n';
 import { parse, serialize } from '@wordpress/blocks';
 import { Button, Dropdown, Modal, Notice, Spinner } from '@wordpress/components';
-import { createPortal } from '@wordpress/element';
+import { createPortal, useEffect, useMemo, useState } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
-import { useEffect, useMemo, useState } from '@wordpress/element';
 import { registerPlugin } from '@wordpress/plugins';
 import apiFetch from '@wordpress/api-fetch';
 
@@ -120,7 +119,7 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         onProgress?.(
             sprintfSafe(
                 // translators: The first value is the current line range; the second is the total number of lines.
-                __('Generating line explanations %s of %s…', 'intelligent-code-assistant'),
+                __('Generating line explanations %1$s of %2$s…', 'intelligent-code-assistant'),
                 `${first}–${last}|${expectedLines.length}`
             )
         );
@@ -374,7 +373,7 @@ function useArticleCodeStatus() {
             setLoading(false);
         });
         return () => { active = false; };
-    }, [linkedIdsKey]);
+    }, [linkedIdsKey, linkedIds]);
 
     const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block));
     const ready = statuses.filter((item) => item?.ready).length;

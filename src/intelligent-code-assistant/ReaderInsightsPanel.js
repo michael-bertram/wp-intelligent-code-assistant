@@ -1,7 +1,7 @@
 import { __ } from '@wordpress/i18n';
 import { Button, PanelBody, Spinner } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
-import { useEffect, useState } from '@wordpress/element';
+import { useCallback, useEffect, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 
 const eventLabels = {
@@ -23,7 +23,7 @@ export default function ReaderInsightsPanel() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const loadSummary = async () => {
+    const loadSummary = useCallback(async () => {
         if (!postId) {
             return;
         }
@@ -44,11 +44,11 @@ export default function ReaderInsightsPanel() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [postId]);
 
     useEffect(() => {
         loadSummary();
-    }, [postId]);
+    }, [loadSummary]);
 
     return (
         <PanelBody

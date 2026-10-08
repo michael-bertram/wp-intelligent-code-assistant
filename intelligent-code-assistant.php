@@ -11,6 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once __DIR__ . '/includes/github-updater.php';
+
 /** Register custom block types from the build directory metadata. */
 function intelligent_code_assistant_register_blocks() {
 	register_block_type_from_metadata( __DIR__ . '/build/intelligent-code-assistant' );

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       WP Intelligent Code Assistant
  * Description:       An interactive code block with inline AI assistance for technical articles, powered by the WordPress AI Client, Abilities API and Interactivity API.
- * Version:           1.1.1
+ * Version:           1.1.2
  * Update URI:        https://github.com/michael-bertram/wp-intelligent-code-assistant
  * Text Domain:       intelligent-code-assistant
  */

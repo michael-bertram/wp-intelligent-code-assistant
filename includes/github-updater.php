@@ -71,7 +71,7 @@ if ( ! function_exists( 'intelligent_code_assistant_github_update' ) ) {
 
 		$version = ltrim( (string) $release['tag_name'], 'v' );
 
-		if ( '' === $version || ! preg_match( '/^\\d+(?:\\.\\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?$/', $version ) ) {
+		if ( '' === $version || ! preg_match( '/^\d+(?:\.\d+){1,3}(?:[-+][0-9A-Za-z.-]+)?$/', $version ) ) {
 			return $update;
 		}
 

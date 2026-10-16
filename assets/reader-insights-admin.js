@@ -155,6 +155,7 @@
 			} );
 			const data = await response.json();
 			if ( ! response.ok ) throw new Error( data?.message || config.i18n?.error );
+			config.savedInsights = data;
 			renderInsights( data );
 			button.textContent = config.i18n?.regenerate || 'Regenerate insights';
 			button.dataset.idleLabel = button.textContent;

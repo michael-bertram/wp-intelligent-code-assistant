@@ -105,6 +105,30 @@
 		results.hidden = false;
 	};
 
+	const formatSavedAt = ( value ) => {
+		if ( ! value ) return '';
+		const date = new Date( value );
+		return Number.isNaN( date.getTime() ) ? String( value ) : date.toLocaleString();
+	};
+
+	const updateSavedStatus = ( data ) => {
+		const generatedAt = formatSavedAt( data.generatedAt );
+		const interactions = Number( data.analyticsTotalInteractions );
+		const snapshot = Number.isFinite( interactions ) && interactions > 0
+			? ` · ${ interactions } ${ config.i18n?.snapshotInteractions || 'interactions in snapshot' }`
+			: '';
+		status.textContent = generatedAt
+			? `${ config.i18n?.saved || 'Saved insights · generated' } ${ generatedAt }${ snapshot }`
+			: ( config.i18n?.saved || 'Saved insights available' );
+	};
+
+	if ( config.savedInsights && config.savedInsights.summary ) {
+		renderInsights( config.savedInsights );
+		button.textContent = config.i18n?.regenerate || 'Regenerate insights';
+		button.dataset.idleLabel = button.textContent;
+		updateSavedStatus( config.savedInsights );
+	}
+
 	const showError = ( message ) => {
 		results.classList.remove( 'is-loading' );
 		results.setAttribute( 'aria-busy', 'false' );
@@ -134,12 +158,15 @@
 			renderInsights( data );
 			button.textContent = config.i18n?.regenerate || 'Regenerate insights';
 			button.dataset.idleLabel = button.textContent;
-			status.textContent = isCodeExample
-				? ( config.i18n?.generatedCodeExample || 'Generated from current Code Example analytics' )
-				: ( config.i18n?.generatedArticle || 'Generated from current article analytics' );
+			updateSavedStatus( data );
 		} catch ( error ) {
-			showError( error?.message || config.i18n?.error || 'AI insights are currently unavailable.' );
-			status.textContent = '';
+			if ( config.savedInsights && config.savedInsights.summary ) {
+				renderInsights( config.savedInsights );
+				updateSavedStatus( config.savedInsights );
+			} else {
+				showError( error?.message || config.i18n?.error || 'AI insights are currently unavailable.' );
+				status.textContent = '';
+			}
 		} finally {
 			status.classList.remove( 'is-loading' );
 			button.disabled = false;

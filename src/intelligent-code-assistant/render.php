@@ -11,10 +11,7 @@ $persistent_id = ! empty( $attributes['id'] )
 	: wp_unique_id( 'wpe-code-' );
 
 $show_badge                = $attributes['showLanguageBadge'] ?? true;
-<<<<<<< HEAD
-=======
 $code_example_id           = isset( $attributes['codeExampleId'] ) ? absint( $attributes['codeExampleId'] ) : 0;
->>>>>>> main
 $code_lang                 = isset( $attributes['codeLanguage'] ) ? sanitize_text_field( $attributes['codeLanguage'] ) : '';
 $filename                  = isset( $attributes['filename'] ) ? sanitize_file_name( $attributes['filename'] ) : '';
 $is_dark                   = $attributes['isDarkMode'] ?? false;
@@ -27,17 +24,6 @@ $enable_ai_assistant       = $attributes['enableAIAssistant'] ?? false;
 $tutorial_context_override = isset( $attributes['tutorialContextOverride'] )
 	? sanitize_textarea_field( $attributes['tutorialContextOverride'] )
 	: '';
-<<<<<<< HEAD
-=======
-$generated_explanation       = isset( $attributes['generatedExplanation'] ) ? sanitize_textarea_field( $attributes['generatedExplanation'] ) : '';
-$generated_line_explanations = isset( $attributes['generatedLineExplanations'] ) && is_array( $attributes['generatedLineExplanations'] ) ? $attributes['generatedLineExplanations'] : array();
-$generated_knowledge_check   = isset( $attributes['generatedKnowledgeCheck'] ) && is_array( $attributes['generatedKnowledgeCheck'] ) ? $attributes['generatedKnowledgeCheck'] : array();
-
-$generated_line_explanations = array_map( 'sanitize_textarea_field', $generated_line_explanations );
-$generated_check_options     = isset( $generated_knowledge_check['options'] ) && is_array( $generated_knowledge_check['options'] )
-	? array_values( array_map( 'sanitize_text_field', $generated_knowledge_check['options'] ) )
-	: array();
->>>>>>> main
 
 $theme_class   = $is_dark ? 'dark-theme' : '';
 $compact_class = $is_compact ? 'is-compact' : '';
@@ -133,13 +119,8 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'aiAssistantView'          => 'menu',
 			'isExplaining'             => false,
 			'isAnalyzingExplanation'   => false,
-<<<<<<< HEAD
 			'explanationText'          => '',
 			'explanationItems'         => array(),
-=======
-			'explanationText'          => $generated_explanation,
-			'explanationItems'         => array_values( array_filter( array_map( 'trim', preg_split( '/\\R+/', $generated_explanation ) ) ) ),
->>>>>>> main
 			'explanationError'         => '',
 			'selectedLineNumber'       => 0,
 			'selectedLineText'         => '',
@@ -147,18 +128,10 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'isAnalyzingLine'          => false,
 			'lineExplanation'          => '',
 			'lineExplanationError'     => '',
-<<<<<<< HEAD
-			'activeCodeText'           => $raw_code_text,
-			'rawCodeText'              => $raw_code_text,
-    		'postId'          			=> get_the_ID(),
-=======
-			'generatedLineExplanations'=> $generated_line_explanations,
-			'generatedLineExplanationsJson' => wp_json_encode( $generated_line_explanations ),
 			'activeCodeText'           => $raw_code_text,
 			'rawCodeText'              => $raw_code_text,
 			'postId'                   => get_the_ID(),
 			'codeExampleId'            => $code_example_id,
->>>>>>> main
 			'codeLanguage'             => $code_lang,
 			'codeFilename'             => $filename,
 			'codeTitle'                => $code_title,
@@ -172,7 +145,6 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'codeQuestionError'        => '',
 			'isCheckingUnderstanding'  => false,
 			'isGeneratingCheck'        => false,
-<<<<<<< HEAD
 			'checkQuestion'            => '',
 			'checkOptions'             => array(),
 			'checkOption0'             => '',
@@ -180,15 +152,6 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'checkOption2'             => '',
 			'checkCorrectAnswer'       => null,
 			'checkExplanation'         => '',
-=======
-			'checkQuestion'            => isset( $generated_knowledge_check['question'] ) ? sanitize_text_field( $generated_knowledge_check['question'] ) : '',
-			'checkOptions'             => $generated_check_options,
-			'checkOption0'             => $generated_check_options[0] ?? '',
-			'checkOption1'             => $generated_check_options[1] ?? '',
-			'checkOption2'             => $generated_check_options[2] ?? '',
-			'checkCorrectAnswer'       => isset( $generated_knowledge_check['correctAnswer'] ) ? absint( $generated_knowledge_check['correctAnswer'] ) : null,
-			'checkExplanation'         => isset( $generated_knowledge_check['explanation'] ) ? sanitize_textarea_field( $generated_knowledge_check['explanation'] ) : '',
->>>>>>> main
 			'selectedCheckAnswer'      => null,
 			'hasAnsweredCheck'         => false,
 			'isCheckCorrect'           => false,
@@ -280,17 +243,10 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 									data-wp-bind--disabled="context.isAnalyzingLine"
 								>
 									<span data-wp-bind--hidden="context.isAnalyzingLine">
-<<<<<<< HEAD
 										<?php esc_html_e( 'Ask AI about this line', 'intelligent-code-assistant' ); ?>
 									</span>
 									<span data-wp-bind--hidden="!context.isAnalyzingLine">
 										<?php esc_html_e( 'Explaining…', 'intelligent-code-assistant' ); ?>
-=======
-										<?php esc_html_e( 'Explain this line', 'intelligent-code-assistant' ); ?>
-									</span>
-									<span data-wp-bind--hidden="!context.isAnalyzingLine">
-										<?php esc_html_e( 'Opening explanation…', 'intelligent-code-assistant' ); ?>
->>>>>>> main
 									</span>
 								</button>
 							</div>
@@ -316,11 +272,7 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 							type="button"
 							class="explanation-close-btn"
 							data-wp-on--click="actions.closeAssistant"
-<<<<<<< HEAD
 							aria-label="<?php esc_attr_e( 'Close AI Assistant', 'intelligent-code-assistant' ); ?>"
-=======
-							aria-label="<?php esc_attr_e( 'Close Code Assistant', 'intelligent-code-assistant' ); ?>"
->>>>>>> main
 						>&times;</button>
 					</div>
 
@@ -463,7 +415,6 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 
 							<div class="understanding-check-options" role="group" aria-label="<?php esc_attr_e( 'Choose an answer', 'intelligent-code-assistant' ); ?>">
 								<button type="button" class="understanding-check-option" data-answer-index="0" data-wp-on--click="actions.selectCheckAnswer" data-wp-bind--disabled="context.hasAnsweredCheck" data-wp-class--is-correct="state.isCheckOption0Correct" data-wp-class--is-incorrect="state.isCheckOption0Incorrect">
-<<<<<<< HEAD
 									<span data-wp-text="context.checkOption0"></span>
 								</button>
 								<button type="button" class="understanding-check-option" data-answer-index="1" data-wp-on--click="actions.selectCheckAnswer" data-wp-bind--disabled="context.hasAnsweredCheck" data-wp-class--is-correct="state.isCheckOption1Correct" data-wp-class--is-incorrect="state.isCheckOption1Incorrect">
@@ -471,15 +422,6 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 								</button>
 								<button type="button" class="understanding-check-option" data-answer-index="2" data-wp-on--click="actions.selectCheckAnswer" data-wp-bind--disabled="context.hasAnsweredCheck" data-wp-class--is-correct="state.isCheckOption2Correct" data-wp-class--is-incorrect="state.isCheckOption2Incorrect">
 									<span data-wp-text="context.checkOption2"></span>
-=======
-									<span><?php echo esc_html( $generated_check_options[0] ?? '' ); ?></span>
-								</button>
-								<button type="button" class="understanding-check-option" data-answer-index="1" data-wp-on--click="actions.selectCheckAnswer" data-wp-bind--disabled="context.hasAnsweredCheck" data-wp-class--is-correct="state.isCheckOption1Correct" data-wp-class--is-incorrect="state.isCheckOption1Incorrect">
-									<span><?php echo esc_html( $generated_check_options[1] ?? '' ); ?></span>
-								</button>
-								<button type="button" class="understanding-check-option" data-answer-index="2" data-wp-on--click="actions.selectCheckAnswer" data-wp-bind--disabled="context.hasAnsweredCheck" data-wp-class--is-correct="state.isCheckOption2Correct" data-wp-class--is-incorrect="state.isCheckOption2Incorrect">
-									<span><?php echo esc_html( $generated_check_options[2] ?? '' ); ?></span>
->>>>>>> main
 								</button>
 							</div>
 
@@ -525,7 +467,6 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 
 			<div class="code-footer-actions">
 				<?php if ( $enable_ai_assistant ) : ?>
-<<<<<<< HEAD
 					<button
 						type="button"
 						class="explain-button ai-assistant-button"
@@ -535,19 +476,6 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 						<span aria-hidden="true">✦</span>
 						<span><?php esc_html_e( 'AI Assistant', 'intelligent-code-assistant' ); ?></span>
 					</button>
-=======
-					<div class="ai-assistant-attention">
-						<button
-							type="button"
-							class="explain-button ai-assistant-button"
-							data-wp-on--click="actions.openAssistant"
-							data-wp-class--active="context.aiAssistantOpen"
-						>
-							<span aria-hidden="true">✦</span>
-							<span><?php esc_html_e( 'Code Assistant', 'intelligent-code-assistant' ); ?></span>
-						</button>
-					</div>
->>>>>>> main
 				<?php endif; ?>
 
 				<button

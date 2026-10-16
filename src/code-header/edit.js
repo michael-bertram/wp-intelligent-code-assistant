@@ -1,10 +1,7 @@
 import { useBlockProps, RichText } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useSelect, useDispatch } from '@wordpress/data';
-<<<<<<< HEAD
 import { useEffect } from '@wordpress/element';
-=======
->>>>>>> main
 
 const GENERIC_FILENAMES = /^(?:snippet|script|index|functions?|style|styles|data|query|code|example)\.(?:php|js|css|html|json|sql|sh|bash)$/i;
 
@@ -43,7 +40,6 @@ const deriveFilename = (rawCode, language) => {
             const abilityName = match[1].split('/').pop();
             return `${slugify(abilityName) || 'ability'}.php`;
         }
-<<<<<<< HEAD
 
         match = code.match(/\bfunction\s+([A-Za-z_]\w*)\s*\(/);
         if (match) return `${slugify(match[1])}.php`;
@@ -54,21 +50,12 @@ const deriveFilename = (rawCode, language) => {
         match = code.match(/\b(?:add_action|add_filter)\s*\(\s*['"]([^'"]+)['"]/);
         if (match) return `${slugify(match[1]) || 'wordpress-hook'}.php`;
 
-=======
-        match = code.match(/\bfunction\s+([A-Za-z_]\w*)\s*\(/);
-        if (match) return `${slugify(match[1])}.php`;
-        match = code.match(/\bclass\s+([A-Za-z_]\w*)/);
-        if (match) return `${slugify(match[1])}.php`;
-        match = code.match(/\b(?:add_action|add_filter)\s*\(\s*['"]([^'"]+)['"]/);
-        if (match) return `${slugify(match[1]) || 'wordpress-hook'}.php`;
->>>>>>> main
         if (/register_block_type(?:_from_metadata)?\s*\(/.test(code)) return 'register-block.php';
     }
 
     if (language === 'JS' || language === 'JavaScript') {
         match = code.match(/\b(?:export\s+default\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/);
         if (match) return `${slugify(match[1])}.js`;
-<<<<<<< HEAD
 
         match = code.match(/\bclass\s+([A-Za-z_$][\w$]*)/);
         if (match) return `${slugify(match[1])}.js`;
@@ -76,12 +63,6 @@ const deriveFilename = (rawCode, language) => {
         match = code.match(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/);
         if (match) return `${slugify(match[1])}.js`;
 
-=======
-        match = code.match(/\bclass\s+([A-Za-z_$][\w$]*)/);
-        if (match) return `${slugify(match[1])}.js`;
-        match = code.match(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/);
-        if (match) return `${slugify(match[1])}.js`;
->>>>>>> main
         match = code.match(/customElements\.define\s*\(\s*['"]([^'"]+)['"]/);
         if (match) return `${slugify(match[1])}.js`;
     }
@@ -89,19 +70,13 @@ const deriveFilename = (rawCode, language) => {
     if (language === 'HTML') {
         match = code.match(/\bid\s*=\s*['"]([^'"]+)['"]/i);
         if (match) return `${slugify(match[1])}.html`;
-<<<<<<< HEAD
 
-=======
->>>>>>> main
         match = code.match(/\bclass\s*=\s*['"]([^'"]+)['"]/i);
         if (match) {
             const firstClass = match[1].trim().split(/\s+/)[0];
             if (firstClass) return `${slugify(firstClass)}.html`;
         }
-<<<<<<< HEAD
 
-=======
->>>>>>> main
         match = code.match(/<\s*(main|nav|form|header|footer|section|article)\b/i);
         if (match) return `${slugify(match[1])}.html`;
     }
@@ -117,13 +92,9 @@ const deriveFilename = (rawCode, language) => {
             if (parsed && typeof parsed === 'object') {
                 if ('apiVersion' in parsed && 'name' in parsed) return 'block.json';
                 if ('scripts' in parsed && 'dependencies' in parsed) return 'package.json';
-<<<<<<< HEAD
                 if (typeof parsed.name === 'string' && parsed.name) {
                     return `${slugify(parsed.name)}.json`;
                 }
-=======
-                if (typeof parsed.name === 'string' && parsed.name) return `${slugify(parsed.name)}.json`;
->>>>>>> main
             }
         } catch (error) {
             // Fall through to a neutral JSON filename.
@@ -144,18 +115,10 @@ const deriveFilename = (rawCode, language) => {
 };
 
 export default function Edit({ attributes, setAttributes, clientId }) {
-<<<<<<< HEAD
     const { updateBlockAttributes } = useDispatch('core/block-editor');
 
     const { parentId, filename, codeLanguage, code } = useSelect((select) => {
         const { getBlockParents, getBlockAttributes, getBlock } = select('core/block-editor');
-=======
-    const { updateBlockAttributes, selectBlock } = useDispatch('core/block-editor');
-
-    const { parentId, filename, codeLanguage, code, isParentSelected } = useSelect((select) => {
-        const blockEditor = select('core/block-editor');
-        const { getBlockParents, getBlockAttributes, getBlock } = blockEditor;
->>>>>>> main
         const parents = getBlockParents(clientId);
         const directParentId = parents.length ? parents[parents.length - 1] : null;
         const parentAttributes = directParentId ? getBlockAttributes(directParentId) : null;
@@ -168,7 +131,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             filename: parentAttributes?.filename || '',
             codeLanguage: parentAttributes?.codeLanguage || '',
             code: rawCode,
-<<<<<<< HEAD
         };
     }, [clientId]);
 
@@ -202,35 +164,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
         setAttributes,
         updateBlockAttributes,
     ]);
-=======
-            isParentSelected: directParentId ? blockEditor.isBlockSelected(directParentId) : false,
-        };
-    }, [clientId]);
-
-    const selectAssistantFirst = (event) => {
-        if (!parentId || isParentSelected) {
-            return;
-        }
-
-        selectBlock(parentId);
-        event.preventDefault();
-        event.stopPropagation();
-    };
->>>>>>> main
 
     const blockProps = useBlockProps({
-        className: 'task-title',
-        onMouseDownCapture: selectAssistantFirst,
+        className: 'task-title'
     });
 
     const handleFilenameChange = (value) => {
         if (parentId) {
             updateBlockAttributes(parentId, { filename: value });
         }
-<<<<<<< HEAD
 
-=======
->>>>>>> main
         setAttributes({ content: value });
     };
 

@@ -1,55 +1,54 @@
-=== Interactive Block v6 ===
-Contributors:      The WordPress Contributors
-Tags:              block
-Tested up to:      6.7
-Stable tag:        0.1.0
+=== WP Intelligent Code Assistant ===
+Contributors:      michael-bertram
+Tags:              code, artificial intelligence, interactivity, developer tools, blocks
+Stable tag:        1.1.0
 License:           GPL-2.0-or-later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
-An interactive block with the Interactivity API.
+Interactive Gutenberg code examples with contextual AI assistance and Reader Insights for technical content.
 
 == Description ==
 
-This is the long description. No limit, and you can use Markdown (as well as in the following sections).
+WP Intelligent Code Assistant keeps readers inside technical articles when they need help understanding a code example.
 
-For backwards compatibility, if this section is missing, the full length of the short description will be used, and
-Markdown parsed.
+Code Examples can provide contextual reader tools including Explain Code, Explain Line, Ask about this code, and Check Your Understanding. WordPress supplies the surrounding code and tutorial context to the configured AI provider through the WordPress AI Client.
+
+Reader interactions feed into Reader Insights so authors can see where readers request explanations, which lines attract attention, repeated questions, knowledge-check activity, and cross-article Code Example signals.
+
+The plugin uses WordPress-native architecture including Gutenberg, the Interactivity API, the Abilities API, REST endpoints, and the WordPress AI Client.
 
 == Installation ==
 
-This section describes how to install the plugin and get it working.
+1. Upload the plugin to your WordPress plugins directory.
+2. Install and configure the required WordPress AI provider/connector for your site.
+3. Activate WP Intelligent Code Assistant.
+4. Add an Intelligent Code Assistant block or referenced Code Example to an article.
+5. Configure the code example and enable the reader assistance features you want to expose.
 
-e.g.
-
-1. Upload the plugin files to the `/wp-content/plugins/interactive-v6` directory, or install the plugin through the WordPress plugins screen directly.
-1. Activate the plugin through the 'Plugins' screen in WordPress
-
+For development builds, run `npm install` followed by `npm run build`.
 
 == Frequently Asked Questions ==
 
-= A question that someone might have =
+= Are AI provider credentials exposed to readers? =
 
-An answer to that question.
+No. Reader requests are sent to plugin-owned WordPress REST endpoints. Provider execution happens server-side through the WordPress AI Client.
 
-= What about foo bar? =
+= Do readers need to log in to use the assistant? =
 
-Answer to foo bar dilemma.
+No. Public reader assistance is designed to work for logged-out visitors. Public endpoints include validation and rate limiting before server-side AI execution.
 
-== Screenshots ==
+= What can authors learn from Reader Insights? =
 
-1. This screen shot description corresponds to screenshot-1.(png|jpg|jpeg|gif). Note that the screenshot is taken from
-the /assets directory or the directory that contains the stable readme.txt (tags or trunk). Screenshots in the /assets
-directory take precedence. For example, `/assets/screenshot-1.png` would win over `/tags/4.3/screenshot-1.png`
-(or jpg, jpeg, gif).
-2. This is the second screen shot
+Reader Insights surfaces interaction counts, commonly explained lines, repeated questions, knowledge-check activity, article context, and aggregated Code Example analytics.
 
 == Changelog ==
 
-= 0.1.0 =
-* Release
-
-== Arbitrary section ==
-
-You may provide arbitrary sections, in the same format as the ones above. This may be of use for extremely complicated
-plugins where more information needs to be conveyed that doesn't fit into the categories of "description" or
-"installation." Arbitrary sections will be shown below the built-in sections outlined above.
+= 1.1.0 =
+* Added contextual frontend AI assistance for code examples.
+* Added public reader AI requests with server-side provider execution, validation, and rate limiting.
+* Added Reader Insights for articles and reusable Code Examples.
+* Added AI-generated editorial interpretation of Reader Insights.
+* Added concept-level analytics across articles referencing the same Code Example.
+* Added persistent canonical Code Example editing from article references.
+* Added floating AI Assistant discoverability and contextual active-block highlighting.
+* Refined Reader Insights dashboard, loading states, and frontend interaction feedback.

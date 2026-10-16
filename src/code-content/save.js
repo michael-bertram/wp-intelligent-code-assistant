@@ -1,12 +1,12 @@
 import { useBlockProps, RichText } from '@wordpress/block-editor';
 
 export default function Save({ attributes }) {
-    // blockProps automatically assigns the <pre> tag because we pass it to useBlockProps.save()
     const blockProps = useBlockProps.save();
+    const codeValue = attributes.code ?? attributes.content ?? '';
 
     return (
-        <div { ...blockProps }>
-            <RichText.Content value={ attributes.code } />
+        <div {...blockProps}>
+            <RichText.Content value={codeValue} />
         </div>
     );
 }

@@ -3,10 +3,17 @@
   "apiVersion": 3,
   "name": "wpe/intelligent-code-assistant",
   "version": "0.1.0",
+<<<<<<< HEAD
   "title": "Code Dropdown",
   "category": "widgets",
   "icon": "screenoptions",
   "description": "An interactive block with the Interactivity API.",
+=======
+  "title": "Intelligent Code",
+  "category": "widgets",
+  "icon": "screenoptions",
+  "description": "Interactive code snippets with contextual reader assistance.",
+>>>>>>> main
   "example": {},
   "supports": {
     "interactivity": true
@@ -15,10 +22,21 @@
     "id": {
       "type": "string"
     },
+<<<<<<< HEAD
     "showLanguageBadge": {
       "type": "boolean",
       "default": true
     },
+=======
+    "codeExampleId": {
+      "type": "integer",
+      "default": 0
+    },
+    "showLanguageBadge": {
+      "type": "boolean",
+      "default": true
+    },
+>>>>>>> main
     "codeLanguage": {
       "type": "string",
       "default": ""
@@ -58,6 +76,21 @@
     "tutorialContextOverride": {
       "type": "string",
       "default": ""
+<<<<<<< HEAD
+=======
+    },
+    "generatedExplanation": {
+      "type": "string",
+      "default": ""
+    },
+    "generatedLineExplanations": {
+      "type": "object",
+      "default": {}
+    },
+    "generatedKnowledgeCheck": {
+      "type": "object",
+      "default": {}
+>>>>>>> main
     }
   },
   "textdomain": "intelligent-code-assistant",

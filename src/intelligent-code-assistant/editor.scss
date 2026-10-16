@@ -2,6 +2,129 @@
 @import url('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css');
 
 /* ==========================================================================
+   CODE EXAMPLE CHOOSER
+   Keep the entity relationship step compact and Gutenberg-like. Authors make
+   one decision first, then see only the controls required for that workflow.
+   ========================================================================== */
+.ica-code-example-chooser {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 24px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+
+    &__intro {
+        margin-bottom: 20px;
+
+        h3 {
+            margin: 0 0 6px;
+            font-size: 24px;
+            line-height: 1.25;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 0;
+            color: #50575e;
+            font-size: 14px;
+        }
+    }
+
+    &__modes {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    &__mode.components-button {
+        height: auto;
+        min-height: 68px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 2px;
+        text-align: left;
+        border-radius: 4px;
+        box-shadow: none;
+
+        &.is-secondary:not(.is-active) {
+            color: #1e1e1e;
+            background: #fff;
+            border: 1px solid #c3c4c7;
+        }
+    }
+
+    &__mode-title {
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    &__mode-description {
+        font-size: 12px;
+        line-height: 1.35;
+        opacity: 0.78;
+    }
+
+    &__form {
+        padding-top: 18px;
+        border-top: 1px solid #e0e0e0;
+
+        .components-base-control {
+            margin-bottom: 12px;
+        }
+
+        .components-base-control__label {
+            font-weight: 600;
+        }
+    }
+
+    &__error {
+        margin: 14px 0 0;
+        color: #cc1818;
+    }
+
+    @media (max-width: 600px) {
+        padding: 18px;
+
+        &__modes {
+            grid-template-columns: 1fr;
+        }
+    }
+}
+
+/* ==========================================================================
+   LINKED CODE EXAMPLE REFERENCE
+   The article reference must remain a real Gutenberg block for selection, but
+   it should be visually transparent. The canonical ICA block supplies the
+   visible card, border, spacing and content.
+   ========================================================================== */
+.ica-code-example-reference {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+    overflow: visible !important;
+}
+
+.ica-code-example-reference > .block-editor-block-list__layout,
+.ica-code-example-reference > .block-editor-block-list__layout > .block-editor-block-list__block,
+.ica-code-example-reference > .block-editor-block-list__layout > .wp-block {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: 0 !important;
+}
+
+/* ==========================================================================
    BACKEND EDITOR PANEL EXCLUSIVE SEAMLESS LAYOUTS
    ========================================================================== */
 .wp-block-wpe-intelligent-code-assistant-editor {
@@ -84,8 +207,6 @@
             width: 100%;
             background: transparent;
             z-index: 5;
-            
-            // Force horizontal scroll lock in the editor so lines don't wrap while typing
             overflow-x: auto !important;
 
             .block-editor-rich-text__editable, pre, code, p, div {
@@ -113,12 +234,11 @@
         position: relative;
     }
 
-    /* Absolute Left Gutter Track Column */
     .line-numbers-gutter {
         position: absolute;
         left: 0;
         bottom: 0;
-        top: 55px; /* Sits perfectly under the title header row */
+        top: 55px;
         width: 48px;
         background: #f1f5f9;
         border-right: 1px solid #e2e8f0;
@@ -138,16 +258,12 @@
         }
     }
 
-    /* Apply content padding offset when line numbers are checked */
     &.has-line-numbers {
         .editor-inner-blocks-wrapper .block-editor-block-list__layout > *:last-child {
             padding-left: 64px !important; 
         }
     }
 
-    /* ----------------------------------------------------------------------
-       DARK THEME EDITOR OVERRIDES 
-       ---------------------------------------------------------------------- */
     &.dark-theme {
         background: #1e1e1e !important;
         border-color: #2e2e2e !important;
@@ -187,9 +303,6 @@
         }
     }
 
-    /* ----------------------------------------------------------------------
-       COMPACT LAYOUT OVERRIDES 
-       ---------------------------------------------------------------------- */
     &.is-compact {
         .code-badge { top: 8px; }
 
@@ -218,8 +331,6 @@
    PRISM SYNTAX COLORING & LINE HIGHLIGHTING STYLES
    ========================================================================== */
 
-
-/* Line Numbers Gutter Styling */
 .wp-block-wpe-intelligent-code-assistant-editor .line-numbers-gutter,
 .wp-block-wpe-intelligent-code-assistant .line-numbers-gutter {
     display: flex;
@@ -233,16 +344,14 @@
     font-size: var(--editor-code-font-size, 14px);
 }
 
-/* Active Line Highlighting Overlay */
 .wp-block-wpe-intelligent-code-assistant-editor .line-numbers-gutter span.is-highlighted,
 .wp-block-wpe-intelligent-code-assistant .panel-content pre .line-highlight {
-    background-color: rgba(255, 235, 59, 0.2); /* Soft Yellow Highlight */
+    background-color: rgba(255, 235, 59, 0.2);
     border-left: 3px solid #ffeb3b;
     font-weight: bold;
     opacity: 1;
 }
 
-/* Language Badge Colors */
 .code-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -255,22 +364,716 @@
 }
 
 .code-badge.lang-css {
-    background-color: #264de4; /* CSS Blue */
+    background-color: #264de4;
     color: #ffffff;
 }
 
 .code-badge.lang-php {
-    background-color: #4f5d95; /* PHP Purple */
+    background-color: #4f5d95;
     color: #ffffff;
 }
 
 .code-badge.lang-js,
 .code-badge.lang-javascript {
-    background-color: #f7df1e; /* JS Yellow */
+    background-color: #f7df1e;
     color: #000000;
 }
 
 .code-badge.lang-json {
     background-color: #292929;
     color: #00e676;
+}
+
+/* ==========================================================================
+   ARTICLE AI WORKSPACE
+   ========================================================================== */
+.ica-ai-workspace {
+    .components-modal__content {
+        padding: 0 32px 32px;
+    }
+}
+
+.ica-ai-workspace__intro {
+    margin: 0 -32px 28px;
+    padding: 28px 32px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #f6f7f7;
+
+    h2 {
+        margin: 4px 0 8px;
+        font-size: 24px;
+        line-height: 1.25;
+    }
+
+    p {
+        max-width: 720px;
+        margin: 0;
+        color: #50575e;
+    }
+
+    .ica-ai-workspace__eyebrow {
+        color: #3858e9;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .08em;
+    }
+}
+
+.ica-ai-workspace__grid {
+    display: grid;
+    gap: 16px;
+}
+
+.ica-ai-workspace__card {
+    padding: 20px;
+    border: 1px solid #dcdcde;
+    border-radius: 6px;
+    background: #fff;
+
+    > .components-button.is-primary {
+        margin-top: 18px;
+    }
+}
+
+.ica-ai-workspace__card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+
+    h3 {
+        margin: 0 0 3px;
+        font-size: 16px;
+    }
+
+    p {
+        margin: 0;
+        color: #646970;
+        font-size: 12px;
+    }
+}
+
+.ica-ai-workspace__status {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 18px;
+
+    span {
+        padding: 10px 12px;
+        border-radius: 4px;
+        background: #f6f7f7;
+        font-size: 12px;
+        font-weight: 600;
+    }
+}
+
+@media (max-width: 782px) {
+    .ica-ai-workspace__status {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* Code Assistant editor discovery and status */
+.ica-ai-sidebar-summary {
+    padding: 4px 0;
+
+    &__heading {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+
+        p {
+            margin: 3px 0 0;
+            color: #646970;
+            font-size: 12px;
+        }
+    }
+
+    &__mark {
+        display: grid;
+        place-items: center;
+        flex: 0 0 30px;
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        background: #3858e9;
+        color: #fff;
+        font-size: 17px;
+    }
+
+    &__counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 14px 0;
+
+        span {
+            padding: 4px 7px;
+            border-radius: 999px;
+            background: #f0f0f0;
+            color: #50575e;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .is-ready {
+            background: #edfaef;
+            color: #116329;
+        }
+
+        .is-incomplete {
+            background: #fcf0e3;
+            color: #8a4b08;
+        }
+    }
+
+    > .components-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.ica-block-ai-card {
+    margin: 0 -16px -16px;
+    padding: 16px;
+    border-top: 1px solid #e0e0e0;
+    background: #f6f7f7;
+
+    &__headline {
+        display: flex;
+        gap: 10px;
+
+        p {
+            margin: 3px 0 0;
+            color: #646970;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+    }
+
+    &__mark {
+        display: grid;
+        place-items: center;
+        flex: 0 0 32px;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: #3858e9;
+        color: #fff;
+        font-size: 18px;
+    }
+
+    &__checks {
+        display: grid;
+        gap: 6px;
+        margin-top: 14px;
+
+        span {
+            padding: 7px 9px;
+            border-radius: 4px;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    }
+
+    &__hint {
+        margin: 12px 0 0;
+        color: #646970;
+        font-size: 11px;
+        line-height: 1.4;
+    }
+
+    &.is-ready {
+        border-left: 3px solid #00a32a;
+    }
+
+    &.is-incomplete {
+        border-left: 3px solid #dba617;
+    }
+
+    &.is-unconfigured {
+        border-left: 3px solid #8c8f94;
+    }
+}
+
+.ica-ai-workspace__status.is-ready span {
+    background: #edfaef;
+    color: #116329;
+}
+
+.ica-ai-workspace__status.is-incomplete span:nth-child(2) {
+    background: #fcf0e3;
+    color: #8a4b08;
+}
+
+
+
+.ica-ai-workspace .components-modal__content {
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+}
+
+.ica-ai-workspace__intro {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.ica-ai-workspace__progress {
+    margin: 14px 0 0;
+    color: #50575e;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+.ica-post-status-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    .ica-post-status-info__label {
+        font-weight: 500;
+    }
+
+    .ica-post-status-info__value.components-button.is-link {
+        min-width: auto;
+        height: auto;
+        padding: 0;
+        text-decoration: none;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+}
+
+.ica-code-assistant-toolbar-sidebar__content {
+    padding: 16px;
+
+    .ica-code-assistant-toolbar-sidebar__linked {
+        display: inline-flex;
+        margin: 14px 0;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #f0f0f0;
+        color: #50575e;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    > .components-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+
+/* Current post-editor chrome integrations. These use stable core wrapper classes
+ * because the corresponding SlotFills are not exposed by every editor shell. */
+.ica-editor-summary-row {
+    appearance: none;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover .ica-editor-summary-row__value,
+    &:focus-visible .ica-editor-summary-row__value {
+        color: var(--wp-admin-theme-color, #3858e9);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+        outline-offset: 2px;
+    }
+}
+
+.ica-editor-summary-row__label {
+    font-weight: 400;
+}
+
+.ica-editor-summary-row__value {
+    color: var(--wp-admin-theme-color, #3858e9);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ica-editor-toolbar-button.components-button {
+    min-width: 40px;
+    height: 40px;
+    padding: 8px;
+    justify-content: center;
+}
+
+.ica-editor-toolbar-button__mark {
+    display: block;
+    font-size: 20px;
+    line-height: 1;
+}
+
+
+.ica-editor-toolbar-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.ica-editor-toolbar-button {
+    position: relative;
+}
+
+.ica-editor-toolbar-button__status {
+    position: absolute;
+    top: 5px;
+    right: 4px;
+    width: 9px;
+    height: 9px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #dba617;
+
+    &.is-ready {
+        background: #00a32a;
+    }
+}
+
+.ica-toolbar-overview {
+    position: fixed;
+    z-index: 100001;
+    top: 58px;
+    right: 72px;
+    width: min(360px, calc(100vw - 32px));
+    padding: 18px;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    color: #1e1e1e;
+}
+
+.ica-toolbar-overview__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e0e0e0;
+
+    p {
+        margin: 3px 0 0;
+        color: #757575;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+}
+
+.ica-toolbar-overview__status {
+    display: grid;
+    gap: 9px;
+    padding: 14px 0;
+
+    strong {
+        font-size: 11px;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+    }
+
+    span {
+        font-size: 13px;
+    }
+
+    .is-ready {
+        color: #008a20;
+        font-weight: 600;
+    }
+
+    .needs-attention {
+        color: #996800;
+        font-weight: 600;
+    }
+}
+
+.ica-toolbar-overview > .components-button {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Floating editor control is a direct child of body, not of Gutenberg's React tree. */
+.ica-editor-toolbar-floating.components-button {
+    position: fixed;
+    z-index: 100000;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 0;
+    border-radius: 2px;
+    cursor: pointer;
+}
+.ica-editor-toolbar-floating.components-button:hover {
+    background: #f0f0f0;
+}
+
+/* Ensure the floating, DOM-owned overview respects its closed state. */
+.ica-toolbar-overview[hidden] {
+    display: none !important;
+}
+.ica-toolbar-overview > p {
+    margin: 10px 0;
+}
+.ica-toolbar-overview > .components-button {
+    margin-top: 8px;
+}
+
+/* Gutenberg header SlotFill: stays aligned with the editor's own controls. */
+.ica-header-toolbar {
+    display: flex;
+    align-items: center;
+}
+
+.ica-header-toolbar__button.components-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 6px;
+    border-radius: 4px;
+}
+
+.ica-header-toolbar__icon {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #3858e9;
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.ica-header-toolbar__status {
+    position: absolute;
+    top: 3px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #dba617;
+}
+
+.ica-header-toolbar__status.is-ready { background: #00a32a; }
+.ica-header-toolbar__status.is-checking { background: #a7aaad; }
+
+.ica-header-toolbar__popover .components-popover__content {
+    width: min(340px, calc(100vw - 32px));
+    min-width: 0;
+    padding: 0;
+}
+
+.ica-header-toolbar__content {
+    padding: 20px;
+    color: #1e1e1e;
+}
+
+.ica-header-toolbar__heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 16px;
+}
+
+.ica-header-toolbar__details {
+    padding: 16px 0;
+}
+
+.ica-header-toolbar__details > strong {
+    font-size: 11px;
+    letter-spacing: .08em;
+}
+
+.ica-header-toolbar__details p {
+    margin: 10px 0 0;
+}
+
+.ica-header-toolbar__details .is-ready {
+    color: #008a20;
+    font-weight: 600;
+}
+
+.ica-header-toolbar__content > .components-button {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Article assistance belongs to the native Post summary, not a second panel. */
+.ica-post-summary-host {
+    padding: 16px 0 4px;
+    margin-top: 12px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.ica-post-summary {
+    display: grid;
+    gap: 10px;
+    font-size: 13px;
+
+    p { margin: 0; }
+    .is-ready { color: #008a20; font-weight: 600; }
+
+    &__heading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+    }
+
+    &__links {
+        display: grid;
+        gap: 8px;
+
+        > strong { font-size: 12px; }
+        ul { margin: 0; padding: 0; list-style: none; }
+        li {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 4px 12px;
+            padding: 7px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        li span:first-child { overflow-wrap: anywhere; }
+        li span:last-child { color: #646970; font-size: 12px; }
+        li span.is-ready { color: #008a20; }
+    }
+
+    > .components-button { width: 100%; justify-content: center; }
+}
+
+/* Prepend visually without moving React-owned header nodes (avoids insertBefore errors). */
+.editor-header__settings > .ica-header-toolbar-host,
+.edit-post-header__settings > .ica-header-toolbar-host {
+    order: -9999;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    margin-right: 6px;
+}
+
+.ica-header-toolbar__details .needs-attention {
+    color: #996800;
+    font-weight: 600;
+}
+
+.ica-header-toolbar__missing {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+
+    > strong { font-size: 12px; }
+    p { margin: 8px 0 0; color: #996800; font-size: 12px; }
+}
+
+/* Compact, expandable Code Assistant inventory in the native Post summary. */
+.ica-post-summary-host {
+    padding-top: 0;
+    margin-top: 12px;
+}
+
+.ica-post-summary {
+    display: block;
+
+    &__toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+            outline-offset: 2px;
+        }
+    }
+
+    &__toggle-right {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        flex: 0 0 auto;
+        color: #646970;
+        font-size: 12px;
+    }
+
+    &__body {
+        display: grid;
+        gap: 12px;
+        padding: 2px 0 12px;
+    }
+
+    &__stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+
+        > span { color: #646970; }
+        > strong { text-align: right; font-size: 12px; }
+    }
+
+    &__links {
+        padding-top: 10px;
+        border-top: 1px solid #e0e0e0;
+
+        li {
+            display: grid;
+            grid-template-columns: 16px minmax(0, 1fr);
+            gap: 2px 8px;
+            align-items: baseline;
+        }
+
+        a {
+            color: var(--wp-admin-theme-color, #3858e9);
+            text-decoration: none;
+            overflow-wrap: anywhere;
+
+            &:hover, &:focus-visible { text-decoration: underline; }
+        }
+    }
+
+    &__state { grid-column: 1; grid-row: 1; }
+    &__state.is-ready { color: #008a20; }
+    &__state.needs-attention { color: #996800; }
+    &__external { margin-left: 5px; font-size: 11px; }
+    &__state-label {
+        grid-column: 2;
+        grid-row: 2;
+        color: #646970;
+        font-size: 11px;
+    }
 }

@@ -16,6 +16,14 @@
       "type": "string",
       "source": "html",
       "selector": "div.wp-block-wpe-code-content"
+<<<<<<< HEAD
+=======
+    },
+    "content": {
+      "type": "string",
+      "source": "html",
+      "selector": "div.wp-block-wpe-code-content"
+>>>>>>> main
     }
   },
   "editorScript": "file:./index.js"

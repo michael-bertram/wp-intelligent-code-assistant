@@ -74,7 +74,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             currentPostType: postType,
             blockForConversion: block || null,
         };
-    }, [clientId, codeExampleId]);
+    }, [clientId]);
 
     const isCanonicalCodeExample = currentPostType === 'ica_code_example' || isEditingCanonicalEntity || isCodeExampleProxy;
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLocalBlockStructure;
@@ -375,6 +375,17 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                     })()}
                 </PanelBody>
                 <PanelBody title={__('Code Display Settings', 'intelligent-code-assistant')} initialOpen={false}>
+                    <Button
+                        variant="secondary"
+                        onClick={handleAutoFill}
+                        disabled={isAnalyzing || !cleanRawText?.trim()}
+                        isBusy={isAnalyzing}
+                        style={{ marginBottom: '12px' }}
+                    >
+                        {isAnalyzing ? __('Detecting metadata…', 'intelligent-code-assistant') : __('Auto-fill Metadata', 'intelligent-code-assistant')}
+                    </Button>
+                    {aiError && <p role="alert" style={{ color: '#cc1818' }}>{aiError}</p>}
+
                     <TextControl label={__('Filename / Label', 'intelligent-code-assistant')} value={filename || ''} onChange={(value) => setAttributes({ filename: value })} />
                     <TextControl label={__('Highlight Lines (e.g., 3, 5-8)', 'intelligent-code-assistant')} value={highlightLines || ''} onChange={(value) => setAttributes({ highlightLines: value })} />
                     <ToggleControl label={__('Show Language Badge', 'intelligent-code-assistant')} checked={showLanguageBadge} onChange={(value) => setAttributes({ showLanguageBadge: value })} />

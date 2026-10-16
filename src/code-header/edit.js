@@ -1,7 +1,6 @@
 import { useBlockProps, RichText } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useSelect, useDispatch } from '@wordpress/data';
-import { useEffect } from '@wordpress/element';
 
 const GENERIC_FILENAMES = /^(?:snippet|script|index|functions?|style|styles|data|query|code|example)\.(?:php|js|css|html|json|sql|sh|bash)$/i;
 
@@ -124,28 +123,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
             isParentSelected: directParentId ? blockEditor.isBlockSelected(directParentId) : false,
         };
     }, [clientId]);
-
-    useEffect(() => {
-        if (!parentId || !filename || !code) return;
-
-        const expectedExtension = getExtension(codeLanguage);
-        const filenameExtension = filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
-        const hasWrongExtension = expectedExtension !== 'txt' && filenameExtension !== expectedExtension;
-        const isGenericFilename = GENERIC_FILENAMES.test(filename);
-
-        if (isGenericFilename || hasWrongExtension) {
-            const derivedFilename = deriveFilename(code, codeLanguage);
-            if (derivedFilename && derivedFilename !== filename) {
-                updateBlockAttributes(parentId, { filename: derivedFilename });
-                setAttributes({ content: derivedFilename });
-                return;
-            }
-        }
-
-        if (filename !== attributes.content) {
-            setAttributes({ content: filename });
-        }
-    }, [parentId, filename, codeLanguage, code, attributes.content, setAttributes, updateBlockAttributes]);
 
     const selectAssistantFirst = (event) => {
         if (!parentId || isParentSelected) {

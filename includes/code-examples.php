@@ -33,8 +33,8 @@ function intelligent_code_assistant_register_code_example_post_type() {
 		'ica_code_example',
 		array(
 			'labels'              => $labels,
-			'public'              => false,
-			'publicly_queryable'  => false,
+			'public'              => true,
+			'publicly_queryable'  => true,
 			'show_ui'             => true,
 			'show_in_menu'        => true,
 			'show_in_admin_bar'   => true,

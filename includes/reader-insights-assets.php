@@ -23,8 +23,12 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 	$is_code_example = $code_example_id > 0;
 	$is_article = $post_id > 0;
 
+	$insights_post_id = $is_code_example ? $code_example_id : $post_id;
+	$saved_insights = $insights_post_id > 0 ? get_post_meta( $insights_post_id, '_ica_reader_insights', true ) : null;
+
 	wp_localize_script( 'intelligent-code-assistant-reader-insights-admin', 'ICAReaderInsights', array(
 		'mode' => $is_code_example ? 'codeExample' : ( $is_article ? 'article' : 'overview' ),
+		'savedInsights' => is_array( $saved_insights ) ? $saved_insights : null,
 		'postId' => $post_id,
 		'codeExampleId' => $code_example_id,
 		'endpoint' => $is_code_example
@@ -37,6 +41,8 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 			'generating' => __( 'Generating insights…', 'intelligent-code-assistant' ),
 			'generatedArticle' => __( 'Generated from current article analytics', 'intelligent-code-assistant' ),
 			'generatedCodeExample' => __( 'Generated from current Code Snippet analytics', 'intelligent-code-assistant' ),
+			'saved' => __( 'Saved insights · generated', 'intelligent-code-assistant' ),
+			'snapshotInteractions' => __( 'interactions in snapshot', 'intelligent-code-assistant' ),
 			'error' => __( 'AI insights are currently unavailable. Please try again later.', 'intelligent-code-assistant' ),
 			'introArticle' => __( 'Interpret the deterministic analytics for this article. Suggestions are evidence-based and remain for the author to review.', 'intelligent-code-assistant' ),
 			'introCodeExample' => __( 'Interpret the deterministic analytics for this Code Snippet across every article where it appears. Suggestions are evidence-based and remain for the author to review.', 'intelligent-code-assistant' ),

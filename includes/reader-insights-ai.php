@@ -222,8 +222,16 @@ add_action(
 							'summary'      => $summary,
 						)
 					);
+                                        if ( is_wp_error( $result ) ) {
+                                                return $result;
+                                        }
 
-					return is_wp_error( $result ) ? $result : rest_ensure_response( $result );
+                                        $result['generatedAt'] = current_time( 'c' );
+                                        $result['analyticsTotalInteractions'] = absint( $summary['totalInteractions'] ?? 0 );
+
+                                        update_post_meta( $post_id, '_ica_reader_insights', $result );
+
+                                        return rest_ensure_response( $result );
 				},
 				'permission_callback' => function ( WP_REST_Request $request ) {
 					$post_id = absint( $request->get_param( 'postId' ) );

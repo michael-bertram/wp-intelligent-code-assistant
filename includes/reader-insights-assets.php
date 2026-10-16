@@ -31,14 +31,25 @@ add_action(
 			$version,
 			true
 		);
+		                $post_id = isset( $_GET['post_id'] )
+                        ? absint( wp_unslash( $_GET['post_id'] ) )
+                        : 0;
 
+                $saved_insights = $post_id > 0
+                        ? get_post_meta( $post_id, '_ica_reader_insights', true )
+                        : null;
+
+                if ( ! is_array( $saved_insights ) ) {
+                        $saved_insights = null;
+                }
 		wp_localize_script(
 			'intelligent-code-assistant-reader-insights-admin',
 			'ICAReaderInsights',
 			array(
-				'postId'   => isset( $_GET['post_id'] ) ? absint( wp_unslash( $_GET['post_id'] ) ) : 0,
+				'postId'   => $post_id,
 				'endpoint' => rest_url( 'intelligent-code-assistant/v1/analyze-reader-insights' ),
 				'nonce'    => wp_create_nonce( 'wp_rest' ),
+				'savedInsights' => $saved_insights,
 				'i18n'     => array(
 					'generate'        => __( 'Generate AI insights', 'intelligent-code-assistant' ),
 					'regenerate'      => __( 'Regenerate insights', 'intelligent-code-assistant' ),

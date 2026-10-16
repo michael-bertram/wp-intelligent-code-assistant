@@ -328,6 +328,8 @@ body.toplevel_page_intelligent-code-assistant-reader-insights a:hover {
 		grid-template-columns: 1fr;
 	}
 }
+<<<<<<< HEAD
+=======
 
 
 /* Unified Intelligent Code admin routes. Keep the release UI intact while
@@ -757,3 +759,4 @@ body.intelligent-code_page_intelligent-code-assistant-code-examples .ica-page-he
 	.ica-overview-grid { grid-template-columns: 1fr; }
 	.ica-intelligent-code-overview .ica-page-header { padding: 22px 20px; }
 }
+>>>>>>> main

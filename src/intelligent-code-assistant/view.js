@@ -188,6 +188,26 @@ const { state } = store('wpe', {
       } catch (err) {
         // Local storage is optional.
       }
+<<<<<<< HEAD
+
+      try {
+        yield fetch(
+          '/wp-json/intelligent-code-assistant/v1/toggle-complete',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-WP-Nonce': window.wpApiSettings?.nonce || '',
+            },
+            body: JSON.stringify({
+              block_id: context.id,
+              status: context.isComplete,
+            }),
+          }
+        );
+      } catch (err) {
+        // Local completion remains available.
+=======
 
       try {
         yield fetch(
@@ -222,12 +242,50 @@ const { state } = store('wpe', {
       if (!context.explanationItems?.length) {
         context.explanationError =
           'No stored explanation is available for this code example yet.';
+>>>>>>> main
       }
     },
 
     explainLine() {
       const context = getContext();
 
+<<<<<<< HEAD
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.EXPLAIN_CODE,
+        context
+      );
+
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'explain';
+      context.isExplaining = true;
+
+      if (context.explanationText && !context.explanationError) {
+        return;
+      }
+
+      context.isAnalyzingExplanation = true;
+      context.explanationError = '';
+      context.explanationText = '';
+      context.explanationItems = [];
+
+      const response = yield requestAICapability(
+        'explain-code',
+        buildAIContext(context)
+      );
+
+      if (response?.error) {
+        context.explanationError = getAIErrorMessage(response);
+      } else if (
+        response &&
+        typeof response.explanation === 'string' &&
+        response.explanation.trim()
+      ) {
+        context.explanationText = response.explanation.trim();
+        context.explanationItems = formatAIItems(response.explanation);
+      } else {
+        context.explanationError =
+          'Unable to generate a code explanation right now.';
+=======
       if (!context.selectedLineNumber || !context.selectedLineText) {
         context.lineExplanationError = 'Select a line of code first.';
         return;
@@ -257,6 +315,7 @@ const { state } = store('wpe', {
         } catch (error) {
           storedLineExplanations = context.generatedLineExplanations || {};
         }
+>>>>>>> main
       }
 
       const lineKey = String(selectedLineNumber);
@@ -387,10 +446,239 @@ const { state } = store('wpe', {
       );
     },
 
+    *explainLine() {
+      const context = getContext();
+<<<<<<< HEAD
+
+      if (!context.selectedLineNumber || !context.selectedLineText) {
+        context.lineExplanationError = 'Select a line of code first.';
+        return;
+      }
+
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'explain-line';
+      context.isExplainingLine = true;
+      context.isAnalyzingLine = true;
+      context.lineExplanation = '';
+      context.lineExplanationError = '';
+
+      const lines = (context.rawCodeText || '').split('\n');
+      const selectedLineNumber = Number(context.selectedLineNumber);
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.EXPLAIN_LINE,
+        context,
+        { lineNumber: selectedLineNumber }
+      );
+
+      const start = Math.max(1, selectedLineNumber - 2);
+      const end = Math.min(lines.length, selectedLineNumber + 2);
+
+      const surroundingCode = lines
+        .slice(start - 1, end)
+        .map((line, index) => {
+          const lineNumber = start + index;
+          const marker = lineNumber === selectedLineNumber ? '>>>' : '   ';
+          return `${marker} ${lineNumber}: ${line}`;
+        })
+        .join('\n');
+
+      const payload = buildAIContext(context, {
+        selectedLineNumber,
+        selectedLine: context.selectedLineText,
+        surroundingCode,
+      });
+
+      const response = yield requestAICapability('explain-line', payload);
+
+      if (response?.error) {
+        context.lineExplanationError = getAIErrorMessage(response);
+      } else if (
+        response &&
+        typeof response.explanation === 'string' &&
+        response.explanation.trim()
+      ) {
+        context.lineExplanation = response.explanation.trim();
+      } else {
+        context.lineExplanationError = 'Unable to explain this line right now.';
+      }
+
+      context.isAnalyzingLine = false;
+    },
+
+    handleCodeQuestionInput(event) {
+      const context = getContext();
+      context.codeQuestion = event.target.value;
+      context.codeQuestionError = '';
+    },
+
+    toggleAskCode() {
+      const context = getContext();
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'ask';
+      context.isAskingCode = true;
+      context.codeQuestionError = '';
+    },
+
+    *submitCodeQuestion() {
+      const context = getContext();
+      const question = (context.codeQuestion || '').trim();
+
+      if (!question) {
+        context.codeQuestionError = 'Enter a question about this code first.';
+        return;
+      }
+
+      if (context.isSubmittingQuestion) {
+        return;
+      }
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.ASK_QUESTION,
+        context,
+        { question }
+      );
+
+      context.isSubmittingQuestion = true;
+      context.codeQuestionError = '';
+      context.codeAnswer = '';
+
+      const requestContext = {
+        ...context,
+        question,
+      };
+
+      try {
+        const response = yield requestAICapability(
+          'ask-code',
+          buildAIContext(requestContext)
+        );
+
+        if (
+          response &&
+          typeof response.answer === 'string' &&
+          response.answer.trim()
+        ) {
+          context.codeAnswer = response.answer.trim();
+        } else {
+          context.codeQuestionError =
+            'AI assistance is temporarily unavailable. Please try again later.';
+        }
+      } catch (error) {
+        context.codeQuestionError =
+          'AI assistance is temporarily unavailable. Please try again later.';
+      } finally {
+        context.isSubmittingQuestion = false;
+      }
+    },
+
+    *generateUnderstandingCheck() {
+      const context = getContext();
+
+      context.aiAssistantOpen = true;
+      context.aiAssistantView = 'check';
+
+      if (context.isGeneratingCheck) {
+        return;
+      }
+
+      if (context.checkQuestion) {
+        context.isCheckingUnderstanding = true;
+        return;
+      }
+
+      context.isCheckingUnderstanding = true;
+      context.isGeneratingCheck = true;
+      context.checkError = '';
+      context.checkQuestion = '';
+      context.checkOptions = [];
+      context.checkOption0 = '';
+      context.checkOption1 = '';
+      context.checkOption2 = '';
+      context.checkCorrectAnswer = null;
+      context.checkExplanation = '';
+      context.selectedCheckAnswer = null;
+      context.hasAnsweredCheck = false;
+      context.isCheckCorrect = false;
+
+      try {
+        const response = yield requestAICapability(
+          'check-understanding',
+          buildAIContext(context)
+        );
+
+        const hasValidResponse =
+          response &&
+          typeof response.question === 'string' &&
+          response.question.trim() &&
+          Array.isArray(response.options) &&
+          response.options.length === 3 &&
+          Number.isInteger(response.correctAnswer) &&
+          response.correctAnswer >= 0 &&
+          response.correctAnswer <= 2 &&
+          typeof response.explanation === 'string';
+
+        if (!hasValidResponse) {
+          context.checkError =
+            'Unable to generate a knowledge check right now.';
+          return;
+        }
+
+        context.checkQuestion = response.question.trim();
+        context.checkOptions = response.options;
+        context.checkOption0 = response.options[0];
+        context.checkOption1 = response.options[1];
+        context.checkOption2 = response.options[2];
+        context.checkCorrectAnswer = response.correctAnswer;
+        context.checkExplanation = response.explanation.trim();
+      } catch (error) {
+        context.checkError =
+          'Unable to generate a knowledge check right now.';
+      } finally {
+        context.isGeneratingCheck = false;
+      }
+    },
+
+    selectCheckAnswer(event) {
+      const context = getContext();
+
+      if (context.hasAnsweredCheck) {
+        return;
+      }
+
+      const answerIndex = Number(event.currentTarget.dataset.answerIndex);
+
+      if (
+        !Number.isInteger(answerIndex) ||
+        answerIndex < 0 ||
+        answerIndex >= context.checkOptions.length
+      ) {
+        return;
+      }
+
+      context.selectedCheckAnswer = answerIndex;
+      context.hasAnsweredCheck = true;
+      context.isCheckCorrect = answerIndex === context.checkCorrectAnswer;
+
+      recordAnalyticsEvent(
+        ANALYTICS_EVENTS.KNOWLEDGE_CHECK,
+        context,
+        {
+          correct: context.isCheckCorrect,
+          selectedAnswer: answerIndex,
+          correctAnswer: context.checkCorrectAnswer,
+        }
+      );
+    },
+
     async copyToClipboard() {
       const context = getContext();
       const cleanedText = (context.rawCodeText || '').trim();
 
+=======
+      const cleanedText = (context.rawCodeText || '').trim();
+
+>>>>>>> main
       if (!cleanedText) {
         return;
       }
@@ -478,7 +766,10 @@ const { state } = store('wpe', {
       context.isAnalyzingLine = false;
       context.lineExplanation = '';
       context.lineExplanationError = '';
+<<<<<<< HEAD
+=======
       context.generatedLineExplanations = context.generatedLineExplanations || {};
+>>>>>>> main
 
       context.isAskingCode = false;
       context.isSubmittingQuestion = false;
@@ -488,6 +779,15 @@ const { state } = store('wpe', {
 
       context.isCheckingUnderstanding = false;
       context.isGeneratingCheck = false;
+<<<<<<< HEAD
+      context.checkQuestion = '';
+      context.checkOptions = [];
+      context.checkOption0 = '';
+      context.checkOption1 = '';
+      context.checkOption2 = '';
+      context.checkCorrectAnswer = null;
+      context.checkExplanation = '';
+=======
       context.checkQuestion = context.checkQuestion || '';
       context.checkOptions = context.checkOptions || [];
       context.checkOption0 = context.checkOption0 || '';
@@ -497,6 +797,7 @@ const { state } = store('wpe', {
         ? context.checkCorrectAnswer
         : null;
       context.checkExplanation = context.checkExplanation || '';
+>>>>>>> main
       context.selectedCheckAnswer = null;
       context.hasAnsweredCheck = false;
       context.isCheckCorrect = false;
@@ -536,7 +837,10 @@ const { state } = store('wpe', {
       }
 
       const { ref: blockElement } = getElement();
+<<<<<<< HEAD
+=======
 
+>>>>>>> main
       const panel = blockElement?.querySelector('.panel-content');
 
       if (!panel || panel.dataset.lineSelectionBound) {
@@ -547,7 +851,11 @@ const { state } = store('wpe', {
       panel.setAttribute(
         'aria-label',
         context.aiAssistantEnabled
+<<<<<<< HEAD
+          ? 'Code. Select a line to explain it with AI.'
+=======
           ? 'Code. Select a line to view its explanation.'
+>>>>>>> main
           : 'Code.'
       );
 
@@ -598,6 +906,9 @@ const { state } = store('wpe', {
       });
     },
   },
+<<<<<<< HEAD
+});
+=======
 });
 
 /**
@@ -687,3 +998,4 @@ if (typeof document !== 'undefined') {
     bindAssistantAttention();
   }
 }
+>>>>>>> main

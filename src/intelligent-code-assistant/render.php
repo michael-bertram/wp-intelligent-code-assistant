@@ -11,6 +11,7 @@ $persistent_id = ! empty( $attributes['id'] )
 	: wp_unique_id( 'wpe-code-' );
 
 $show_badge                = $attributes['showLanguageBadge'] ?? true;
+$code_example_id           = isset( $attributes['codeExampleId'] ) ? absint( $attributes['codeExampleId'] ) : 0;
 $code_lang                 = isset( $attributes['codeLanguage'] ) ? sanitize_text_field( $attributes['codeLanguage'] ) : '';
 $filename                  = isset( $attributes['filename'] ) ? sanitize_file_name( $attributes['filename'] ) : '';
 $is_dark                   = $attributes['isDarkMode'] ?? false;
@@ -129,7 +130,8 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			'lineExplanationError'     => '',
 			'activeCodeText'           => $raw_code_text,
 			'rawCodeText'              => $raw_code_text,
-    		'postId'          			=> get_the_ID(),
+			'postId'                   => get_the_ID(),
+			'codeExampleId'            => $code_example_id,
 			'codeLanguage'             => $code_lang,
 			'codeFilename'             => $filename,
 			'codeTitle'                => $code_title,

@@ -1,61 +1,4 @@
 <?php
-<<<<<<< HEAD
-/**
- * Admin assets for the Reader Insights editorial workspace.
- */
-
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
-
-add_action(
-	'admin_enqueue_scripts',
-	function ( $hook_suffix ) {
-		if ( 'toplevel_page_intelligent-code-assistant-reader-insights' !== $hook_suffix ) {
-			return;
-		}
-
-		$plugin_file = dirname( __DIR__ ) . '/intelligent-code-assistant.php';
-		$version     = '1.1.0';
-
-		wp_enqueue_style(
-			'intelligent-code-assistant-reader-insights-admin',
-			plugin_dir_url( $plugin_file ) . 'assets/reader-insights-admin.css',
-			array(),
-			$version
-		);
-
-		wp_enqueue_script(
-			'intelligent-code-assistant-reader-insights-admin',
-			plugin_dir_url( $plugin_file ) . 'assets/reader-insights-admin.js',
-			array(),
-			$version,
-			true
-		);
-
-		wp_localize_script(
-			'intelligent-code-assistant-reader-insights-admin',
-			'ICAReaderInsights',
-			array(
-				'postId'   => isset( $_GET['post_id'] ) ? absint( wp_unslash( $_GET['post_id'] ) ) : 0,
-				'endpoint' => rest_url( 'intelligent-code-assistant/v1/analyze-reader-insights' ),
-				'nonce'    => wp_create_nonce( 'wp_rest' ),
-				'i18n'     => array(
-					'generate'        => __( 'Generate AI insights', 'intelligent-code-assistant' ),
-					'regenerate'      => __( 'Regenerate insights', 'intelligent-code-assistant' ),
-					'generating'      => __( 'Generating insights…', 'intelligent-code-assistant' ),
-					'generated'       => __( 'Generated from current analytics', 'intelligent-code-assistant' ),
-					'error'           => __( 'AI insights are currently unavailable. Please try again later.', 'intelligent-code-assistant' ),
-					'intro'           => __( 'Use the deterministic reader data above as context for an AI-assisted editorial interpretation. The suggestions remain evidence-based and are for the author to review.', 'intelligent-code-assistant' ),
-					'frictionPoints'  => __( 'Potential friction points', 'intelligent-code-assistant' ),
-					'recommendations' => __( 'Recommendations', 'intelligent-code-assistant' ),
-					'suggestedFaqs'   => __( 'Suggested FAQs', 'intelligent-code-assistant' ),
-				),
-			)
-		);
-	}
-);
-=======
 /** Admin assets for the Reader Insights editorial workspace. */
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
@@ -79,6 +22,8 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 	$post_id = ! $is_code_example_screen && isset( $_GET['post_id'] ) ? absint( wp_unslash( $_GET['post_id'] ) ) : 0;
 	$is_code_example = $code_example_id > 0;
 	$is_article = $post_id > 0;
+	$saved_insights = $is_article ? get_post_meta( $post_id, '_ica_reader_insights', true ) : null;
+	if ( ! is_array( $saved_insights ) ) { $saved_insights = null; }
 
 	wp_localize_script( 'intelligent-code-assistant-reader-insights-admin', 'ICAReaderInsights', array(
 		'mode' => $is_code_example ? 'codeExample' : ( $is_article ? 'article' : 'overview' ),
@@ -88,6 +33,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 			? rest_url( 'intelligent-code-assistant/v1/analyze-code-example-insights' )
 			: ( $is_article ? rest_url( 'intelligent-code-assistant/v1/analyze-reader-insights' ) : '' ),
 		'nonce' => wp_create_nonce( 'wp_rest' ),
+		'savedInsights' => $saved_insights,
 		'i18n' => array(
 			'generate' => __( 'Generate AI insights', 'intelligent-code-assistant' ),
 			'regenerate' => __( 'Regenerate insights', 'intelligent-code-assistant' ),
@@ -103,4 +49,3 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 		),
 	) );
 } );
->>>>>>> main

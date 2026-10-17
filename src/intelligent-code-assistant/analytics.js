@@ -29,6 +29,7 @@ export function buildAnalyticsEvent(event, context = {}, metadata = {}) {
     event,
     blockId: context.id || '',
     postId: Number(context.postId || 0),
+    codeExampleId: Number(context.codeExampleId || 0),
     filename: context.codeFilename || '',
     language: context.codeLanguage || '',
     metadata,

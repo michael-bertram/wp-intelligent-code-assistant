@@ -4,9 +4,7 @@
   "title": "Code Content",
   "category": "widgets",
   "icon": "embed-generic",
-  "parent": [
-    "wpe/intelligent-code-assistant"
-  ],
+  "parent": ["wpe/intelligent-code-assistant"],
   "supports": {
     "html": false,
     "reusable": false
@@ -16,14 +14,11 @@
       "type": "string",
       "source": "html",
       "selector": "div.wp-block-wpe-code-content"
-<<<<<<< HEAD
-=======
     },
     "content": {
       "type": "string",
       "source": "html",
       "selector": "div.wp-block-wpe-code-content"
->>>>>>> main
     }
   },
   "editorScript": "file:./index.js"

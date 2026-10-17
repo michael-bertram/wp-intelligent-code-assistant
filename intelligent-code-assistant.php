@@ -2,16 +2,13 @@
 /**
  * Plugin Name:       WP Intelligent Code Assistant
  * Description:       An interactive code block with inline AI assistance for technical articles, powered by the WordPress AI Client, Abilities API and Interactivity API.
- * Version:           1.1.4
- * Update URI:        https://github.com/michael-bertram/wp-intelligent-code-assistant
+ * Version:           1.1.0
  * Text Domain:       intelligent-code-assistant
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-
-require_once __DIR__ . '/includes/github-updater.php';
 
 /** Register custom block types from the build directory metadata. */
 function intelligent_code_assistant_register_blocks() {
@@ -187,7 +184,7 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_autofill_ability' ) 
 		if ( preg_match( '/(const|let|var|import|export|function)\s/', $trimmed_code ) ) {
 			return array( 'codeLanguage' => 'JS', 'filename' => 'script.js', 'title' => __( 'JavaScript Code', 'intelligent-code-assistant' ), 'highlightLines' => '', 'showLineNumbers' => $lines_count > 3 );
 		}
-		return array( 'codeLanguage' => '', 'filename' => 'code-example.txt', 'title' => __( 'Code Snippet', 'intelligent-code-assistant' ), 'highlightLines' => '', 'showLineNumbers' => $lines_count > 3 );
+		return array( 'codeLanguage' => 'PHP', 'filename' => 'snippet.php', 'title' => __( 'Code Snippet', 'intelligent-code-assistant' ), 'highlightLines' => '', 'showLineNumbers' => $lines_count > 3 );
 	}
 }
 
@@ -253,7 +250,7 @@ add_action( 'wp_abilities_api_init', function() {
 		'description'         => __( 'Generates a concise explanation of a code snippet for a technical article reader.', 'intelligent-code-assistant' ),
 		'show_in_rest'        => true,
 		'show_in_mcp'         => true,
-		'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
+		'permission_callback' => '__return_true',
 		'input_schema'        => array(
 			'type'       => 'object',
 			'properties' => array(

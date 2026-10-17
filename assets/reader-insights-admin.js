@@ -119,6 +119,20 @@
 		results.hidden = false;
 	};
 
+	let currentInsights = null;
+
+if (
+    config.savedInsights &&
+    typeof config.savedInsights === 'object' &&
+    typeof config.savedInsights.summary === 'string'
+) {
+    currentInsights = config.savedInsights;
+    renderInsights( currentInsights );
+
+    button.textContent = config.i18n?.regenerate || 'Regenerate insights';
+    status.textContent = config.i18n?.generated || 'Generated from current analytics';
+}
+
 	const showError = ( message ) => {
 		results.classList.remove( 'is-loading' );
 		results.setAttribute( 'aria-busy', 'false' );
@@ -131,7 +145,9 @@
 		button.setAttribute( 'aria-disabled', 'true' );
 		status.classList.add( 'is-loading' );
 		status.textContent = config.i18n?.generating || 'Generating insights…';
-		renderLoading();
+		if ( ! currentInsights ) {
+    renderLoading();
+}
 
 		try {
 			const response = await fetch( config.endpoint, {
@@ -150,12 +166,18 @@
 				throw new Error( config.i18n?.error || 'AI insights are currently unavailable. Please try again later.' );
 			}
 
-			renderInsights( data );
-			button.textContent = config.i18n?.regenerate || 'Regenerate insights';
+			currentInsights = data;
+renderInsights( currentInsights );
+button.textContent = config.i18n?.regenerate || 'Regenerate insights';
 			status.textContent = config.i18n?.generated || 'Generated from current analytics';
 		} catch ( error ) {
-			showError( config.i18n?.error || 'AI insights are currently unavailable. Please try again later.' );
-			status.textContent = '';
+			if ( currentInsights ) {
+    renderInsights( currentInsights );
+    status.textContent = 'Could not refresh insights. Showing the last saved results.';
+} else {
+    showError( config.i18n?.error || 'AI insights are currently unavailable. Please try again later.' );
+    status.textContent = '';
+}
 		} finally {
 			status.classList.remove( 'is-loading' );
 			button.disabled = false;

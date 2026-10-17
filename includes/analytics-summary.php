@@ -221,6 +221,7 @@ add_action(
 	}
 );
 
+require_once __DIR__ . '/code-examples.php';
 require_once __DIR__ . '/public-ai-hardening.php';
 require_once __DIR__ . '/ai-response-formatting.php';
 require_once __DIR__ . '/analytics-dashboard.php';

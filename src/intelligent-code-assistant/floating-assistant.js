@@ -6,14 +6,6 @@ const visibleBlocks = new Map();
 let activeBlock = null;
 let launcher = null;
 let rafId = null;
-<<<<<<< HEAD
-
-function getBlockLabel(block) {
-	const title = block?.querySelector('.code-title');
-	const text = title?.textContent?.trim();
-
-	return text || 'this code example';
-=======
 let hasPlayedLauncherAttention = false;
 let launcherReminderTimer = null;
 let expandedFocusBlock = null;
@@ -26,7 +18,6 @@ function isBlockExpanded(block) {
 function getBlockLabel(block) {
 	const title = block?.querySelector('.code-title');
 	return title?.textContent?.trim() || 'this code snippet';
->>>>>>> main
 }
 
 function syncLauncherState() {
@@ -36,15 +27,6 @@ function syncLauncherState() {
 
 	const drawer = activeBlock?.querySelector('.ai-assistant-drawer');
 	const isOpen = Boolean(drawer && !drawer.hidden);
-<<<<<<< HEAD
-
-	launcher.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-	launcher.setAttribute(
-		'aria-label',
-		activeBlock
-			? `Open AI Assistant for ${getBlockLabel(activeBlock)}`
-			: 'Open AI Assistant'
-=======
 	const label = launcher.querySelector('.wpe-floating-ai-assistant__label');
 
 	launcher.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
@@ -67,7 +49,6 @@ function syncLauncherState() {
 		activeBlock
 			? `Open Code Assistant for ${getBlockLabel(activeBlock)}`
 			: 'Open Code Assistant'
->>>>>>> main
 	);
 }
 
@@ -78,12 +59,7 @@ function closeAssistantFor(block) {
 		return;
 	}
 
-<<<<<<< HEAD
-	const closeButton = drawer.querySelector('.ai-assistant-header .explanation-close-btn');
-	closeButton?.click();
-=======
 	drawer.querySelector('.ai-assistant-header .explanation-close-btn')?.click();
->>>>>>> main
 }
 
 function setActiveBlock(nextBlock) {
@@ -94,11 +70,8 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.removeAttribute(ACTIVE_ATTRIBUTE);
-<<<<<<< HEAD
-=======
 		activeBlock.classList.remove('is-ai-assistant-focused');
 		activeBlock.classList.remove('is-ai-assistant-visible-highlight');
->>>>>>> main
 		closeAssistantFor(activeBlock);
 	}
 
@@ -106,12 +79,6 @@ function setActiveBlock(nextBlock) {
 
 	if (activeBlock) {
 		activeBlock.setAttribute(ACTIVE_ATTRIBUTE, 'true');
-<<<<<<< HEAD
-	}
-
-	if (launcher) {
-		launcher.hidden = !activeBlock;
-=======
 		activeBlock.classList.add('is-ai-assistant-visible-highlight');
 	}
 
@@ -127,7 +94,6 @@ function setActiveBlock(nextBlock) {
 		} else if (!activeBlock) {
 			window.clearTimeout(launcherReminderTimer);
 		}
->>>>>>> main
 	}
 
 	syncLauncherState();
@@ -139,12 +105,8 @@ function isMeaningfullyVisible(block) {
 	}
 
 	const rect = block.getBoundingClientRect();
-<<<<<<< HEAD
-	const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-=======
 	const viewportHeight =
 		window.innerHeight || document.documentElement.clientHeight;
->>>>>>> main
 	const activationTop = viewportHeight * 0.12;
 	const activationBottom = viewportHeight * 0.88;
 
@@ -172,8 +134,6 @@ function chooseActiveBlock() {
 		}
 	});
 
-<<<<<<< HEAD
-=======
 	if (expandedFocusBlock && isMeaningfullyVisible(expandedFocusBlock)) {
 		setActiveBlock(expandedFocusBlock);
 		return;
@@ -185,7 +145,6 @@ function chooseActiveBlock() {
 		expandedFocusBlock = null;
 	}
 
->>>>>>> main
 	setActiveBlock(bestBlock);
 }
 
@@ -200,8 +159,6 @@ function scheduleActiveBlockUpdate() {
 	});
 }
 
-<<<<<<< HEAD
-=======
 function scheduleLauncherReminder() {
 	window.clearTimeout(launcherReminderTimer);
 
@@ -258,7 +215,6 @@ function playLauncherAttention(isReminder = false) {
 	);
 }
 
->>>>>>> main
 function createLauncher() {
 	if (launcher) {
 		return launcher;
@@ -269,11 +225,6 @@ function createLauncher() {
 	launcher.className = LAUNCHER_CLASS;
 	launcher.hidden = true;
 	launcher.setAttribute('aria-expanded', 'false');
-<<<<<<< HEAD
-	launcher.innerHTML = '<span aria-hidden="true">✦</span><span>AI Assistant</span>';
-
-	launcher.addEventListener('click', () => {
-=======
 	launcher.setAttribute('aria-label', 'Open Code Assistant');
 	launcher.innerHTML =
 		'<span aria-hidden="true">✦</span><span class="wpe-floating-ai-assistant__label">Code Assistant</span>';
@@ -306,18 +257,11 @@ function createLauncher() {
 	launcher.addEventListener('click', () => {
 		window.clearTimeout(launcherReminderTimer);
 
->>>>>>> main
 		if (!activeBlock || !isMeaningfullyVisible(activeBlock)) {
 			setActiveBlock(null);
 			return;
 		}
 
-<<<<<<< HEAD
-		const blockLauncher = activeBlock.querySelector('.ai-assistant-button');
-		blockLauncher?.click();
-
-		window.setTimeout(syncLauncherState, 0);
-=======
 		activeBlock.classList.add('is-ai-assistant-focused');
 		activeBlock.querySelector('.ai-assistant-button')?.click();
 
@@ -327,7 +271,6 @@ function createLauncher() {
 				scheduleLauncherReminder();
 			}
 		}, 0);
->>>>>>> main
 	});
 
 	document.body.appendChild(launcher);
@@ -343,12 +286,6 @@ function observeBlocks() {
 
 	createLauncher();
 
-<<<<<<< HEAD
-	if (!('IntersectionObserver' in window)) {
-		blocks.forEach((block) => visibleBlocks.set(block, 1));
-		chooseActiveBlock();
-		window.addEventListener('scroll', scheduleActiveBlockUpdate, { passive: true });
-=======
 	// Expanding a block is an explicit focus action and immediately makes that
 	// block the current context. Normal viewport selection resumes on scroll.
 	blocks.forEach((block) => {
@@ -389,7 +326,6 @@ function observeBlocks() {
 		window.addEventListener('scroll', scheduleActiveBlockUpdate, {
 			passive: true,
 		});
->>>>>>> main
 		window.addEventListener('resize', scheduleActiveBlockUpdate);
 		return;
 	}
@@ -433,14 +369,10 @@ function observeBlocks() {
 	blocks.forEach((block) => {
 		const drawer = block.querySelector('.ai-assistant-drawer');
 		if (drawer) {
-<<<<<<< HEAD
-			drawerObserver.observe(drawer, { attributes: true, attributeFilter: ['hidden'] });
-=======
 			drawerObserver.observe(drawer, {
 				attributes: true,
 				attributeFilter: ['hidden'],
 			});
->>>>>>> main
 		}
 	});
 

@@ -209,7 +209,7 @@ const { state } = store('wpe', {
       }
     },
 
-    explainLine() {
+    *explainCode() {
       const context = getContext();
 
       recordAnalyticsEvent(
@@ -249,132 +249,7 @@ const { state } = store('wpe', {
           'Unable to generate a code explanation right now.';
       }
 
-      const lineKey = String(selectedLineNumber);
-      stored =
-        storedLineExplanations?.[lineKey] ??
-        storedLineExplanations?.[selectedLineNumber] ??
-        '';
-
-      context.lineExplanation =
-        typeof stored === 'string' ? stored.trim() : '';
-
-      if (!context.lineExplanation) {
-        context.lineExplanationError =
-          'No stored explanation is available for this line yet.';
-      }
-    },
-
-    handleCodeQuestionInput(event) {
-      const context = getContext();
-      context.codeQuestion = event.target.value;
-      context.codeQuestionError = '';
-    },
-
-    toggleAskCode() {
-      const context = getContext();
-      context.aiAssistantOpen = true;
-      context.aiAssistantView = 'ask';
-      context.isAskingCode = true;
-      context.codeQuestionError = '';
-    },
-
-    *submitCodeQuestion() {
-      const context = getContext();
-      const question = (context.codeQuestion || '').trim();
-
-      if (!question) {
-        context.codeQuestionError = 'Enter a question about this code first.';
-        return;
-      }
-
-      if (context.isSubmittingQuestion) {
-        return;
-      }
-
-      recordAnalyticsEvent(
-        ANALYTICS_EVENTS.ASK_QUESTION,
-        context,
-        { question }
-      );
-
-      context.isSubmittingQuestion = true;
-      context.codeQuestionError = '';
-      context.codeAnswer = '';
-
-      const requestContext = {
-        ...context,
-        question,
-      };
-
-      try {
-        const response = yield requestAICapability(
-          'ask-code',
-          buildAIContext(requestContext)
-        );
-
-        if (
-          response &&
-          typeof response.answer === 'string' &&
-          response.answer.trim()
-        ) {
-          context.codeAnswer = response.answer.trim();
-        } else {
-          context.codeQuestionError =
-            'AI assistance is temporarily unavailable. Please try again later.';
-        }
-      } catch (error) {
-        context.codeQuestionError =
-          'AI assistance is temporarily unavailable. Please try again later.';
-      } finally {
-        context.isSubmittingQuestion = false;
-      }
-    },
-
-    generateUnderstandingCheck() {
-      const context = getContext();
-
-      context.aiAssistantOpen = true;
-      context.aiAssistantView = 'check';
-      context.isCheckingUnderstanding = true;
-      context.isGeneratingCheck = false;
-      context.checkError = '';
-
-      if (!context.checkQuestion || context.checkOptions?.length !== 3) {
-        context.checkError =
-          'No stored knowledge check is available for this code example yet.';
-      }
-    },
-
-    selectCheckAnswer(event) {
-      const context = getContext();
-
-      if (context.hasAnsweredCheck) {
-        return;
-      }
-
-      const answerIndex = Number(event.currentTarget.dataset.answerIndex);
-
-      if (
-        !Number.isInteger(answerIndex) ||
-        answerIndex < 0 ||
-        answerIndex >= context.checkOptions.length
-      ) {
-        return;
-      }
-
-      context.selectedCheckAnswer = answerIndex;
-      context.hasAnsweredCheck = true;
-      context.isCheckCorrect = answerIndex === context.checkCorrectAnswer;
-
-      recordAnalyticsEvent(
-        ANALYTICS_EVENTS.KNOWLEDGE_CHECK,
-        context,
-        {
-          correct: context.isCheckCorrect,
-          selectedAnswer: answerIndex,
-          correctAnswer: context.checkCorrectAnswer,
-        }
-      );
+      context.isAnalyzingExplanation = false;
     },
 
     *explainLine() {
@@ -682,8 +557,8 @@ const { state } = store('wpe', {
 
       context.isExplaining = false;
       context.isAnalyzingExplanation = false;
-      context.explanationText = context.explanationText || '';
-      context.explanationItems = context.explanationItems || [];
+      context.explanationText = '';
+      context.explanationItems = [];
       context.explanationError = '';
 
       context.selectedLineNumber = 0;

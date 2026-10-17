@@ -1,5 +1,7 @@
 /**
- * Registers the Intelligent Code Assistant block.
+ * Registers a new block provided a unique name and an object defining its behavior.
+ *
+ * @see https://developer.wordpress.org/block-editor/developers/block-api/#registering-a-block
  */
 import { registerBlockType } from '@wordpress/blocks';
 
@@ -12,9 +14,11 @@ import { registerBlockType } from '@wordpress/blocks';
 import './style.scss';
 import './assistant/style.scss';
 import './editor.scss';
-import './article-ai-workspace';
 
-import EditRouter from './EditRouter';
+/**
+ * Internal dependencies
+ */
+import Edit from './edit';
 import Save from './save';
 import metadata from './block.json';
 
@@ -26,6 +30,9 @@ import { InnerBlocks } from '@wordpress/block-editor';
  * @see ./edit.js
  */
 registerBlockType(metadata.name, {
-  edit: EditRouter,
+  /**
+   * @see ./edit.js
+   */
+  edit: Edit,
   save: Save,
 });

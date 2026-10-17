@@ -15,6 +15,10 @@
     "id": {
       "type": "string"
     },
+    "codeExampleId": {
+      "type": "integer",
+      "default": 0
+    },
     "showLanguageBadge": {
       "type": "boolean",
       "default": true

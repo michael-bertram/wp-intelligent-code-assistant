@@ -10,7 +10,7 @@ import CanonicalCodeExampleEditor from './CanonicalCodeExampleEditor';
 import { CanonicalCodeExampleContext } from './canonical-editor-context';
 import './editor.scss';
 
-export default function Edit({ attributes, setAttributes, clientId, isCodeExampleProxy = false }) {
+export default function Edit({ attributes, setAttributes, clientId, isCodeExampleProxy = false, canonicalEntityId: canonicalEntityIdProp = 0 }) {
     const {
         codeExampleId,
         showLanguageBadge,
@@ -31,7 +31,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
 
     const canonicalEditorContext = useContext(CanonicalCodeExampleContext);
     const isEditingCanonicalEntity = Boolean(canonicalEditorContext?.isCanonical);
-    const canonicalEntityId = Number(canonicalEditorContext?.entityId || 0);
+    const canonicalEntityId = Number(canonicalEditorContext?.entityId || canonicalEntityIdProp || 0);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiError, setAiError] = useState(null);
     const [isEditingContext, setIsEditingContext] = useState(false);

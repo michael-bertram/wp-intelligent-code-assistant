@@ -105,6 +105,20 @@
 		results.hidden = false;
 	};
 
+	let currentInsights = null;
+
+	if (
+		isArticle &&
+		config.savedInsights &&
+		typeof config.savedInsights === 'object' &&
+		typeof config.savedInsights.summary === 'string'
+	) {
+		currentInsights = config.savedInsights;
+		renderInsights( currentInsights );
+		button.textContent = config.i18n?.regenerate || 'Regenerate insights';
+		status.textContent = config.i18n?.generatedArticle || 'Generated from current article analytics';
+	}
+
 	const showError = ( message ) => {
 		results.classList.remove( 'is-loading' );
 		results.setAttribute( 'aria-busy', 'false' );
@@ -120,7 +134,9 @@
 		button.textContent = config.i18n?.generating || 'Generating insights…';
 		status.classList.add( 'is-loading' );
 		status.textContent = config.i18n?.generating || 'Generating insights…';
-		renderLoading();
+		if ( ! currentInsights ) {
+			renderLoading();
+		}
 
 		try {
 			const response = await fetch( config.endpoint, {
@@ -131,15 +147,21 @@
 			} );
 			const data = await response.json();
 			if ( ! response.ok ) throw new Error( data?.message || config.i18n?.error );
-			renderInsights( data );
+			currentInsights = data;
+			renderInsights( currentInsights );
 			button.textContent = config.i18n?.regenerate || 'Regenerate insights';
 			button.dataset.idleLabel = button.textContent;
 			status.textContent = isCodeExample
 				? ( config.i18n?.generatedCodeExample || 'Generated from current Code Example analytics' )
 				: ( config.i18n?.generatedArticle || 'Generated from current article analytics' );
 		} catch ( error ) {
-			showError( error?.message || config.i18n?.error || 'AI insights are currently unavailable.' );
-			status.textContent = '';
+			if ( currentInsights ) {
+				renderInsights( currentInsights );
+				status.textContent = 'Could not refresh insights. Showing the last saved results.';
+			} else {
+				showError( error?.message || config.i18n?.error || 'AI insights are currently unavailable.' );
+				status.textContent = '';
+			}
 		} finally {
 			status.classList.remove( 'is-loading' );
 			button.disabled = false;

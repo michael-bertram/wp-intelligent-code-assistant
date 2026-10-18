@@ -41,6 +41,15 @@
         };
     }
 
+    function syncLegacyToolbarDot(items) {
+        const dot = document.querySelector('.ica-header-toolbar__status');
+        if (!dot) return;
+        const complete = items.length > 0 && items.every((item) => item.complete);
+        dot.classList.toggle('is-ready', complete);
+        dot.classList.toggle('needs-attention', !complete);
+        dot.classList.remove('is-checking');
+    }
+
     function isComplete(data, code) {
         const attrs = data || {};
         const lines = String(code || '').replace(/\r/g, '').split('\n');
@@ -101,8 +110,10 @@
                     };
                 }));
                 setItems(next);
+                syncLegacyToolbarDot(next);
                 setError('');
             } catch (err) {
+                syncLegacyToolbarDot([]);
                 setError(err?.message || __('Could not check saved assistance for every Code Snippet.', 'intelligent-code-assistant'));
             } finally {
                 setLoading(false);
@@ -110,6 +121,32 @@
         }, [idsKey]);
 
         useEffect(() => { refresh(); }, [refresh]);
+
+        // The original toolbar status lives in the Article AI Workspace bundle.
+        // Recheck canonical records when its per-snippet status changes so the
+        // header dot updates immediately after generating assistance there too.
+        useEffect(() => {
+            const observer = new MutationObserver((mutations) => {
+                if (mutations.some((mutation) =>
+                    mutation.type === 'attributes' &&
+                    mutation.attributeName === 'class' &&
+                    mutation.target?.classList?.contains('ica-ai-workspace__status')
+                )) {
+                    refresh();
+                }
+            });
+            observer.observe(document.body, {
+                attributes: true,
+                attributeFilter: ['class'],
+                subtree: true,
+            });
+            const handleSaved = () => refresh();
+            window.addEventListener('ica:reader-assistance-saved', handleSaved);
+            return () => {
+                observer.disconnect();
+                window.removeEventListener('ica:reader-assistance-saved', handleSaved);
+            };
+        }, [refresh]);
 
         const generateAll = async () => {
             if (generating) return;

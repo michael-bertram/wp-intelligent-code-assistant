@@ -5,6 +5,7 @@
     const Fragment = wp.element.Fragment;
     const useEffect = wp.element.useEffect;
     const useMemo = wp.element.useMemo;
+    const useCallback = wp.element.useCallback;
     const useState = wp.element.useState;
     const registerPlugin = wp.plugins.registerPlugin;
     const PluginSidebar = wp.editPost && wp.editPost.PluginSidebar;
@@ -72,20 +73,22 @@
             return Array.from(found);
         }, [blocks]);
 
+        const idsKey = ids.join(',');
         const [items, setItems] = useState([]);
         const [loading, setLoading] = useState(false);
         const [generating, setGenerating] = useState(false);
         const [progress, setProgress] = useState({ done: 0, total: 0 });
         const [error, setError] = useState('');
 
-        const refresh = async () => {
-            if (!ids.length) {
+        const refresh = useCallback(async () => {
+            const currentIds = idsKey ? idsKey.split(',').map(Number) : [];
+            if (!currentIds.length) {
                 setItems([]);
                 return;
             }
             setLoading(true);
             try {
-                const next = await Promise.all(ids.map(async (id) => {
+                const next = await Promise.all(currentIds.map(async (id) => {
                     const record = await wp.apiFetch({ path: '/wp/v2/ica_code_example/' + id + '?context=edit' });
                     const parsed = wp.blocks.parse(record?.content?.raw || '');
                     const details = getCode(parsed);
@@ -104,9 +107,9 @@
             } finally {
                 setLoading(false);
             }
-        };
+        }, [idsKey]);
 
-        useEffect(() => { refresh(); }, [ids.join(',')]);
+        useEffect(() => { refresh(); }, [refresh]);
 
         const generateAll = async () => {
             if (generating) return;
@@ -121,7 +124,7 @@
                     const parsed = wp.blocks.parse(record?.content?.raw || '');
                     const details = getCode(parsed);
                     if (!details?.code?.trim()) {
-                        throw new Error(__('Could not read the code for ', 'intelligent-code-assistant') + item.title);
+                        throw new Error(sprintf(__('Could not read the code for %s', 'intelligent-code-assistant'), item.title));
                     }
 
                     const payload = {
@@ -169,7 +172,7 @@
                         !overview?.knowledgeCheck?.question ||
                         !requiredLines.every((line) => typeof lineExplanations[String(line)] === 'string' && lineExplanations[String(line)].trim())
                     ) {
-                        throw new Error(__('Incomplete AI response for ', 'intelligent-code-assistant') + item.title);
+                        throw new Error(sprintf(__('Incomplete AI response for %s', 'intelligent-code-assistant'), item.title));
                     }
 
                     await wp.apiFetch({

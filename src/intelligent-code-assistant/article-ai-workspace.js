@@ -1,5 +1,5 @@
 import { __ } from '@wordpress/i18n';
-import { parse, serialize } from '@wordpress/blocks';
+import { parse } from '@wordpress/blocks';
 import { Button, Dropdown, Modal, Notice, Spinner } from '@wordpress/components';
 import { createPortal, useEffect, useMemo, useState } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';

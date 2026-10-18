@@ -174,43 +174,52 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             tutorialContext: effectiveTutorialContext,
         };
 
-        try {
-            // Generate the overview, every non-empty line explanation, and the
-            // knowledge check together. This is more reliable than making a
-            // separate AI request for every line.
-            let result;
+        const runRoute = async (ability, route, data) => {
             try {
-                result = await apiFetch({
-                    path: '/wp/v2/abilities/intelligent-code-assistant/generate-reader-assistance/run',
+                return await apiFetch({
+                    path: `/wp/v2/abilities/intelligent-code-assistant/${ability}/run`,
                     method: 'POST',
-                    data: base,
+                    data,
                 });
             } catch (routeErr) {
                 if (routeErr.code !== 'rest_no_route' && routeErr.status !== 404) throw routeErr;
-                result = await apiFetch({
-                    path: '/intelligent-code-assistant/v1/generate-reader-assistance',
-                    method: 'POST',
-                    data: base,
+                return apiFetch({ path: `/intelligent-code-assistant/v1/${route}`, method: 'POST', data });
+            }
+        };
+
+        try {
+            // Keep overview generation separate from bounded line batches so
+            // larger snippets do not exceed the AI provider's request limits.
+            const overview = await runRoute('generate-reader-overview', 'generate-reader-overview', base);
+            const lines = cleanRawText.replace(/\r/g, '').split('\n');
+            const requiredLines = lines
+                .map((line, index) => line.trim() ? index + 1 : null)
+                .filter(Boolean);
+            const lineExplanations = {};
+
+            for (let offset = 0; offset < requiredLines.length; offset += 30) {
+                const lineNumbers = requiredLines.slice(offset, offset + 30);
+                const batch = await runRoute('generate-line-explanations-batch', 'generate-line-explanations-batch', {
+                    ...base,
+                    lineNumbers,
                 });
+                Object.assign(lineExplanations, batch?.lineExplanations || {});
             }
 
             const nextAttributes = {
-                generatedExplanation: result?.explanation?.trim() || '',
-                generatedLineExplanations: result?.lineExplanations || {},
-                generatedKnowledgeCheck: result?.knowledgeCheck || {},
+                generatedExplanation: overview?.explanation?.trim() || '',
+                generatedLineExplanations: lineExplanations,
+                generatedKnowledgeCheck: overview?.knowledgeCheck || {},
             };
 
             if (
                 !nextAttributes.generatedExplanation ||
-                !Object.keys(nextAttributes.generatedLineExplanations).length ||
+                !requiredLines.every((line) => typeof lineExplanations[String(line)] === 'string' && lineExplanations[String(line)].trim()) ||
                 !nextAttributes.generatedKnowledgeCheck?.question
             ) {
                 throw new Error(__('The AI response was incomplete. No generated assistance was saved.', 'intelligent-code-assistant'));
             }
 
-            // Update the editor immediately, then persist the canonical block
-            // explicitly. Nested entity editors can otherwise show generated
-            // attributes before their debounced content save has completed.
             setAttributes(nextAttributes);
 
             if (canonicalEntityId > 0) {

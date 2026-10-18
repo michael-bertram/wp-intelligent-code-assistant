@@ -226,18 +226,22 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
             return;
         }
 
-        const record = await apiFetch({ path: `/wp/v2/ica_code_example/${item.codeExampleId}?context=edit` });
-        const blocks = parse(record?.content?.raw || '');
-        const canonicalBlock = flattenBlocks(blocks)[0];
-        if (!canonicalBlock) throw new Error(__('The canonical Code Snippet block could not be found.', 'intelligent-code-assistant'));
-
-        canonicalBlock.attributes = { ...(canonicalBlock.attributes || {}), ...generated };
         await apiFetch({
-            path: `/wp/v2/ica_code_example/${item.codeExampleId}`,
+            path: '/intelligent-code-assistant/v1/save-reader-assistance',
             method: 'POST',
-            data: { content: serialize(blocks) },
+            data: {
+                codeExampleId: item.codeExampleId,
+                generatedExplanation: generated.generatedExplanation || '',
+                generatedLineExplanations: generated.generatedLineExplanations || {},
+                generatedKnowledgeCheck: generated.generatedKnowledgeCheck || {},
+            },
         });
-        setCanonical(canonicalBlock);
+
+        setCanonical((current) => ({
+            ...current,
+            attributes: { ...(current?.attributes || {}), ...generated },
+        }));
+        window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
     };
 
     const assistanceStatus = canonical ? getAssistanceStatus(canonical) : null;

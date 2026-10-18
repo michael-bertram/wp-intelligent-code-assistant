@@ -385,6 +385,7 @@ add_action(
 						$block['attrs']['generatedExplanation']      = sanitize_textarea_field( $request->get_param( 'generatedExplanation' ) );
 						$block['attrs']['generatedLineExplanations'] = $clean_lines;
 						$block['attrs']['generatedKnowledgeCheck']   = $clean_check;
+						$block['attrs']['enableAIAssistant']        = true;
 						$found = true;
 						break;
 					}

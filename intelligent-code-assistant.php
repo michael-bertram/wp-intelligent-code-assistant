@@ -1788,3 +1788,24 @@ require_once __DIR__ . '/includes/reader-insights-ai.php';
 require_once __DIR__ . '/includes/code-example-insights-ai.php';
 require_once __DIR__ . '/includes/reader-insights-assets.php';
 require_once __DIR__ . '/includes/analytics-summary.php';
+
+
+/**
+ * Add the post-level reader-assistance workspace to the block editor.
+ * It tracks completion across reusable Code Snippets referenced by the post
+ * and can generate/persist assistance for all incomplete snippets in sequence.
+ */
+add_action( 'enqueue_block_editor_assets', function () {
+	$asset_path = __DIR__ . '/assets/post-assistance.js';
+	if ( ! file_exists( $asset_path ) ) {
+		return;
+	}
+
+	wp_enqueue_script(
+		'ica-post-assistance',
+		plugins_url( 'assets/post-assistance.js', __FILE__ ),
+		array( 'wp-plugins', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-components', 'wp-data', 'wp-api-fetch', 'wp-blocks', 'wp-i18n' ),
+		(string) filemtime( $asset_path ),
+		true
+	);
+} );

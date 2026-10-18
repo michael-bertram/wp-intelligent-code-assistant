@@ -124,7 +124,7 @@
                     const parsed = wp.blocks.parse(record?.content?.raw || '');
                     const details = getCode(parsed);
                     if (!details?.code?.trim()) {
-                        throw new Error(sprintf(__('Could not read the code for %s', 'intelligent-code-assistant'), item.title));
+                        throw new Error(__('Could not read the code for', 'intelligent-code-assistant') + ' ' + item.title);
                     }
 
                     const payload = {
@@ -172,7 +172,7 @@
                         !overview?.knowledgeCheck?.question ||
                         !requiredLines.every((line) => typeof lineExplanations[String(line)] === 'string' && lineExplanations[String(line)].trim())
                     ) {
-                        throw new Error(sprintf(__('Incomplete AI response for %s', 'intelligent-code-assistant'), item.title));
+                        throw new Error(__('Incomplete AI response for', 'intelligent-code-assistant') + ' ' + item.title);
                     }
 
                     await wp.apiFetch({

@@ -1777,4 +1777,14 @@ function intelligent_code_assistant_record_analytics_event( WP_REST_Request $req
 }
 
 /** Load analytics aggregation, Reader Insights, and production hardening. */
+require_once __DIR__ . '/includes/analytics-hardening.php';
+require_once __DIR__ . '/includes/code-examples.php';
+require_once __DIR__ . '/includes/code-example-insights.php';
+require_once __DIR__ . '/includes/public-ai-hardening.php';
+require_once __DIR__ . '/includes/ai-response-formatting.php';
+require_once __DIR__ . '/includes/analytics-dashboard.php';
+require_once __DIR__ . '/includes/reader-insights-admin.php';
+require_once __DIR__ . '/includes/reader-insights-ai.php';
+require_once __DIR__ . '/includes/code-example-insights-ai.php';
+require_once __DIR__ . '/includes/reader-insights-assets.php';
 require_once __DIR__ . '/includes/analytics-summary.php';

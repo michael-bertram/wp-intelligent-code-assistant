@@ -132,23 +132,43 @@
                         tutorialTitle: postTitle,
                         tutorialContext: details.attributes.tutorialContextOverride || '',
                     };
-                    let generated;
-                    try {
-                        generated = await wp.apiFetch({
-                            path: '/wp/v2/abilities/intelligent-code-assistant/generate-reader-assistance/run',
-                            method: 'POST',
-                            data: payload,
+                    const runRoute = async (ability, route, data) => {
+                        try {
+                            return await wp.apiFetch({
+                                path: '/wp/v2/abilities/intelligent-code-assistant/' + ability + '/run',
+                                method: 'POST',
+                                data,
+                            });
+                        } catch (routeError) {
+                            if (routeError.code !== 'rest_no_route' && routeError.status !== 404) throw routeError;
+                            return wp.apiFetch({
+                                path: '/intelligent-code-assistant/v1/' + route,
+                                method: 'POST',
+                                data,
+                            });
+                        }
+                    };
+
+                    const overview = await runRoute('generate-reader-overview', 'generate-reader-overview', payload);
+                    const sourceLines = details.code.replace(/\\r/g, '').split('\\n');
+                    const requiredLines = sourceLines
+                        .map((line, index) => line.trim() ? index + 1 : null)
+                        .filter(Boolean);
+                    const lineExplanations = {};
+                    for (let offset = 0; offset < requiredLines.length; offset += 30) {
+                        const lineNumbers = requiredLines.slice(offset, offset + 30);
+                        const batch = await runRoute('generate-line-explanations-batch', 'generate-line-explanations-batch', {
+                            ...payload,
+                            lineNumbers,
                         });
-                    } catch (routeError) {
-                        if (routeError.code !== 'rest_no_route' && routeError.status !== 404) throw routeError;
-                        generated = await wp.apiFetch({
-                            path: '/intelligent-code-assistant/v1/generate-reader-assistance',
-                            method: 'POST',
-                            data: payload,
-                        });
+                        Object.assign(lineExplanations, batch?.lineExplanations || {});
                     }
 
-                    if (!generated?.explanation || !generated?.lineExplanations || !generated?.knowledgeCheck?.question) {
+                    if (
+                        !overview?.explanation ||
+                        !overview?.knowledgeCheck?.question ||
+                        !requiredLines.every((line) => typeof lineExplanations[String(line)] === 'string' && lineExplanations[String(line)].trim())
+                    ) {
                         throw new Error(__('Incomplete AI response for ', 'intelligent-code-assistant') + item.title);
                     }
 
@@ -157,9 +177,9 @@
                         method: 'POST',
                         data: {
                             codeExampleId: item.id,
-                            generatedExplanation: generated.explanation,
-                            generatedLineExplanations: generated.lineExplanations,
-                            generatedKnowledgeCheck: generated.knowledgeCheck,
+                            generatedExplanation: overview.explanation,
+                            generatedLineExplanations: lineExplanations,
+                            generatedKnowledgeCheck: overview.knowledgeCheck,
                         },
                     });
                     done += 1;

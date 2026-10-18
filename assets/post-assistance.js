@@ -1,0 +1,222 @@
+(function (wp) {
+    if (!wp || !wp.plugins || !wp.element || !wp.data || !wp.apiFetch || !wp.blocks) return;
+
+    const el = wp.element.createElement;
+    const Fragment = wp.element.Fragment;
+    const useEffect = wp.element.useEffect;
+    const useMemo = wp.element.useMemo;
+    const useState = wp.element.useState;
+    const registerPlugin = wp.plugins.registerPlugin;
+    const PluginSidebar = wp.editPost && wp.editPost.PluginSidebar;
+    const PluginSidebarMoreMenuItem = wp.editPost && wp.editPost.PluginSidebarMoreMenuItem;
+    const PluginPostStatusInfo = wp.editor && wp.editor.PluginPostStatusInfo;
+    const PanelBody = wp.components.PanelBody;
+    const Button = wp.components.Button;
+    const Notice = wp.components.Notice;
+    const Spinner = wp.components.Spinner;
+    const __ = wp.i18n.__;
+
+    if (!PluginSidebar || !PluginSidebarMoreMenuItem || !PanelBody || !Button) return;
+
+    function getAssistantBlock(blocks) {
+        for (const block of (blocks || [])) {
+            if (block.name === 'wpe/intelligent-code-assistant') return block;
+            const nested = getAssistantBlock(block.innerBlocks || []);
+            if (nested) return nested;
+        }
+        return null;
+    }
+
+    function getCode(blocks) {
+        const assistant = getAssistantBlock(blocks);
+        if (!assistant) return null;
+        const header = (assistant.innerBlocks || []).find((block) => block.name === 'wpe/code-header');
+        const content = (assistant.innerBlocks || []).find((block) => block.name === 'wpe/code-content');
+        return {
+            assistant,
+            code: String(content?.attributes?.code ?? content?.attributes?.content ?? ''),
+            title: String(header?.attributes?.title ?? ''),
+            attributes: assistant.attributes || {},
+        };
+    }
+
+    function isComplete(data, code) {
+        const attrs = data || {};
+        const lines = String(code || '').replace(/\r/g, '').split('\n');
+        const required = lines.map((line, index) => line.trim() ? String(index + 1) : null).filter(Boolean);
+        const stored = attrs.generatedLineExplanations || {};
+        return Boolean(
+            attrs.generatedExplanation?.trim() &&
+            attrs.generatedKnowledgeCheck?.question &&
+            required.length > 0 &&
+            required.every((line) => typeof stored[line] === 'string' && stored[line].trim())
+        );
+    }
+
+    function AssistanceWorkspace() {
+        const { postId, postTitle, blocks } = wp.data.useSelect((select) => ({
+            postId: select('core/editor')?.getCurrentPostId?.() || 0,
+            postTitle: select('core/editor')?.getEditedPostAttribute?.('title') || '',
+            blocks: select('core/block-editor')?.getBlocks?.() || [],
+        }), []);
+
+        const ids = useMemo(() => {
+            const found = new Set();
+            const visit = (items) => (items || []).forEach((block) => {
+                if (block.name === 'wpe/intelligent-code-assistant' && Number(block.attributes?.codeExampleId || 0) > 0) {
+                    found.add(Number(block.attributes.codeExampleId));
+                }
+                visit(block.innerBlocks || []);
+            });
+            visit(blocks);
+            return Array.from(found);
+        }, [blocks]);
+
+        const [items, setItems] = useState([]);
+        const [loading, setLoading] = useState(false);
+        const [generating, setGenerating] = useState(false);
+        const [progress, setProgress] = useState({ done: 0, total: 0 });
+        const [error, setError] = useState('');
+
+        const refresh = async () => {
+            if (!ids.length) {
+                setItems([]);
+                return;
+            }
+            setLoading(true);
+            try {
+                const next = await Promise.all(ids.map(async (id) => {
+                    const record = await wp.apiFetch({ path: '/wp/v2/ica_code_example/' + id + '?context=edit' });
+                    const parsed = wp.blocks.parse(record?.content?.raw || '');
+                    const details = getCode(parsed);
+                    return {
+                        id,
+                        title: record?.title?.rendered || __('Code Snippet', 'intelligent-code-assistant') + ' #' + id,
+                        code: details?.code || '',
+                        attributes: details?.attributes || {},
+                        complete: Boolean(details && isComplete(details.attributes, details.code)),
+                    };
+                }));
+                setItems(next);
+                setError('');
+            } catch (err) {
+                setError(err?.message || __('Could not check saved assistance for every Code Snippet.', 'intelligent-code-assistant'));
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        useEffect(() => { refresh(); }, [ids.join(',')]);
+
+        const generateAll = async () => {
+            if (generating) return;
+            setGenerating(true);
+            setError('');
+            const pending = items.filter((item) => !item.complete);
+            setProgress({ done: 0, total: pending.length });
+            let done = 0;
+            try {
+                for (const item of pending) {
+                    const record = await wp.apiFetch({ path: '/wp/v2/ica_code_example/' + item.id + '?context=edit' });
+                    const parsed = wp.blocks.parse(record?.content?.raw || '');
+                    const details = getCode(parsed);
+                    if (!details?.code?.trim()) {
+                        throw new Error(__('Could not read the code for ', 'intelligent-code-assistant') + item.title);
+                    }
+
+                    const payload = {
+                        code: details.code,
+                        language: details.attributes.codeLanguage || 'code',
+                        filename: details.attributes.filename || '',
+                        title: details.title || item.title,
+                        tutorialTitle: postTitle,
+                        tutorialContext: details.attributes.tutorialContextOverride || '',
+                    };
+                    let generated;
+                    try {
+                        generated = await wp.apiFetch({
+                            path: '/wp/v2/abilities/intelligent-code-assistant/generate-reader-assistance/run',
+                            method: 'POST',
+                            data: payload,
+                        });
+                    } catch (routeError) {
+                        if (routeError.code !== 'rest_no_route' && routeError.status !== 404) throw routeError;
+                        generated = await wp.apiFetch({
+                            path: '/intelligent-code-assistant/v1/generate-reader-assistance',
+                            method: 'POST',
+                            data: payload,
+                        });
+                    }
+
+                    if (!generated?.explanation || !generated?.lineExplanations || !generated?.knowledgeCheck?.question) {
+                        throw new Error(__('Incomplete AI response for ', 'intelligent-code-assistant') + item.title);
+                    }
+
+                    await wp.apiFetch({
+                        path: '/intelligent-code-assistant/v1/save-reader-assistance',
+                        method: 'POST',
+                        data: {
+                            codeExampleId: item.id,
+                            generatedExplanation: generated.explanation,
+                            generatedLineExplanations: generated.lineExplanations,
+                            generatedKnowledgeCheck: generated.knowledgeCheck,
+                        },
+                    });
+                    done += 1;
+                    setProgress({ done, total: pending.length });
+                }
+                await refresh();
+            } catch (err) {
+                setError((err?.message || __('Generation failed.', 'intelligent-code-assistant')) + ' ' + __('Completed snippets were saved; run Generate all again to retry anything still incomplete.', 'intelligent-code-assistant'));
+                await refresh();
+            } finally {
+                setGenerating(false);
+            }
+        };
+
+        const completeCount = items.filter((item) => item.complete).length;
+        const allComplete = items.length > 0 && completeCount === items.length;
+        const dotColor = allComplete ? '#16a34a' : (items.length ? '#d97706' : '#94a3b8');
+
+        return el(Fragment, null,
+            PluginPostStatusInfo ? el(PluginPostStatusInfo, null,
+                el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+                    el('span', { 'aria-hidden': 'true', style: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: dotColor } }),
+                    allComplete
+                        ? __('Code assistance complete', 'intelligent-code-assistant')
+                        : (items.length ? completeCount + '/' + items.length + ' ' + __('Code Snippets ready', 'intelligent-code-assistant') : __('No reusable Code Snippets found', 'intelligent-code-assistant'))
+                )
+            ) : null,
+            el(PluginSidebarMoreMenuItem, { target: 'ica-post-assistance' }, __('Code Assistance', 'intelligent-code-assistant')),
+            el(PluginSidebar, { name: 'ica-post-assistance', title: __('Code Assistance', 'intelligent-code-assistant'), icon: 'editor-code' },
+                el(PanelBody, { title: __('Reader assistance for this post', 'intelligent-code-assistant'), initialOpen: true },
+                    el('p', null, __('Generate and save the explanation, every non-empty line explanation, and a knowledge check for each reusable Code Snippet referenced by this post.', 'intelligent-code-assistant')),
+                    loading ? el('p', null, el(Spinner), ' ', __('Checking saved assistance…', 'intelligent-code-assistant')) : null,
+                    el('p', null, items.length
+                        ? completeCount + ' / ' + items.length + ' ' + __('Code Snippets are complete.', 'intelligent-code-assistant')
+                        : __('This post does not contain reusable Code Snippet references.', 'intelligent-code-assistant')),
+                    items.length ? el('ul', { style: { marginLeft: '18px', listStyle: 'disc' } },
+                        items.map((item) => el('li', { key: item.id }, (item.complete ? '✓ ' : '○ ') + item.title))
+                    ) : null,
+                    error ? el(Notice, { status: 'error', isDismissible: true, onRemove: () => setError('') }, error) : null,
+                    generating ? el('p', { role: 'status' }, el(Spinner), ' ', __('Generating…', 'intelligent-code-assistant'), ' ', progress.done, '/', progress.total) : null,
+                    el(Button, {
+                        variant: 'primary',
+                        disabled: loading || generating || !items.length || allComplete,
+                        isBusy: generating,
+                        onClick: generateAll,
+                        style: { width: '100%', justifyContent: 'center' },
+                    }, generating ? __('Generating assistance…', 'intelligent-code-assistant') : __('Generate all', 'intelligent-code-assistant')),
+                    el(Button, {
+                        variant: 'secondary',
+                        disabled: loading || generating,
+                        onClick: refresh,
+                        style: { marginTop: '8px', width: '100%', justifyContent: 'center' },
+                    }, __('Refresh status', 'intelligent-code-assistant'))
+                )
+            )
+        );
+    }
+
+    registerPlugin('ica-post-assistance', { render: AssistanceWorkspace });
+})(window.wp);

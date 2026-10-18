@@ -387,7 +387,7 @@ const { state } = store('wpe', {
       );
     },
 
-    *explainLine() {
+    async copyToClipboard() {
       const context = getContext();
       const cleanedText = (context.rawCodeText || '').trim();
 

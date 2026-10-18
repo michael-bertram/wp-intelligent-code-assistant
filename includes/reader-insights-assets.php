@@ -23,10 +23,8 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 	$is_code_example = $code_example_id > 0;
 	$is_article = $post_id > 0;
 
-	$saved_insights = $is_article ? get_post_meta( $post_id, '_ica_reader_insights', true ) : null;
-	if ( ! is_array( $saved_insights ) ) {
-		$saved_insights = null;
-	}
+	$insights_post_id = $is_code_example ? $code_example_id : $post_id;
+	$saved_insights   = $insights_post_id > 0 ? get_post_meta( $insights_post_id, '_ica_reader_insights', true ) : null;
 
 	wp_localize_script( 'intelligent-code-assistant-reader-insights-admin', 'ICAReaderInsights', array(
 		'mode' => $is_code_example ? 'codeExample' : ( $is_article ? 'article' : 'overview' ),
@@ -36,13 +34,15 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 			? rest_url( 'intelligent-code-assistant/v1/analyze-code-example-insights' )
 			: ( $is_article ? rest_url( 'intelligent-code-assistant/v1/analyze-reader-insights' ) : '' ),
 		'nonce' => wp_create_nonce( 'wp_rest' ),
-		'savedInsights' => $saved_insights,
+		'savedInsights' => is_array( $saved_insights ) ? $saved_insights : null,
 		'i18n' => array(
 			'generate' => __( 'Generate AI insights', 'intelligent-code-assistant' ),
 			'regenerate' => __( 'Regenerate insights', 'intelligent-code-assistant' ),
 			'generating' => __( 'Generating insights…', 'intelligent-code-assistant' ),
 			'generatedArticle' => __( 'Generated from current article analytics', 'intelligent-code-assistant' ),
 			'generatedCodeExample' => __( 'Generated from current Code Snippet analytics', 'intelligent-code-assistant' ),
+			'saved' => __( 'Saved insights · generated', 'intelligent-code-assistant' ),
+			'snapshotInteractions' => __( 'interactions in snapshot', 'intelligent-code-assistant' ),
 			'error' => __( 'AI insights are currently unavailable. Please try again later.', 'intelligent-code-assistant' ),
 			'introArticle' => __( 'Interpret the deterministic analytics for this article. Suggestions are evidence-based and remain for the author to review.', 'intelligent-code-assistant' ),
 			'introCodeExample' => __( 'Interpret the deterministic analytics for this Code Snippet across every article where it appears. Suggestions are evidence-based and remain for the author to review.', 'intelligent-code-assistant' ),

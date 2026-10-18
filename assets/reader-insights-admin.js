@@ -105,18 +105,31 @@
 		results.hidden = false;
 	};
 
+	const formatSavedAt = ( value ) => {
+		if ( ! value ) return '';
+		const date = new Date( value );
+		return Number.isNaN( date.getTime() ) ? String( value ) : date.toLocaleString();
+	};
+
+	const updateSavedStatus = ( data ) => {
+		const generatedAt = formatSavedAt( data.generatedAt );
+		const interactions = Number( data.analyticsTotalInteractions );
+		const snapshot = Number.isFinite( interactions ) && interactions > 0
+			? ` · ${ interactions } ${ config.i18n?.snapshotInteractions || 'interactions in snapshot' }`
+			: '';
+		status.textContent = generatedAt
+			? `${ config.i18n?.saved || 'Saved insights · generated' } ${ generatedAt }${ snapshot }`
+			: ( config.i18n?.saved || 'Saved insights available' );
+	};
+
 	let currentInsights = null;
 
-	if (
-		isArticle &&
-		config.savedInsights &&
-		typeof config.savedInsights === 'object' &&
-		typeof config.savedInsights.summary === 'string'
-	) {
+	if ( config.savedInsights && typeof config.savedInsights.summary === 'string' ) {
 		currentInsights = config.savedInsights;
 		renderInsights( currentInsights );
 		button.textContent = config.i18n?.regenerate || 'Regenerate insights';
-		status.textContent = config.i18n?.generatedArticle || 'Generated from current article analytics';
+		button.dataset.idleLabel = button.textContent;
+		updateSavedStatus( currentInsights );
 	}
 
 	const showError = ( message ) => {
@@ -148,16 +161,15 @@
 			const data = await response.json();
 			if ( ! response.ok ) throw new Error( data?.message || config.i18n?.error );
 			currentInsights = data;
+			config.savedInsights = data;
 			renderInsights( currentInsights );
 			button.textContent = config.i18n?.regenerate || 'Regenerate insights';
 			button.dataset.idleLabel = button.textContent;
-			status.textContent = isCodeExample
-				? ( config.i18n?.generatedCodeExample || 'Generated from current Code Example analytics' )
-				: ( config.i18n?.generatedArticle || 'Generated from current article analytics' );
+			updateSavedStatus( currentInsights );
 		} catch ( error ) {
 			if ( currentInsights ) {
 				renderInsights( currentInsights );
-				status.textContent = 'Could not refresh insights. Showing the last saved results.';
+				updateSavedStatus( currentInsights );
 			} else {
 				showError( error?.message || config.i18n?.error || 'AI insights are currently unavailable.' );
 				status.textContent = '';

@@ -210,6 +210,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 generatedExplanation: overview?.explanation?.trim() || '',
                 generatedLineExplanations: lineExplanations,
                 generatedKnowledgeCheck: overview?.knowledgeCheck || {},
+                enableAIAssistant: true,
             };
 
             if (

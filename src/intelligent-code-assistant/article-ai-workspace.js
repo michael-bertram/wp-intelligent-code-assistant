@@ -66,6 +66,16 @@ function getCode(block) {
     return extractCanonicalSnippet(block).code;
 }
 
+// Fingerprint assistance against the exact normalized source code.
+function getCodeFingerprint(code = '') {
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < code.length; index += 1) {
+        hash ^= code.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
 function getTitle(block) {
     return extractCanonicalSnippet(block).title;
 }
@@ -143,6 +153,7 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         generatedExplanation: overview?.explanation?.trim() || '',
         generatedLineExplanations: lineExplanations,
         generatedKnowledgeCheck: overview?.knowledgeCheck || {},
+        generatedAssistanceCodeHash: getCodeFingerprint(code),
         enableAIAssistant: true,
     };
 }
@@ -159,13 +170,18 @@ function getAssistanceStatus(block, articleTitle = '') {
     const linesReady = expectedLines > 0 && storedLines >= expectedLines;
     const contextTitle = String(attrs.assistanceContextTitle || '');
     const contextValidated = !articleTitle || (contextTitle && contextTitle === String(articleTitle));
-    const assistanceReady = explanationReady && linesReady && knowledgeReady;
-    const ready = assistanceReady && contextValidated;
     const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
+    const codeMatches = Boolean(attrs.generatedAssistanceCodeHash)
+        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(codeText);
+    const codeChanged = hasAny && !codeMatches;
+    const assistanceReady = explanationReady && linesReady && knowledgeReady && codeMatches;
+    const ready = assistanceReady && contextValidated;
 
     return {
         expectedLines,
         contextValidated,
+        codeMatches,
+        codeChanged,
         assistanceReady,
         storedLines,
         explanationReady,
@@ -240,6 +256,7 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
                 generatedExplanation: generated.generatedExplanation || '',
                 generatedLineExplanations: generated.generatedLineExplanations || {},
                 generatedKnowledgeCheck: generated.generatedKnowledgeCheck || {},
+                generatedAssistanceCodeHash: generated.generatedAssistanceCodeHash || '',
             },
         });
 
@@ -500,30 +517,17 @@ function ArticlePostSummary() {
                 onClick={() => setExpanded((previous) => !previous)}
             >
                 <span className="ica-post-summary__heading">
-                    <span aria-hidden="true">✦</span>
-                    <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
+                    <strong>{__('Readiness', 'intelligent-code-assistant')}</strong>
+                    <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
+                        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('Code Snippets ready', 'intelligent-code-assistant')}`}
+                    </span>
                 </span>
                 <span className="ica-post-summary__toggle-right">
-                    <span>{linkedItems.length} {__('linked', 'intelligent-code-assistant')}</span>
                     <span aria-hidden="true">{expanded ? '⌃' : '⌄'}</span>
                 </span>
             </button>
             {expanded && (
                 <div className="ica-post-summary__body">
-                    <div className="ica-post-summary__stat">
-                        <span>{__('Code snippets', 'intelligent-code-assistant')}</span>
-                        <strong>{snippets.length}</strong>
-                    </div>
-                    <div className="ica-post-summary__stat">
-                        <span>{__('Linked Code Examples', 'intelligent-code-assistant')}</span>
-                        <strong>{snippets.filter((item) => item.codeExampleId).length}</strong>
-                    </div>
-                    <div className="ica-post-summary__stat">
-                        <span>{__('Reader assistance', 'intelligent-code-assistant')}</span>
-                        <strong className={!loading && ready === snippets.length ? 'is-ready' : ''}>
-                            {loading ? '…' : `${ready}/${snippets.length} ${__('complete', 'intelligent-code-assistant')}`}
-                        </strong>
-                    </div>
                     {articleItems.length > 0 && (
                         <div className="ica-post-summary__links">
                             <strong>{__('CODE SNIPPETS IN THIS ARTICLE', 'intelligent-code-assistant')}</strong>
@@ -535,9 +539,11 @@ function ArticlePostSummary() {
                                         : status?.ready
                                             ? __('Complete for this article', 'intelligent-code-assistant')
                                             : status
-                                                ? (status.assistanceReady
-                                                    ? __('Needs article-context validation', 'intelligent-code-assistant')
-                                                    : __('Needs assistance', 'intelligent-code-assistant'))
+                                                ? (status.codeChanged
+                                                    ? __('Code changed — regenerate assistance', 'intelligent-code-assistant')
+                                                    : status.assistanceReady
+                                                        ? __('Needs article-context validation', 'intelligent-code-assistant')
+                                                        : __('Needs assistance', 'intelligent-code-assistant'))
                                                 : __('Status unavailable', 'intelligent-code-assistant');
                                     const href = item.codeExampleId
                                         ? editUrl(item.codeExampleId)
@@ -606,6 +612,7 @@ function CodeAssistantToolbar() {
     const missingExplanations = statuses.filter((status) => status && !status.explanationReady).length;
     const missingLines = statuses.filter((status) => status && !status.linesReady).length;
     const missingChecks = statuses.filter((status) => status && !status.knowledgeReady).length;
+    const staleAssistance = statuses.filter((status) => status?.codeChanged).length;
     const unavailable = statuses.filter((status) => !status).length;
 
     return createPortal(
@@ -651,6 +658,7 @@ function CodeAssistantToolbar() {
                                         {missingExplanations > 0 && <p>⚠ {missingExplanations} {__('missing explanations', 'intelligent-code-assistant')}</p>}
                                         {missingLines > 0 && <p>⚠ {missingLines} {__('snippets need line explanations', 'intelligent-code-assistant')}</p>}
                                         {missingChecks > 0 && <p>⚠ {missingChecks} {__('missing knowledge checks', 'intelligent-code-assistant')}</p>}
+                                        {staleAssistance > 0 && <p>⚠ {staleAssistance} {__('snippets have code changes and need assistance regenerated', 'intelligent-code-assistant')}</p>}
                                         {unavailable > 0 && <p>⚠ {unavailable} {__('linked Code Examples could not be checked', 'intelligent-code-assistant')}</p>}
                                     </div>
                                 )}

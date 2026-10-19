@@ -190,7 +190,7 @@
                     };
 
                     const overview = await runRoute('generate-reader-overview', 'generate-reader-overview', payload);
-                    const sourceLines = details.code.replace(/\\r/g, '').split('\\n');
+                    const sourceLines = details.code.replace(/\r/g, '').split('\n');
                     const requiredLines = sourceLines
                         .map((line, index) => line.trim() ? index + 1 : null)
                         .filter(Boolean);

@@ -93,6 +93,14 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     }
 
     const characterCount = cleanRawText.replace(/\r/g, '').length;
+    const getCodeFingerprint = (code = '') => {
+        let hash = 0x811c9dc5;
+        for (let index = 0; index < code.length; index += 1) {
+            hash ^= code.charCodeAt(index);
+            hash = Math.imul(hash, 0x01000193);
+        }
+        return (hash >>> 0).toString(16).padStart(8, '0');
+    };
     const effectiveTutorialContext = tutorialContextOverride || derivedTutorialContext;
 
     const isLineHighlighted = (lineNumber, highlightExpression) => {
@@ -210,6 +218,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 generatedExplanation: overview?.explanation?.trim() || '',
                 generatedLineExplanations: lineExplanations,
                 generatedKnowledgeCheck: overview?.knowledgeCheck || {},
+                generatedAssistanceCodeHash: getCodeFingerprint(cleanRawText.replace(/\r/g, '')),
                 enableAIAssistant: true,
             };
 
@@ -359,14 +368,17 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         const explanationReady = Boolean(generatedExplanation?.trim());
                         const knowledgeReady = Boolean(generatedKnowledgeCheck?.question);
                         const linesReady = expectedLines > 0 && storedLines >= expectedLines;
-                        const ready = explanationReady && linesReady && knowledgeReady;
                         const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
+                        const codeMatches = Boolean(attributes.generatedAssistanceCodeHash)
+                            && attributes.generatedAssistanceCodeHash === getCodeFingerprint(cleanRawText.replace(/\r/g, ''));
+                        const codeChanged = hasAny && !codeMatches;
+                        const ready = explanationReady && linesReady && knowledgeReady && codeMatches;
                         return (
                             <div className={`ica-block-ai-card ${ready ? 'is-ready' : (hasAny ? 'is-incomplete' : 'is-unconfigured')}`}>
                                 <div className="ica-block-ai-card__headline">
                                     <span className="ica-block-ai-card__mark">✦</span>
                                     <div>
-                                        <strong>{ready ? __('Ready for readers', 'intelligent-code-assistant') : (hasAny ? __('Assistance incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant'))}</strong>
+                                        <strong>{ready ? __('Ready for readers', 'intelligent-code-assistant') : (codeChanged ? __('Code changed — regenerate assistance', 'intelligent-code-assistant') : (hasAny ? __('Assistance incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant')))}</strong>
                                         <p>{__('Manage generated reader assistance from the article Code Assistant.', 'intelligent-code-assistant')}</p>
                                     </div>
                                 </div>

@@ -95,7 +95,7 @@ export default function CanonicalCodeExampleEditor({ codeExampleId }) {
     }
 
     return (
-        <CanonicalCodeExampleContext.Provider value={true}>
+        <CanonicalCodeExampleContext.Provider value={{ isCanonical: true, entityId }}>
             {saveError && (
                 <Notice status="error" isDismissible={false}>
                     {saveError?.message || __('The Code Example could not be saved. Your article reference has not been changed.', 'intelligent-code-assistant')}

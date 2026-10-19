@@ -1,5 +1,5 @@
 import { __ } from '@wordpress/i18n';
-import { parse, serialize } from '@wordpress/blocks';
+import { parse } from '@wordpress/blocks';
 import { Button, Dropdown, Modal, Notice, Spinner } from '@wordpress/components';
 import { createPortal, useEffect, useMemo, useState } from '@wordpress/element';
 import { useDispatch, useSelect } from '@wordpress/data';
@@ -47,6 +47,7 @@ function extractCanonicalSnippet(block) {
 
     return {
         block,
+        rawCode: String(rawCode ?? '').replace(/\r/g, ''),
         code: normalizeCodeText(rawCode),
         title: decodeEntities(header?.attributes?.title || attrs.title || attrs.filename || __('Code snippet', 'intelligent-code-assistant')),
         language: attrs.codeLanguage || content?.attributes?.codeLanguage || '',
@@ -64,6 +65,15 @@ function flattenBlocks(blocks, result = []) {
 
 function getCode(block) {
     return extractCanonicalSnippet(block).code;
+}
+
+function getCodeFingerprint(code = '') {
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < code.length; index += 1) {
+        hash ^= code.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
 function getTitle(block) {
@@ -85,6 +95,12 @@ async function runAbility(slug, data) {
             data,
         });
     }
+}
+
+function sprintfSafe(template, value) {
+    const values = String(value).split('|');
+    let index = 0;
+    return template.replace(/%\d+\$[ds]/g, () => String(values[index++] ?? values[values.length - 1] ?? ''));
 }
 
 async function generateAssistance(block, tutorialTitle, onProgress) {
@@ -118,8 +134,7 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         const last = Math.min(offset + batch.length, expectedLines.length);
         onProgress?.(
             sprintfSafe(
-                // translators: 1: The current line range; 2: The total number of lines.
-                __('Generating line explanations %1$s of %2$s…', 'intelligent-code-assistant'),
+                __('Generating line explanations %1$s of \%2$s…', 'intelligent-code-assistant'),
                 `${first}–${last}|${expectedLines.length}`
             )
         );
@@ -143,25 +158,47 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         generatedExplanation: overview?.explanation?.trim() || '',
         generatedLineExplanations: lineExplanations,
         generatedKnowledgeCheck: overview?.knowledgeCheck || {},
+        generatedAssistanceCodeHash: getCodeFingerprint(snippet.rawCode),
         enableAIAssistant: true,
     };
 }
 
-function getAssistanceStatus(block) {
+function getAssistanceStatus(block, articleTitle = '') {
     const attrs = block?.attributes || {};
     const codeText = getCode(block);
-    const expectedLines = codeText.replace(/\r/g, '').split('\n').filter((line) => line.trim()).length;
-    const storedLines = Object.keys(attrs.generatedLineExplanations || {}).filter(
-        (key) => attrs.generatedLineExplanations?.[key]?.trim()
+    const requiredLineNumbers = codeText.replace(/\r/g, '').split('\n')
+        .reduce((numbers, line, index) => {
+            if (line.trim()) numbers.push(String(index + 1));
+            return numbers;
+        }, []);
+    const storedLineExplanations = attrs.generatedLineExplanations || {};
+    const storedLines = requiredLineNumbers.filter(
+        (lineNumber) => typeof storedLineExplanations[lineNumber] === 'string' && storedLineExplanations[lineNumber].trim()
     ).length;
+    const missingLineNumbers = requiredLineNumbers.filter(
+        (lineNumber) => !storedLineExplanations[lineNumber]?.trim()
+    );
+    const expectedLines = requiredLineNumbers.length;
     const explanationReady = Boolean(attrs.generatedExplanation?.trim());
     const knowledgeReady = Boolean(attrs.generatedKnowledgeCheck?.question);
-    const linesReady = expectedLines > 0 && storedLines >= expectedLines;
-    const ready = explanationReady && linesReady && knowledgeReady;
+    const linesReady = expectedLines > 0 && missingLineNumbers.length === 0;
+    const contextTitle = String(attrs.assistanceContextTitle || '');
+    const contextValidated = !articleTitle || (contextTitle && contextTitle === String(articleTitle));
     const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
+    const rawCode = extractCanonicalSnippet(block).rawCode;
+    const codeMatches = Boolean(attrs.generatedAssistanceCodeHash)
+        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(rawCode);
+    const codeChanged = hasAny && !codeMatches;
+    const assistanceReady = explanationReady && linesReady && knowledgeReady && codeMatches;
+    const ready = assistanceReady && contextValidated;
 
     return {
         expectedLines,
+        contextValidated,
+        codeMatches,
+        codeChanged,
+        generatedAssistanceCodeHash: attrs.generatedAssistanceCodeHash || '',
+        assistanceReady,
         storedLines,
         explanationReady,
         knowledgeReady,
@@ -182,12 +219,6 @@ function Status({ block }) {
             <span>{status.knowledgeReady ? '✓' : '—'} {__('Knowledge check', 'intelligent-code-assistant')}</span>
         </div>
     );
-}
-
-function sprintfSafe(template, value) {
-    const values = String(value).split('|');
-    let index = 0;
-    return template.replace(/%[ds]/g, () => String(values[index++] ?? values[values.length - 1] ?? ''));
 }
 
 function SnippetCard({ item, tutorialTitle, onChanged }) {
@@ -223,24 +254,32 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         if (!item.codeExampleId) {
             updateBlockAttributes(item.clientId, generated);
             setCanonical((current) => ({ ...current, attributes: { ...(current?.attributes || {}), ...generated } }));
+            window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
             return;
         }
 
-        const record = await apiFetch({ path: `/wp/v2/ica_code_example/${item.codeExampleId}?context=edit` });
-        const blocks = parse(record?.content?.raw || '');
-        const canonicalBlock = flattenBlocks(blocks)[0];
-        if (!canonicalBlock) throw new Error(__('The canonical Code Snippet block could not be found.', 'intelligent-code-assistant'));
-
-        canonicalBlock.attributes = { ...(canonicalBlock.attributes || {}), ...generated };
         await apiFetch({
-            path: `/wp/v2/ica_code_example/${item.codeExampleId}`,
+            path: '/intelligent-code-assistant/v1/save-reader-assistance',
             method: 'POST',
-            data: { content: serialize(blocks) },
+            data: {
+                codeExampleId: item.codeExampleId,
+                generatedExplanation: generated.generatedExplanation || '',
+                generatedLineExplanations: generated.generatedLineExplanations || {},
+                generatedKnowledgeCheck: generated.generatedKnowledgeCheck || {},
+                generatedAssistanceCodeHash: generated.generatedAssistanceCodeHash || '',
+            },
         });
-        setCanonical(canonicalBlock);
+
+        setCanonical((current) => ({
+            ...current,
+            attributes: { ...(current?.attributes || {}), ...generated },
+        }));
+        window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
     };
 
     const assistanceStatus = canonical ? getAssistanceStatus(canonical) : null;
+    const articleContextValidated = Boolean(item.block?.attributes?.assistanceContextTitle)
+        && item.block.attributes.assistanceContextTitle === String(tutorialTitle || '');
 
     const handleGenerate = async () => {
         if (!canonical || generating) return;
@@ -250,6 +289,8 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         try {
             const generated = await generateAssistance(canonical, tutorialTitle, setProgress);
             await saveGenerated(generated);
+            updateBlockAttributes(item.clientId, { assistanceContextTitle: String(tutorialTitle || '') });
+            window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
             onChanged?.();
         } catch (err) {
             setError(err?.message || __('Unable to generate reader assistance.', 'intelligent-code-assistant'));
@@ -258,6 +299,18 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
             setProgress('');
         }
     };
+
+    useEffect(() => {
+        const handleGenerateAll = () => {
+            const contextValidated = Boolean(item.block?.attributes?.assistanceContextTitle)
+                && item.block.attributes.assistanceContextTitle === String(tutorialTitle || '');
+            if (!loading && canonical && (!getAssistanceStatus(canonical).ready || !contextValidated) && !generating) {
+                handleGenerate();
+            }
+        };
+        window.addEventListener('ica:generate-all-assistance', handleGenerateAll);
+        return () => window.removeEventListener('ica:generate-all-assistance', handleGenerateAll);
+    }, [loading, canonical, generating, handleGenerate, item.block, tutorialTitle]);
 
     return (
         <section className="ica-ai-workspace__card">
@@ -271,6 +324,11 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
                 </Button>
             </div>
             {loading ? <Spinner /> : canonical && <Status block={canonical} />}
+            {item.codeExampleId > 0 && !articleContextValidated && (
+                <Notice status="warning" isDismissible={false}>
+                    {__('Saved assistance has not been validated for this article context yet.', 'intelligent-code-assistant')}
+                </Notice>
+            )}
             {error && <Notice status="error" isDismissible={false}>{error}</Notice>}
             {generating && progress && <p className="ica-ai-workspace__progress" role="status" aria-live="polite">{progress}</p>}
             <Button variant="primary" disabled={loading || !canonical || generating} isBusy={generating} onClick={handleGenerate}>
@@ -329,13 +387,9 @@ function ArticleAIWorkspace() {
     );
 }
 
-
-/**
- * Resolve linked Code Examples once for both the Post summary and toolbar.
- * A linked reference is not necessarily complete: inspect its canonical record.
- */
 function useArticleCodeStatus() {
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
+    const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
     const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
         block,
         codeExampleId: Number(block.attributes?.codeExampleId || 0),
@@ -345,6 +399,13 @@ function useArticleCodeStatus() {
     const linkedIds = useMemo(() => [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))], [snippets]);
 
     const linkedIdsKey = linkedIds.join(',');
+    const [refreshVersion, setRefreshVersion] = useState(0);
+
+    useEffect(() => {
+        const refresh = () => setRefreshVersion((version) => version + 1);
+        window.addEventListener('ica:reader-assistance-saved', refresh);
+        return () => window.removeEventListener('ica:reader-assistance-saved', refresh);
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -373,44 +434,87 @@ function useArticleCodeStatus() {
             setLoading(false);
         });
         return () => { active = false; };
-    }, [linkedIdsKey, linkedIds]);
+    }, [linkedIdsKey, linkedIds, refreshVersion]);
 
-    const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block));
+    const statuses = snippets.map((item) => {
+        const status = item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block);
+        const contextTitle = String(item.block?.attributes?.assistanceContextTitle || '');
+        const contextValidated = Boolean(contextTitle) && contextTitle === String(tutorialTitle || '');
+        const articleRawCode = extractCanonicalSnippet(item.block).rawCode;
+        const localCodeChanged = Boolean(
+            item.codeExampleId
+            && articleRawCode.trim()
+            && status?.generatedAssistanceCodeHash
+            && getCodeFingerprint(articleRawCode) !== status.generatedAssistanceCodeHash
+        );
+        return status ? {
+            ...status,
+            codeChanged: status.codeChanged || localCodeChanged,
+            assistanceReady: status.assistanceReady && !localCodeChanged,
+            contextValidated,
+            ready: status.ready && contextValidated && !localCodeChanged,
+        } : null;
+    });
     const ready = statuses.filter((item) => item?.ready).length;
     const complete = !loading && ready === snippets.length && snippets.length > 0;
     return { snippets, linked, loading, ready, complete, statuses };
 }
 
-/**
- * Add the assistant overview inside the native Post summary where available.
- * Only our own portal host is managed by React. If WordPress changes the
- * summary markup, the toolbar remains available without a duplicate panel.
- */
 function ArticlePostSummary() {
-    const { snippets, linked, loading, ready } = useArticleCodeStatus();
+    const { snippets, linked, loading, ready, statuses } = useArticleCodeStatus();
     const [host, setHost] = useState(null);
     const [expanded, setExpanded] = useState(false);
 
     useEffect(() => {
         let mountedHost = null;
         const ensureHost = () => {
-            const summary = document.querySelector(
-                '.editor-post-summary__panel, .editor-post-summary, .edit-post-post-status, .editor-post-status'
+            // Locate the trash button / container at the bottom of the status panel
+            const trashControl = document.querySelector(
+                '.editor-post-trash, .editor-post-trash-button, .edit-post-post-trash'
             );
-            if (!summary) {
+            const trashRow = trashControl?.closest('.editor-post-trash, .editor-post-trash-button, .edit-post-post-trash')
+                || trashControl;
+            const container = trashRow?.parentElement;
+
+            if (!trashRow || !container) {
                 if (mountedHost && !mountedHost.isConnected) {
                     mountedHost = null;
                     setHost(null);
                 }
                 return;
             }
-            if (mountedHost?.parentElement === summary) return;
+
+            // Hide any legacy standalone readiness text nodes right above the trash button
+            Array.from(container.children).forEach((node) => {
+                if (node.classList.contains('ica-post-summary-host')) return;
+                const text = (node.textContent || '').trim();
+                if (/^\d+\/\d+ Code Snippets ready$/i.test(text)) {
+                    node.style.display = 'none';
+                }
+            });
+
+            const existingHosts = Array.from(document.querySelectorAll('.ica-post-summary-host'));
+            if (mountedHost?.parentElement === container && mountedHost.nextElementSibling === trashRow) {
+                existingHosts.forEach((candidate) => {
+                    if (candidate !== mountedHost) candidate.remove();
+                });
+                return;
+            }
+
+            const reusableHost = existingHosts.find((candidate) => candidate.parentElement === container) || null;
+            existingHosts.forEach((candidate) => {
+                if (candidate !== reusableHost) candidate.remove();
+            });
+
             mountedHost?.remove();
-            mountedHost = document.createElement('div');
+            mountedHost = reusableHost || document.createElement('div');
             mountedHost.className = 'ica-post-summary-host';
-            summary.appendChild(mountedHost);
+
+            // Insert directly above the trash row
+            container.insertBefore(mountedHost, trashRow);
             setHost(mountedHost);
         };
+
         ensureHost();
         const observer = new MutationObserver(ensureHost);
         observer.observe(document.body, { childList: true, subtree: true });
@@ -422,10 +526,15 @@ function ArticlePostSummary() {
 
     if (!host || !snippets.length) return null;
 
-    const linkedItems = [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))];
+    const articleItems = snippets.map((item, index) => ({
+        ...item,
+        status: statuses[index],
+        title: item.codeExampleId
+            ? (linked[item.codeExampleId]?.title || `#${item.codeExampleId}`)
+            : getTitle(item.block),
+    }));
+
     const editUrl = (id) => {
-        // WordPress exposes the correct admin directory via ajaxurl, including
-        // subdirectory installations. Fall back to the current editor directory.
         const adminBase = typeof window.ajaxurl === 'string' && window.ajaxurl
             ? window.ajaxurl
             : window.location.href;
@@ -444,53 +553,47 @@ function ArticlePostSummary() {
                 aria-expanded={expanded}
                 onClick={() => setExpanded((previous) => !previous)}
             >
-                <span className="ica-post-summary__heading">
-                    <span aria-hidden="true">✦</span>
-                    <strong>{__('Code Assistant', 'intelligent-code-assistant')}</strong>
-                </span>
+                <span className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</span>
                 <span className="ica-post-summary__toggle-right">
-                    <span>{linkedItems.length} {__('linked', 'intelligent-code-assistant')}</span>
+                    <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
+                        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('ready', 'intelligent-code-assistant')}`}
+                    </span>
                     <span aria-hidden="true">{expanded ? '⌃' : '⌄'}</span>
                 </span>
             </button>
             {expanded && (
                 <div className="ica-post-summary__body">
-                    <div className="ica-post-summary__stat">
-                        <span>{__('Code snippets', 'intelligent-code-assistant')}</span>
-                        <strong>{snippets.length}</strong>
-                    </div>
-                    <div className="ica-post-summary__stat">
-                        <span>{__('Linked Code Examples', 'intelligent-code-assistant')}</span>
-                        <strong>{linkedItems.length}</strong>
-                    </div>
-                    <div className="ica-post-summary__stat">
-                        <span>{__('Reader assistance', 'intelligent-code-assistant')}</span>
-                        <strong className={!loading && ready === snippets.length ? 'is-ready' : ''}>
-                            {loading ? '…' : `${ready}/${snippets.length} ${__('complete', 'intelligent-code-assistant')}`}
-                        </strong>
-                    </div>
-                    {linkedItems.length > 0 && (
+                    {articleItems.length > 0 && (
                         <div className="ica-post-summary__links">
-                            <strong>{__('LINKED CODE EXAMPLES', 'intelligent-code-assistant')}</strong>
+                            <strong>{__('CODE SNIPPETS IN THIS ARTICLE', 'intelligent-code-assistant')}</strong>
                             <ul>
-                                {linkedItems.map((id) => {
-                                    const status = linked[id]?.status;
+                                {articleItems.map((item, index) => {
+                                    const status = item.status;
                                     const stateLabel = loading
                                         ? __('Checking…', 'intelligent-code-assistant')
                                         : status?.ready
-                                            ? __('Complete', 'intelligent-code-assistant')
+                                            ? __('Complete for this article', 'intelligent-code-assistant')
                                             : status
-                                                ? __('Needs assistance', 'intelligent-code-assistant')
+                                                ? (status.codeChanged
+                                                    ? __('Code changed — regenerate assistance', 'intelligent-code-assistant')
+                                                    : status.assistanceReady
+                                                        ? __('Needs article-context validation', 'intelligent-code-assistant')
+                                                        : __('Needs assistance', 'intelligent-code-assistant'))
                                                 : __('Status unavailable', 'intelligent-code-assistant');
+                                    const href = item.codeExampleId
+                                        ? editUrl(item.codeExampleId)
+                                        : '';
                                     return (
-                                        <li key={id}>
+                                        <li key={`${item.clientId}-${index}`}>
                                             <span className={`ica-post-summary__state ${status?.ready ? 'is-ready' : 'needs-attention'}`} aria-hidden="true">
                                                 {loading ? '○' : status?.ready ? '✓' : '⚠'}
                                             </span>
-                                            <a href={editUrl(id)} title={__('Edit linked Code Example', 'intelligent-code-assistant')}>
-                                                {linked[id]?.title || `#${id}`}
-                                                <span className="ica-post-summary__external" aria-hidden="true">↗</span>
-                                            </a>
+                                            {href ? (
+                                                <a href={href} title={__('Edit linked Code Example', 'intelligent-code-assistant')}>
+                                                    {item.title}
+                                                    <span className="ica-post-summary__external" aria-hidden="true">↗</span>
+                                                </a>
+                                            ) : <span>{item.title}</span>}
                                             <span className="ica-post-summary__state-label">{stateLabel}</span>
                                         </li>
                                     );
@@ -505,7 +608,6 @@ function ArticlePostSummary() {
     );
 }
 
-/** The header icon is a status overview; only its explicit action opens the workspace. */
 function CodeAssistantToolbar() {
     const { snippets, loading, ready, complete, statuses } = useArticleCodeStatus();
     const [toolbarHost, setToolbarHost] = useState(null);
@@ -544,6 +646,7 @@ function CodeAssistantToolbar() {
     const missingExplanations = statuses.filter((status) => status && !status.explanationReady).length;
     const missingLines = statuses.filter((status) => status && !status.linesReady).length;
     const missingChecks = statuses.filter((status) => status && !status.knowledgeReady).length;
+    const staleAssistance = statuses.filter((status) => status?.codeChanged).length;
     const unavailable = statuses.filter((status) => !status).length;
 
     return createPortal(
@@ -589,6 +692,7 @@ function CodeAssistantToolbar() {
                                         {missingExplanations > 0 && <p>⚠ {missingExplanations} {__('missing explanations', 'intelligent-code-assistant')}</p>}
                                         {missingLines > 0 && <p>⚠ {missingLines} {__('snippets need line explanations', 'intelligent-code-assistant')}</p>}
                                         {missingChecks > 0 && <p>⚠ {missingChecks} {__('missing knowledge checks', 'intelligent-code-assistant')}</p>}
+                                        {staleAssistance > 0 && <p>⚠ {staleAssistance} {__('snippets have code changes and need assistance regenerated', 'intelligent-code-assistant')}</p>}
                                         {unavailable > 0 && <p>⚠ {unavailable} {__('linked Code Examples could not be checked', 'intelligent-code-assistant')}</p>}
                                     </div>
                                 )}
@@ -596,12 +700,23 @@ function CodeAssistantToolbar() {
                             </>
                         )}
                     </div>
-                    <Button variant="primary" onClick={() => {
-                        onClose();
-                        window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
-                    }}>
-                        {__('Open Code Assistant', 'intelligent-code-assistant')}
-                    </Button>
+                    <div className="ica-header-toolbar__actions">
+                        <Button variant="primary" disabled={loading || complete || unavailable > 0} onClick={() => {
+                            onClose();
+                            window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+                            window.setTimeout(() => {
+                                window.dispatchEvent(new CustomEvent('ica:generate-all-assistance'));
+                            }, 500);
+                        }}>
+                            {__('Generate all', 'intelligent-code-assistant')}
+                        </Button>
+                        <Button variant="secondary" onClick={() => {
+                            onClose();
+                            window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+                        }}>
+                            {__('Open Code Assistant', 'intelligent-code-assistant')}
+                        </Button>
+                    </div>
                 </section>
             )}
         />,

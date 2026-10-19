@@ -19,6 +19,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Lint PHP
+        run: find . -type f -name '*.php' -not -path './node_modules/*' -not -path './.git/*' -print0 | xargs -0 -n1 php -l
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

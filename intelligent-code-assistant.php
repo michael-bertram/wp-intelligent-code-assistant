@@ -139,40 +139,6 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_autofill_ability' ) 
 
 		$prompt = "You are a software engineer and code analyzer. Analyze the snippet below and return ONLY a raw JSON object (no markdown, no backticks) with these exact keys:\n- 'codeLanguage': The exact matching token from ['PHP', 'JS', 'CSS', 'HTML', 'JSON', 'SQL', 'Bash'].\n- 'filename': An idiomatic filename.\n- 'title': A concise 3-6 word summary title.\n- 'highlightLines': Important line numbers to highlight or empty string.\n- 'showLineNumbers': true if the snippet has more than 3 lines or structural logic, false otherwise.\n\nSnippet:\n{$code}";
 
-<<<<<<< HEAD
-		if ( function_exists( 'wp_ai_client_prompt' ) ) {
-			try {
-				$ai_response = wp_ai_client_prompt( $prompt, array( 'response_format' => array( 'type' => 'json_object' ) ) );
-				if ( ! is_wp_error( $ai_response ) ) {
-					$raw_json = '';
-					if ( is_string( $ai_response ) ) {
-						$raw_json = $ai_response;
-					} elseif ( is_object( $ai_response ) ) {
-						if ( method_exists( $ai_response, 'generate' ) ) {
-							$generated = $ai_response->generate();
-							$raw_json  = is_string( $generated ) ? $generated : (string) $generated;
-						} elseif ( method_exists( $ai_response, 'get_text' ) ) {
-							$raw_json = (string) $ai_response->get_text();
-						} elseif ( method_exists( $ai_response, '__toString' ) ) {
-							$raw_json = (string) $ai_response;
-						}
-					}
-					$data = json_decode( trim( preg_replace( '/^```(json)?|```$/m', '', trim( $raw_json ) ) ), true );
-					if ( is_array( $data ) && isset( $data['codeLanguage'], $data['filename'], $data['title'] ) ) {
-						return array(
-							'codeLanguage'    => sanitize_text_field( $data['codeLanguage'] ),
-							'filename'        => sanitize_file_name( $data['filename'] ),
-							'title'           => sanitize_text_field( $data['title'] ),
-							'highlightLines'  => isset( $data['highlightLines'] ) ? sanitize_text_field( $data['highlightLines'] ) : '',
-							'showLineNumbers' => isset( $data['showLineNumbers'] ) ? (bool) $data['showLineNumbers'] : true,
-						);
-					}
-				}
-			} catch ( Throwable $e ) {
-				// Fall through to the deterministic fallback engine.
-			}
-		}
-=======
         if ( function_exists( 'wp_ai_client_prompt' ) ) {
             try {
                 // wp_ai_client_prompt returns a builder; generate_text actually
@@ -207,7 +173,6 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_autofill_ability' ) 
                 // Continue with deterministic metadata when the AI is unavailable.
             }
         }
->>>>>>> main
 
 		$trimmed_code = trim( $code );
 		$lines_count  = count( explode( "\n", $trimmed_code ) );
@@ -373,11 +338,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'description'         => __( 'Explains a selected line of code using the surrounding snippet as context.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
 			'show_in_mcp'         => true,
-<<<<<<< HEAD
-			'permission_callback' => '__return_true',
-=======
 			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
->>>>>>> main
 
 			'input_schema'        => array(
 				'type'       => 'object',
@@ -669,8 +630,6 @@ add_action( 'rest_api_init', function() {
 	);
 } );
 
-<<<<<<< HEAD
-=======
 /* ==========================================================================
    ABILITY - GENERATE STORED READER ASSISTANCE
    Generate the predictable reader assistance in one structured AI request.
@@ -1010,7 +969,6 @@ add_action( 'rest_api_init', function() {
 	}
 } );
 
->>>>>>> main
 /* ========================================================================== 
    ABILITY - ASK ABOUT THIS CODE
    ========================================================================== */
@@ -1029,11 +987,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'description'         => __( 'Answers a reader question using the current code example as context.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
 			'show_in_mcp'         => true,
-<<<<<<< HEAD
-			'permission_callback' => '__return_true',
-=======
 			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
->>>>>>> main
 
 			'input_schema' => array(
 				'type'       => 'object',
@@ -1108,96 +1062,13 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_ask_code_ability' ) 
 
 	function intelligent_code_assistant_execute_ask_code_ability( array $args ) {
 
-<<<<<<< HEAD
-		$raw_code = isset( $args['code'] ) && is_string( $args['code'] )
-			? $args['code']
-			: '';
-
-		$code = wp_unslash(
-			trim(
-				html_entity_decode(
-					$raw_code,
-					ENT_QUOTES | ENT_HTML5,
-					'UTF-8'
-				)
-			)
-		);
-
-		$language = isset( $args['language'] )
-			? sanitize_text_field( $args['language'] )
-			: 'code';
-
-		$filename = isset( $args['filename'] )
-			? sanitize_text_field( $args['filename'] )
-			: '';
-
-		$title = isset( $args['title'] )
-			? sanitize_text_field( $args['title'] )
-			: '';
-
-=======
 		$raw_code = isset( $args['code'] ) && is_string( $args['code'] ) ? $args['code'] : '';
 		$code = wp_unslash( trim( html_entity_decode( $raw_code, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) );
->>>>>>> main
 		$question = isset( $args['question'] ) && is_string( $args['question'] )
 			? sanitize_textarea_field( $args['question'] )
 			: '';
 
 		if ( '' === $code ) {
-<<<<<<< HEAD
-			return new WP_Error(
-				'empty_code',
-				__( 'Code snippet cannot be empty.', 'intelligent-code-assistant' ),
-				array(
-					'status' => 400,
-				)
-			);
-		}
-
-		if ( '' === trim( $question ) ) {
-			return new WP_Error(
-				'empty_question',
-				__( 'Please provide a question about the code.', 'intelligent-code-assistant' ),
-				array(
-					'status' => 400,
-				)
-			);
-		}
-
-		if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
-			return new WP_Error(
-				'ai_client_unavailable',
-				__( 'The WordPress AI Client is not available.', 'intelligent-code-assistant' ),
-				array(
-					'status' => 503,
-				)
-			);
-		}
-
-		$context_summary = intelligent_code_assistant_build_tutorial_context_prompt( $args );
-
-		$prompt = <<<PROMPT
-You are an expert technical instructor helping a reader understand a code example inside a tutorial.
-
-Answer the reader's question using the supplied code example and tutorial context.
-
-Context:
-{$context_summary}
-
-Code snippet:
-{$code}
-
-Reader question:
-{$question}
-
-Requirements:
-- Answer the reader's actual question directly.
-- Ground the answer in the supplied code and context.
-- Treat the code itself as authoritative.
-- Use tutorial context to connect the answer to the current lesson, but do not invent facts that are not supplied.
-- If the code and context do not provide enough information to answer confidently, say what is missing.
-- You may explain relevant programming or WordPress concepts when they help clarify the supplied code.
-=======
 			return new WP_Error( 'empty_code', __( 'Code snippet cannot be empty.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
 		}
 
@@ -1262,7 +1133,6 @@ For relevant questions:
 - Answer the reader's actual question directly.
 - Ground the answer in the supplied code and context.
 - If there is not enough information to answer confidently, say what is missing.
->>>>>>> main
 - Keep the answer concise and tutorial-friendly.
 - Maximum 140 words.
 - Do not include markdown code fences.
@@ -1270,52 +1140,14 @@ For relevant questions:
 PROMPT;
 
 		try {
-<<<<<<< HEAD
-
-			$result = wp_ai_client_prompt(
-				$prompt
-			)->generate_text();
-=======
 			$result = wp_ai_client_prompt( $prompt )
 				->as_json_response( $schema )
 				->generate_text();
->>>>>>> main
 
 			if ( is_wp_error( $result ) ) {
 				return $result;
 			}
 
-<<<<<<< HEAD
-			$answer = is_string( $result )
-				? trim( $result )
-				: '';
-
-			if ( '' === $answer ) {
-				return new WP_Error(
-					'ai_empty_response',
-					__( 'The AI provider returned an empty response.', 'intelligent-code-assistant' ),
-					array(
-						'status' => 502,
-					)
-				);
-			}
-
-			return array(
-				'answer' => sanitize_textarea_field(
-					$answer
-				),
-			);
-
-		} catch ( Throwable $e ) {
-
-			return new WP_Error(
-				'ai_generation_exception',
-				__( 'An unexpected error occurred while answering the question.', 'intelligent-code-assistant' ),
-				array(
-					'status' => 500,
-				)
-			);
-=======
 			$data = is_string( $result ) ? json_decode( $result, true ) : null;
 			if ( ! is_array( $data ) || ! array_key_exists( 'relevant', $data ) || ! isset( $data['answer'] ) ) {
 				return new WP_Error( 'ai_invalid_response', __( 'The AI provider returned an invalid structured response.', 'intelligent-code-assistant' ), array( 'status' => 502 ) );
@@ -1339,13 +1171,10 @@ PROMPT;
 			);
 		} catch ( Throwable $e ) {
 			return new WP_Error( 'ai_generation_exception', __( 'An unexpected error occurred while answering the question.', 'intelligent-code-assistant' ), array( 'status' => 500 ) );
->>>>>>> main
 		}
 	}
 }
 
-<<<<<<< HEAD
-=======
 /**
  * Protect public reader AI calls before contacting a paid provider.
  *
@@ -1446,7 +1275,6 @@ if ( ! function_exists( 'intelligent_code_assistant_check_reader_budget' ) ) {
     }
 }
 
->>>>>>> main
 /* Direct REST fallback for reader questions about code. */
 add_action( 'rest_api_init', function() {
 
@@ -1459,8 +1287,6 @@ add_action( 'rest_api_init', function() {
 			'callback' => function( WP_REST_Request $request ) {
 
 				$params = $request->get_json_params();
-<<<<<<< HEAD
-=======
                 $params = is_array( $params ) ? $params : array();
                 $verified_code = intelligent_code_assistant_resolve_public_code(
                     $params['postId'] ?? 0,
@@ -1469,7 +1295,6 @@ add_action( 'rest_api_init', function() {
                 );
                 if ( is_wp_error( $verified_code ) ) return $verified_code;
                 $params['code'] = $verified_code;
->>>>>>> main
 
 				return intelligent_code_assistant_execute_ask_code_ability(
 					array(
@@ -1487,11 +1312,8 @@ add_action( 'rest_api_init', function() {
 			'permission_callback' => '__return_true',
 
 			'args' => array(
-<<<<<<< HEAD
-=======
                 'postId' => array( 'required' => true, 'type' => 'integer', 'minimum' => 1 ),
                 'codeExampleId' => array( 'required' => false, 'type' => 'integer', 'minimum' => 0 ),
->>>>>>> main
 				'code' => array(
 					'required'  => true,
 					'type'      => 'string',
@@ -1541,11 +1363,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'description'         => __( 'Generates a short multiple-choice question based on the current code example.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
 			'show_in_mcp'         => true,
-<<<<<<< HEAD
-			'permission_callback' => '__return_true',
-=======
 			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
->>>>>>> main
 
 			'input_schema' => array(
 				'type'       => 'object',
@@ -1959,4 +1777,151 @@ function intelligent_code_assistant_record_analytics_event( WP_REST_Request $req
 }
 
 /** Load analytics aggregation, Reader Insights, and production hardening. */
+require_once __DIR__ . '/includes/analytics-hardening.php';
+require_once __DIR__ . '/includes/code-examples.php';
+require_once __DIR__ . '/includes/code-example-insights.php';
+require_once __DIR__ . '/includes/public-ai-hardening.php';
+require_once __DIR__ . '/includes/ai-response-formatting.php';
+require_once __DIR__ . '/includes/analytics-dashboard.php';
+require_once __DIR__ . '/includes/reader-insights-admin.php';
+require_once __DIR__ . '/includes/reader-insights-ai.php';
+require_once __DIR__ . '/includes/code-example-insights-ai.php';
+require_once __DIR__ . '/includes/reader-insights-assets.php';
 require_once __DIR__ . '/includes/analytics-summary.php';
+
+
+/**
+ * Add the post-level reader-assistance workspace to the block editor.
+ * It tracks completion across reusable Code Snippets referenced by the post
+ * and can generate/persist assistance for all incomplete snippets in sequence.
+ */
+add_action( 'enqueue_block_editor_assets', function () {
+	$asset_path = __DIR__ . '/assets/post-assistance.js';
+	if ( ! file_exists( $asset_path ) ) {
+		return;
+	}
+
+	wp_enqueue_script(
+		'ica-post-assistance',
+		plugins_url( 'assets/post-assistance.js', __FILE__ ),
+		array( 'wp-plugins', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-components', 'wp-data', 'wp-api-fetch', 'wp-blocks', 'wp-i18n' ),
+		(string) filemtime( $asset_path ),
+		true
+	);
+} );
+
+
+/**
+ * Persist generated reader assistance on the canonical Code Snippet.
+ *
+ * The editor's block attributes are stored in the canonical post content.
+ * Updating them through this endpoint avoids relying on the embedding
+ * article's save cycle, which intentionally does not store a second copy.
+ */
+add_action( 'rest_api_init', function () {
+	register_rest_route(
+		'intelligent-code-assistant/v1',
+		'/save-reader-assistance',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'permission_callback' => function ( WP_REST_Request $request ) {
+				$id = absint( $request->get_param( 'codeExampleId' ) );
+				return $id > 0 && 'ica_code_example' === get_post_type( $id ) && current_user_can( 'edit_post', $id );
+			},
+			'args'                => array(
+				'codeExampleId' => array(
+					'required'          => true,
+					'type'              => 'integer',
+					'sanitize_callback' => 'absint',
+				),
+				'generatedExplanation' => array( 'required' => true, 'type' => 'string' ),
+				'generatedLineExplanations' => array( 'required' => true, 'type' => 'object' ),
+				'generatedKnowledgeCheck' => array( 'required' => true, 'type' => 'object' ),
+				'generatedAssistanceCodeHash' => array( 'required' => true, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ),
+			),
+			'callback'            => function ( WP_REST_Request $request ) {
+				$id = absint( $request->get_param( 'codeExampleId' ) );
+				$post = get_post( $id );
+				if ( ! $post || 'ica_code_example' !== $post->post_type ) {
+					return new WP_Error( 'invalid_code_example', __( 'A valid Code Snippet ID is required.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+				}
+
+				$explanation = sanitize_textarea_field( (string) $request->get_param( 'generatedExplanation' ) );
+				$raw_lines = $request->get_param( 'generatedLineExplanations' );
+				$raw_check = $request->get_param( 'generatedKnowledgeCheck' );
+				if ( '' === trim( $explanation ) || ! is_array( $raw_lines ) || ! is_array( $raw_check ) ) {
+					return new WP_Error( 'invalid_reader_assistance', __( 'The generated reader assistance payload is incomplete.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+				}
+
+				$line_explanations = array();
+				foreach ( $raw_lines as $line_number => $line_text ) {
+					$line_number = (string) absint( $line_number );
+					$line_text = is_scalar( $line_text ) ? sanitize_textarea_field( (string) $line_text ) : '';
+					if ( '0' !== $line_number && '' !== trim( $line_text ) ) {
+						$line_explanations[ $line_number ] = $line_text;
+					}
+				}
+				$question = isset( $raw_check['question'] ) ? sanitize_text_field( (string) $raw_check['question'] ) : '';
+				$options = isset( $raw_check['options'] ) && is_array( $raw_check['options'] )
+					? array_values( array_slice( array_map( 'sanitize_text_field', $raw_check['options'] ), 0, 3 ) )
+					: array();
+				if ( '' === $question || count( $options ) < 2 || empty( $line_explanations ) ) {
+					return new WP_Error( 'invalid_reader_assistance', __( 'The generated reader assistance payload is incomplete.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+				}
+				$knowledge_check = array(
+					'question'      => $question,
+					'options'       => $options,
+					'correctAnswer' => max( 0, min( count( $options ) - 1, absint( $raw_check['correctAnswer'] ?? 0 ) ) ),
+					'explanation'   => isset( $raw_check['explanation'] ) ? sanitize_textarea_field( (string) $raw_check['explanation'] ) : '',
+				);
+
+				$blocks = parse_blocks( $post->post_content );
+				$updated = false;
+				$code_hash = sanitize_text_field( (string) $request->get_param( 'generatedAssistanceCodeHash' ) );
+				$update_block = function ( &$items ) use ( &$update_block, &$updated, $explanation, $line_explanations, $knowledge_check, $code_hash ) {
+					foreach ( $items as &$block ) {
+						if ( 'wpe/intelligent-code-assistant' === ( $block['blockName'] ?? '' ) ) {
+							$block['attrs'] = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : array();
+							$block['attrs']['generatedExplanation'] = $explanation;
+							$block['attrs']['generatedLineExplanations'] = $line_explanations;
+							$block['attrs']['generatedKnowledgeCheck'] = $knowledge_check;
+							$block['attrs']['generatedAssistanceCodeHash'] = $code_hash;
+							$block['attrs']['enableAIAssistant'] = true;
+							$updated = true;
+						}
+						if ( ! empty( $block['innerBlocks'] ) ) {
+							$update_block( $block['innerBlocks'] );
+						}
+					}
+					unset( $block );
+				};
+				$update_block( $blocks );
+
+				if ( ! $updated ) {
+					return new WP_Error( 'code_block_not_found', __( 'No Intelligent Code block was found in this Code Snippet.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+				}
+
+				$result = wp_update_post(
+					array(
+						'ID'           => $id,
+						'post_content' => serialize_blocks( $blocks ),
+					),
+					true
+				);
+				if ( is_wp_error( $result ) ) {
+					return $result;
+				}
+
+				return rest_ensure_response( array(
+					'success'                    => true,
+					'codeExampleId'              => $id,
+					'generatedExplanation'       => $explanation,
+					'generatedLineExplanations'  => $line_explanations,
+					'generatedKnowledgeCheck'    => $knowledge_check,
+					'generatedAssistanceCodeHash' => $code_hash,
+					'enableAIAssistant'          => true,
+				) );
+			},
+		)
+	);
+} );

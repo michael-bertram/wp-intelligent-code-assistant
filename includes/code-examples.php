@@ -324,3 +324,93 @@ add_action(
 	},
 	20
 );
+
+
+/**
+ * Persist generated reader assistance directly into the canonical block content.
+ *
+ * This avoids relying solely on a nested BlockEditorProvider's debounced save,
+ * which can otherwise leave generated values visible in the editor but absent
+ * from the canonical Code Snippet after a reload.
+ */
+add_action(
+	'rest_api_init',
+	function () {
+		register_rest_route(
+			'intelligent-code-assistant/v1',
+			'/save-reader-assistance',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'permission_callback' => function ( WP_REST_Request $request ) {
+					$id = absint( $request->get_param( 'codeExampleId' ) );
+					return $id > 0 && 'ica_code_example' === get_post_type( $id ) && current_user_can( 'edit_post', $id );
+				},
+				'args'                => array(
+					'codeExampleId'           => array( 'required' => true, 'type' => 'integer', 'minimum' => 1, 'sanitize_callback' => 'absint' ),
+					'generatedExplanation'    => array( 'required' => true, 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field' ),
+					'generatedLineExplanations' => array( 'required' => true, 'type' => 'object' ),
+					'generatedKnowledgeCheck'  => array( 'required' => true, 'type' => 'object' ),
+					'generatedAssistanceCodeHash' => array( 'required' => true, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ),
+				),
+				'callback'            => function ( WP_REST_Request $request ) {
+					$id   = absint( $request->get_param( 'codeExampleId' ) );
+					$post = get_post( $id );
+					if ( ! $post || 'ica_code_example' !== $post->post_type ) {
+						return new WP_Error( 'invalid_code_example', __( 'A valid Code Snippet is required.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+					}
+
+					$blocks = parse_blocks( $post->post_content );
+					$found  = false;
+					foreach ( $blocks as &$block ) {
+						if ( 'wpe/intelligent-code-assistant' !== ( $block['blockName'] ?? '' ) ) {
+							continue;
+						}
+						$line_explanations = $request->get_param( 'generatedLineExplanations' );
+						$line_explanations = is_array( $line_explanations ) ? $line_explanations : array();
+						$clean_lines       = array();
+						foreach ( $line_explanations as $line_number => $explanation ) {
+							if ( is_scalar( $explanation ) && ctype_digit( (string) $line_number ) && (int) $line_number > 0 ) {
+								$clean_lines[ (string) absint( $line_number ) ] = sanitize_textarea_field( (string) $explanation );
+							}
+						}
+
+						$check = $request->get_param( 'generatedKnowledgeCheck' );
+						$check = is_array( $check ) ? $check : array();
+						$clean_check = array(
+							'question'      => isset( $check['question'] ) ? sanitize_text_field( $check['question'] ) : '',
+						'options'       => isset( $check['options'] ) && is_array( $check['options'] ) ? array_values( array_slice( array_map( 'sanitize_text_field', $check['options'] ), 0, 3 ) ) : array(),
+						'correctAnswer' => isset( $check['correctAnswer'] ) ? max( 0, min( 2, absint( $check['correctAnswer'] ) ) ) : 0,
+						'explanation'   => isset( $check['explanation'] ) ? sanitize_textarea_field( $check['explanation'] ) : '',
+					);
+
+						$block['attrs']['generatedExplanation']      = sanitize_textarea_field( $request->get_param( 'generatedExplanation' ) );
+						$block['attrs']['generatedLineExplanations'] = $clean_lines;
+						$block['attrs']['generatedKnowledgeCheck']   = $clean_check;
+						$block['attrs']['generatedAssistanceCodeHash'] = sanitize_text_field( $request->get_param( 'generatedAssistanceCodeHash' ) );
+						$block['attrs']['enableAIAssistant']        = true;
+						$found = true;
+						break;
+					}
+					unset( $block );
+
+					if ( ! $found ) {
+						return new WP_Error( 'canonical_block_missing', __( 'The Code Snippet does not contain its expected assistant block.', 'intelligent-code-assistant' ), array( 'status' => 422 ) );
+					}
+
+					$result = wp_update_post(
+						array(
+							'ID'           => $id,
+							'post_content' => serialize_blocks( $blocks ),
+						),
+					true
+				);
+					if ( is_wp_error( $result ) ) {
+						return $result;
+					}
+
+					return rest_ensure_response( array( 'saved' => true, 'codeExampleId' => $id ) );
+				},
+			)
+		);
+	}
+);

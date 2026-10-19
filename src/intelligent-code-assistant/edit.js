@@ -1,16 +1,4 @@
 import { __ } from '@wordpress/i18n';
-<<<<<<< HEAD
-import { useBlockProps, InnerBlocks, InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl } from '@wordpress/components';
-import { useSelect, useDispatch } from '@wordpress/data';
-import { useState } from '@wordpress/element';
-import apiFetch from '@wordpress/api-fetch';
-import ReaderInsightsPanel from './ReaderInsightsPanel';
-import './editor.scss';
-
-export default function Edit({ attributes, setAttributes, clientId }) {
-    const {
-=======
 import { useBlockProps, InnerBlocks, InspectorControls, BlockControls } from '@wordpress/block-editor';
 import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl, ToolbarButton } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
@@ -22,10 +10,9 @@ import CanonicalCodeExampleEditor from './CanonicalCodeExampleEditor';
 import { CanonicalCodeExampleContext } from './canonical-editor-context';
 import './editor.scss';
 
-export default function Edit({ attributes, setAttributes, clientId, isCodeExampleProxy = false }) {
+export default function Edit({ attributes, setAttributes, clientId, isCodeExampleProxy = false, canonicalEntityId: canonicalEntityIdProp = 0 }) {
     const {
         codeExampleId,
->>>>>>> main
         showLanguageBadge,
         codeLanguage,
         filename,
@@ -37,19 +24,14 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         fontSize,
         enableAIAssistant,
         tutorialContextOverride,
-<<<<<<< HEAD
-    } = attributes;
-
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [aiError, setAiError] = useState(null);
-    const [isEditingContext, setIsEditingContext] = useState(false);
-=======
         generatedExplanation,
         generatedLineExplanations,
         generatedKnowledgeCheck,
     } = attributes;
 
-    const isEditingCanonicalEntity = useContext(CanonicalCodeExampleContext);
+    const canonicalEditorContext = useContext(CanonicalCodeExampleContext);
+    const isEditingCanonicalEntity = Boolean(canonicalEditorContext?.isCanonical);
+    const canonicalEntityId = Number(canonicalEditorContext?.entityId || canonicalEntityIdProp || 0);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [aiError, setAiError] = useState(null);
     const [isEditingContext, setIsEditingContext] = useState(false);
@@ -58,26 +40,10 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     const [conversionError, setConversionError] = useState('');
     const [isGeneratingAssistance, setIsGeneratingAssistance] = useState(false);
     const [assistanceError, setAssistanceError] = useState('');
->>>>>>> main
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
     const { saveEntityRecord } = useDispatch('core');
 
-<<<<<<< HEAD
-    const {
-        cleanRawText,
-        lineCount,
-        headerBlockId,
-        tutorialTitle,
-        derivedTutorialContext,
-    } = useSelect((select) => {
-        const { getBlockOrder, getBlock } = select('core/block-editor');
-        const editorStore = select('core/editor');
-        const innerBlockIds = getBlockOrder(clientId);
-
-        let contentBlock = null;
-        let headerBlock = null;
-=======
     const { cleanRawText, hasLocalBlockStructure, headerBlockId, headerTitle, tutorialTitle, derivedTutorialContext, currentPostType, blockForConversion } = useSelect((select) => {
         const block = select('core/block-editor').getBlock(clientId);
         const headerBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-header');
@@ -85,7 +51,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         const rawText = contentBlock?.attributes?.code ?? contentBlock?.attributes?.content ?? '';
         const postTitle = select('core/editor')?.getEditedPostAttribute?.('title') || '';
         const postType = select('core/editor')?.getCurrentPostType?.() || '';
->>>>>>> main
 
         const rootBlocks = select('core/block-editor').getBlocks();
         let contextResult = '';
@@ -100,66 +65,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 .filter(Boolean)
                 .join('\n\n');
         }
-<<<<<<< HEAD
-
-        const postTitle = editorStore?.getEditedPostAttribute?.('title') || '';
-        const topLevelIds = getBlockOrder();
-        const currentIndex = topLevelIds.indexOf(clientId);
-        const contextFragments = [];
-
-        if (currentIndex > 0) {
-            for (let index = currentIndex - 1, inspected = 0; index >= 0 && inspected < 8; index -= 1, inspected += 1) {
-                const block = getBlock(topLevelIds[index]);
-                if (!block) continue;
-
-                if (block.name === 'core/paragraph' || block.name === 'core/heading') {
-                    const rawContent = block.attributes?.content || '';
-                    const text = rawContent.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-
-                    if (text) {
-                        contextFragments.unshift(text);
-                    }
-
-                    if (block.name === 'core/heading') {
-                        break;
-                    }
-                }
-            }
-        }
-
-        const contextResult = contextFragments.join('\n').slice(0, 1200);
-
-        if (!contentBlock) {
-            return {
-                cleanRawText: '',
-                lineCount: 1,
-                headerBlockId: headerBlock?.clientId || null,
-                tutorialTitle: postTitle,
-                derivedTutorialContext: contextResult,
-            };
-        }
-
-        const rawContent = contentBlock.attributes?.content ||
-                             contentBlock.attributes?.code ||
-                             contentBlock.attributes?.value ||
-                             '';
-
-        const textWithNewlines = rawContent
-            .replace(/<br\s*\/?>/gi, '\n')
-            .replace(/<\/p><p>/gi, '\n')
-            .replace(/<\/div><div>/gi, '\n');
-
-        const cleanText = textWithNewlines.replace(/<[^>]*>/g, '');
-        const linesArray = cleanText.split('\n');
-        const calculatedLines = cleanText.trim() ? linesArray.length : 1;
-
-        return {
-            cleanRawText: cleanText,
-            lineCount: calculatedLines,
-            headerBlockId: headerBlock?.clientId || null,
-            tutorialTitle: postTitle,
-            derivedTutorialContext: contextResult,
-=======
 
         return {
             cleanRawText: rawText,
@@ -170,7 +75,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             derivedTutorialContext: contextResult,
             currentPostType: postType,
             blockForConversion: block || null,
->>>>>>> main
         };
     }, [clientId]);
 
@@ -189,6 +93,14 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     }
 
     const characterCount = cleanRawText.replace(/\r/g, '').length;
+    const getCodeFingerprint = (code = '') => {
+        let hash = 0x811c9dc5;
+        for (let index = 0; index < code.length; index += 1) {
+            hash ^= code.charCodeAt(index);
+            hash = Math.imul(hash, 0x01000193);
+        }
+        return (hash >>> 0).toString(16).padStart(8, '0');
+    };
     const effectiveTutorialContext = tutorialContextOverride || derivedTutorialContext;
 
     const isLineHighlighted = (lineNumber, highlightExpression) => {
@@ -204,53 +116,12 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     };
 
     const normalizeCodeForDetection = (code) => code
-<<<<<<< HEAD
-        .replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>')
-        .replace(/&quot;/gi, '"')
-        .replace(/&#0*39;|&apos;/gi, "'")
-        .replace(/&amp;/gi, '&');
-=======
         .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"')
         .replace(/&#0*39;|&apos;/gi, "'").replace(/&amp;/gi, '&');
->>>>>>> main
 
     const detectCodeLanguage = (code) => {
         const trimmedCode = normalizeCodeForDetection(code.trim());
         if (!trimmedCode) return '';
-<<<<<<< HEAD
-
-        if (
-            (trimmedCode.startsWith('{') && trimmedCode.endsWith('}')) ||
-            (trimmedCode.startsWith('[') && trimmedCode.endsWith(']'))
-        ) {
-            try {
-                JSON.parse(trimmedCode);
-                return 'JSON';
-            } catch (error) {
-                // Continue with the remaining language checks.
-            }
-        }
-
-        if (/^\s*(?:<!doctype\s+html|<!--|<\/?[a-z][\w:-]*(?:\s[^<>]*?)?>)/i.test(trimmedCode)) return 'HTML';
-
-        if (
-            /<\?php|\bnamespace\s+[A-Za-z_\\]|\$[A-Za-z_]\w*|->|::|\b(add_action|add_filter|wp_register_ability|register_block_type)\s*\(/i.test(trimmedCode)
-        ) {
-            return 'PHP';
-        }
-
-        if (
-            /\b(import|export|const|let|var|async|await|function)\b|=>|\bconsole\.|\bdocument\.|\bwindow\.|\bJSON\./.test(trimmedCode)
-        ) {
-            return 'JS';
-        }
-
-        if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/im.test(trimmedCode)) return 'SQL';
-        if (/^\s*#!.*\b(bash|sh)\b/m.test(trimmedCode) || /^\s*(echo|cd|pwd|mkdir|chmod|curl|grep)\s+/m.test(trimmedCode)) return 'Bash';
-        if (/([.#]?[A-Za-z][\w-]*|\*)\s*(?:,[^{]+)?\{[^}]*:[^}]*;?\s*\}/s.test(trimmedCode)) return 'CSS';
-
-=======
         if ((trimmedCode.startsWith('{') && trimmedCode.endsWith('}')) || (trimmedCode.startsWith('[') && trimmedCode.endsWith(']'))) {
             try { JSON.parse(trimmedCode); return 'JSON'; } catch (error) {}
         }
@@ -260,7 +131,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/im.test(trimmedCode)) return 'SQL';
         if (/^\s*#!.*\b(bash|sh)\b/m.test(trimmedCode) || /^\s*(echo|cd|pwd|mkdir|chmod|curl|grep)\s+/m.test(trimmedCode)) return 'Bash';
         if (/([.#]?[A-Za-z][\w-]*|\*)\s*(?:,[^{]+)?\{[^}]*:[^}]*;?\s*\}/s.test(trimmedCode)) return 'CSS';
->>>>>>> main
         return '';
     };
 
@@ -271,39 +141,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         }
         setIsAnalyzing(true);
         setAiError(null);
-<<<<<<< HEAD
-
-        const requestData = {
-            code: cleanRawText,
-        };
-
-        try {
-            let response;
-            try {
-                response = await apiFetch({
-                    path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run',
-                    method: 'POST',
-                    data: requestData,
-                });
-            } catch (routeErr) {
-                if (routeErr.code === 'rest_no_route' || routeErr.status === 404) {
-                    response = await apiFetch({
-                        path: '/intelligent-code-assistant/v1/auto-fill-metadata',
-                        method: 'POST',
-                        data: requestData,
-                    });
-                } else {
-                    throw routeErr;
-                }
-            }
-
-            const detectedLanguage = detectCodeLanguage(cleanRawText);
-            const responseLanguage = response.codeLanguage || '';
-            const nextLanguage = detectedLanguage || (responseLanguage !== 'PHP' ? responseLanguage : '');
-
-            setAttributes({
-                codeLanguage: nextLanguage,
-=======
         try {
             let response;
             try {
@@ -317,30 +154,14 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             const responseLanguage = response.codeLanguage || '';
             setAttributes({
                 codeLanguage: detectedLanguage || (responseLanguage !== 'PHP' ? responseLanguage : ''),
->>>>>>> main
                 filename: response.filename || filename,
                 highlightLines: response.highlightLines ?? highlightLines,
                 showLineNumbers: response.showLineNumbers ?? showLineNumbers,
             });
-<<<<<<< HEAD
-
-            if (headerBlockId && response.title) {
-                updateBlockAttributes(headerBlockId, {
-                    title: response.title,
-                });
-            }
-        } catch (err) {
-            const rawMessage = err.message || __('Failed to auto-fill metadata.', 'intelligent-code-assistant');
-            const cleanMessage = rawMessage.includes('<p>')
-                ? __('Server error occurred during execution. Check WP debug log.', 'intelligent-code-assistant')
-                : rawMessage;
-            setAiError(cleanMessage);
-=======
             if (headerBlockId && response.title) updateBlockAttributes(headerBlockId, { title: response.title });
         } catch (err) {
             const rawMessage = err.message || __('Failed to auto-fill metadata.', 'intelligent-code-assistant');
             setAiError(rawMessage.includes('<p>') ? __('Server error occurred during execution. Check WP debug log.', 'intelligent-code-assistant') : rawMessage);
->>>>>>> main
         } finally {
             setIsAnalyzing(false);
         }
@@ -361,62 +182,69 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             tutorialContext: effectiveTutorialContext,
         };
 
-        const runAbility = async (slug, data) => {
+        const runRoute = async (ability, route, data) => {
             try {
                 return await apiFetch({
-                    path: `/wp/v2/abilities/intelligent-code-assistant/${slug}/run`,
+                    path: `/wp/v2/abilities/intelligent-code-assistant/${ability}/run`,
                     method: 'POST',
                     data,
                 });
             } catch (routeErr) {
                 if (routeErr.code !== 'rest_no_route' && routeErr.status !== 404) throw routeErr;
-                return apiFetch({
-                    path: `/intelligent-code-assistant/v1/${slug}`,
-                    method: 'POST',
-                    data,
-                });
+                return apiFetch({ path: `/intelligent-code-assistant/v1/${route}`, method: 'POST', data });
             }
         };
 
         try {
-            const explanation = await runAbility('explain-code', base);
+            // Keep overview generation separate from bounded line batches so
+            // larger snippets do not exceed the AI provider's request limits.
+            const overview = await runRoute('generate-reader-overview', 'generate-reader-overview', base);
             const lines = cleanRawText.replace(/\r/g, '').split('\n');
+            const requiredLines = lines
+                .map((line, index) => line.trim() ? index + 1 : null)
+                .filter(Boolean);
             const lineExplanations = {};
 
-            for (let index = 0; index < lines.length; index += 1) {
-                if (!lines[index].trim()) continue;
-                const lineNumber = index + 1;
-                const start = Math.max(0, index - 2);
-                const end = Math.min(lines.length, index + 3);
-                const surroundingCode = lines
-                    .slice(start, end)
-                    .map((line, offset) => {
-                        const number = start + offset + 1;
-                        return `${number === lineNumber ? '>>>' : '   '} ${number}: ${line}`;
-                    })
-                    .join('\n');
-
-                const response = await runAbility('explain-line', {
+            for (let offset = 0; offset < requiredLines.length; offset += 30) {
+                const lineNumbers = requiredLines.slice(offset, offset + 30);
+                const batch = await runRoute('generate-line-explanations-batch', 'generate-line-explanations-batch', {
                     ...base,
-                    selectedLineNumber: lineNumber,
-                    selectedLine: lines[index],
-                    surroundingCode,
+                    lineNumbers,
                 });
-
-                if (response?.explanation) {
-                    lineExplanations[String(lineNumber)] = response.explanation.trim();
-                }
+                Object.assign(lineExplanations, batch?.lineExplanations || {});
             }
 
-            const knowledgeCheck = await runAbility('check-understanding', base);
-
-            setAttributes({
-                generatedExplanation: explanation?.explanation?.trim() || '',
+            const nextAttributes = {
+                generatedExplanation: overview?.explanation?.trim() || '',
                 generatedLineExplanations: lineExplanations,
-                generatedKnowledgeCheck: knowledgeCheck || {},
-            });
+                generatedKnowledgeCheck: overview?.knowledgeCheck || {},
+                generatedAssistanceCodeHash: getCodeFingerprint(cleanRawText.replace(/\r/g, '')),
+                enableAIAssistant: true,
+            };
+
+            if (
+                !nextAttributes.generatedExplanation ||
+                !requiredLines.every((line) => typeof lineExplanations[String(line)] === 'string' && lineExplanations[String(line)].trim()) ||
+                !nextAttributes.generatedKnowledgeCheck?.question
+            ) {
+                throw new Error(__('The AI response was incomplete. No generated assistance was saved.', 'intelligent-code-assistant'));
+            }
+
+            setAttributes(nextAttributes);
+
+            if (canonicalEntityId > 0) {
+                await apiFetch({
+                    path: '/intelligent-code-assistant/v1/save-reader-assistance',
+                    method: 'POST',
+                    data: {
+                        codeExampleId: canonicalEntityId,
+                        ...nextAttributes,
+                    },
+                });
+                window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved', { detail: { codeExampleId: canonicalEntityId } }));
+            }
         } catch (err) {
-            setAssistanceError(err?.message || __('Unable to generate reader assistance.', 'intelligent-code-assistant'));
+            setAssistanceError(err?.message || __('Unable to generate and save reader assistance.', 'intelligent-code-assistant'));
         } finally {
             setIsGeneratingAssistance(false);
         }
@@ -474,14 +302,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
 
     const blockProps = useBlockProps({
         className: `wp-block-wpe-intelligent-code-assistant-editor ${isDarkMode ? 'dark-theme' : ''} ${isCompact ? 'is-compact' : ''} ${showLineNumbers ? 'has-line-numbers' : ''}`,
-<<<<<<< HEAD
-        style: {
-            '--editor-code-font-size': fontSize,
-            '--panel-max-height': maxHeight,
-        },
-=======
         style: { '--editor-code-font-size': fontSize, '--panel-max-height': maxHeight },
->>>>>>> main
     });
 
     if (needsCodeExample || (isLinkedReference && isChangingCodeExample)) {
@@ -526,153 +347,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     return (
         <>
             <InspectorControls>
-<<<<<<< HEAD
-                <PanelBody title={__('AI Features', 'intelligent-code-assistant')} initialOpen={true}>
-                    <ToggleControl
-                        label={__('Enable AI Features', 'intelligent-code-assistant')}
-                        checked={enableAIAssistant}
-                        onChange={(value) => setAttributes({ enableAIAssistant: value })}
-                        help={
-                            enableAIAssistant
-                                ? __('AI-powered authoring tools and reader assistance are enabled for this code block.', 'intelligent-code-assistant')
-                                : __('Enable AI features for authoring assistance and the frontend AI Assistant.', 'intelligent-code-assistant')
-                        }
-                    />
-
-                    {enableAIAssistant && (
-                        <>
-                            <Button
-                                variant="secondary"
-                                isBusy={isAnalyzing}
-                                disabled={isAnalyzing || !cleanRawText.trim()}
-                                onClick={handleAutoFill}
-                                style={{ width: '100%', justifyContent: 'center', marginBottom: '12px' }}
-                            >
-                                {isAnalyzing ? <Spinner /> : __('Auto-Fill Code Details', 'intelligent-code-assistant')}
-                            </Button>
-
-                            {aiError && (
-                                <p style={{ color: '#cc1818', fontSize: '12px', marginBottom: '12px' }}>
-                                    {aiError}
-                                </p>
-                            )}
-
-                            <div style={{ marginTop: '16px' }}>
-                                <strong style={{ display: 'block', marginBottom: '6px' }}>
-                                    {__('Tutorial title', 'intelligent-code-assistant')}
-                                </strong>
-                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', marginBottom: '14px' }}>
-                                    {tutorialTitle || __('No tutorial title detected.', 'intelligent-code-assistant')}
-                                </div>
-
-                                <strong style={{ display: 'block', marginBottom: '6px' }}>
-                                    {__('Tutorial context', 'intelligent-code-assistant')}
-                                </strong>
-                                <div style={{ padding: '10px 12px', background: '#f6f7f7', borderRadius: '4px', whiteSpace: 'pre-wrap', marginBottom: '10px' }}>
-                                    {effectiveTutorialContext || __('No nearby tutorial context detected.', 'intelligent-code-assistant')}
-                                </div>
-
-                                {!isEditingContext && (
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => setIsEditingContext(true)}
-                                        style={{ marginBottom: '8px' }}
-                                    >
-                                        {__('Edit context', 'intelligent-code-assistant')}
-                                    </Button>
-                                )}
-
-                                {isEditingContext && (
-                                    <>
-                                        <TextareaControl
-                                            label={__('Edit tutorial context', 'intelligent-code-assistant')}
-                                            value={tutorialContextOverride || derivedTutorialContext}
-                                            onChange={(value) => setAttributes({ tutorialContextOverride: value })}
-                                            help={__('This custom context will replace the automatically detected context for this code block.', 'intelligent-code-assistant')}
-                                        />
-                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                            <Button
-                                                variant="primary"
-                                                onClick={() => setIsEditingContext(false)}
-                                            >
-                                                {__('Done', 'intelligent-code-assistant')}
-                                            </Button>
-                                            {tutorialContextOverride && (
-                                                <Button
-                                                    variant="tertiary"
-                                                    onClick={() => {
-                                                        setAttributes({ tutorialContextOverride: '' });
-                                                        setIsEditingContext(false);
-                                                    }}
-                                                >
-                                                    {__('Use detected context', 'intelligent-code-assistant')}
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </>
-                                )}
-
-                                <p style={{ marginTop: '6px', color: '#646970', fontSize: '12px' }}>
-                                    {tutorialContextOverride
-                                        ? __('Using custom context for this code block.', 'intelligent-code-assistant')
-                                        : __('Using context detected from the nearest heading and paragraphs.', 'intelligent-code-assistant')}
-                                </p>
-                            </div>
-                        </>
-                    )}
-                </PanelBody>
-
-                <ReaderInsightsPanel />
-
-                <PanelBody title={__('Code Display Settings', 'intelligent-code-assistant')} initialOpen={false}>
-                    <TextControl
-                        label={__('Filename / Label', 'intelligent-code-assistant')}
-                        value={filename || ''}
-                        onChange={(value) => setAttributes({ filename: value })}
-                        help={__('Filename shown with the code example. AI can suggest this when AI Features are enabled.', 'intelligent-code-assistant')}
-                    />
-                    <TextControl
-                        label={__('Highlight Lines (e.g., 3, 5-8)', 'intelligent-code-assistant')}
-                        value={highlightLines || ''}
-                        onChange={(value) => setAttributes({ highlightLines: value })}
-                        help={__('Comma-separated line numbers or ranges to highlight.', 'intelligent-code-assistant')}
-                    />
-                    <ToggleControl
-                        label={__('Show Language Badge', 'intelligent-code-assistant')}
-                        checked={showLanguageBadge}
-                        onChange={(value) => setAttributes({ showLanguageBadge: value })}
-                    />
-                    {showLanguageBadge && (
-                        <SelectControl
-                            label={__('Code Language', 'intelligent-code-assistant')}
-                            value={codeLanguage || ''}
-                            options={[
-                                { label: __('Auto / Not set', 'intelligent-code-assistant'), value: '' },
-                                { label: 'PHP', value: 'PHP' },
-                                { label: 'JavaScript', value: 'JS' },
-                                { label: 'CSS', value: 'CSS' },
-                                { label: 'HTML', value: 'HTML' },
-                                { label: 'JSON', value: 'JSON' },
-                                { label: 'SQL', value: 'SQL' },
-                                { label: 'Bash', value: 'Bash' },
-                            ]}
-                            onChange={(value) => setAttributes({ codeLanguage: value })}
-                        />
-                    )}
-                    <ToggleControl
-                        label={__('Show Line Numbers', 'intelligent-code-assistant')}
-                        checked={showLineNumbers}
-                        onChange={(value) => {
-                            if (value && isCompact) {
-                                setAttributes({ showLineNumbers: value, isCompact: false });
-                            } else {
-                                setAttributes({ showLineNumbers: value });
-                            }
-                        }}
-                    />
-                </PanelBody>
-
-=======
                 {isLegacyStandalone && (
                     <PanelBody title={__('Code Example', 'intelligent-code-assistant')} initialOpen={true}>
                         <p>{__('This is a legacy standalone block. Convert it to reusable canonical content without losing its existing code or settings.', 'intelligent-code-assistant')}</p>
@@ -689,19 +363,30 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 )}
                 <PanelBody title={__('✦ Code Assistant', 'intelligent-code-assistant')} initialOpen={true}>
                     {(() => {
-                        const expectedLines = cleanRawText.replace(/\r/g, '').split('\n').filter((line) => line.trim()).length;
-                        const storedLines = Object.keys(generatedLineExplanations || {}).filter((key) => generatedLineExplanations?.[key]?.trim()).length;
+                        const requiredLineNumbers = cleanRawText.replace(/\r/g, '').split('\n')
+                            .reduce((numbers, line, index) => {
+                                if (line.trim()) numbers.push(String(index + 1));
+                                return numbers;
+                            }, []);
+                        const expectedLines = requiredLineNumbers.length;
+                        const storedLines = requiredLineNumbers.filter(
+                            (lineNumber) => typeof generatedLineExplanations?.[lineNumber] === 'string'
+                                && generatedLineExplanations[lineNumber].trim()
+                        ).length;
                         const explanationReady = Boolean(generatedExplanation?.trim());
                         const knowledgeReady = Boolean(generatedKnowledgeCheck?.question);
-                        const linesReady = expectedLines > 0 && storedLines >= expectedLines;
-                        const ready = explanationReady && linesReady && knowledgeReady;
+                        const linesReady = expectedLines > 0 && storedLines === expectedLines;
                         const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
+                        const codeMatches = Boolean(attributes.generatedAssistanceCodeHash)
+                            && attributes.generatedAssistanceCodeHash === getCodeFingerprint(cleanRawText.replace(/\r/g, ''));
+                        const codeChanged = hasAny && !codeMatches;
+                        const ready = explanationReady && linesReady && knowledgeReady && codeMatches;
                         return (
                             <div className={`ica-block-ai-card ${ready ? 'is-ready' : (hasAny ? 'is-incomplete' : 'is-unconfigured')}`}>
                                 <div className="ica-block-ai-card__headline">
                                     <span className="ica-block-ai-card__mark">✦</span>
                                     <div>
-                                        <strong>{ready ? __('Ready for readers', 'intelligent-code-assistant') : (hasAny ? __('Assistance incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant'))}</strong>
+                                        <strong>{ready ? __('Ready for readers', 'intelligent-code-assistant') : (codeChanged ? __('Code changed — regenerate assistance', 'intelligent-code-assistant') : (hasAny ? __('Assistance incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant')))}</strong>
                                         <p>{__('Manage generated reader assistance from the article Code Assistant.', 'intelligent-code-assistant')}</p>
                                     </div>
                                 </div>
@@ -735,7 +420,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                     {showLanguageBadge && <SelectControl label={__('Code Language', 'intelligent-code-assistant')} value={codeLanguage || ''} options={[{ label: __('Auto / Not set', 'intelligent-code-assistant'), value: '' }, { label: 'PHP', value: 'PHP' }, { label: 'JavaScript', value: 'JS' }, { label: 'CSS', value: 'CSS' }, { label: 'HTML', value: 'HTML' }, { label: 'JSON', value: 'JSON' }, { label: 'SQL', value: 'SQL' }, { label: 'Bash', value: 'Bash' }]} onChange={(value) => setAttributes({ codeLanguage: value })} />}
                     <ToggleControl label={__('Show Line Numbers', 'intelligent-code-assistant')} checked={showLineNumbers} onChange={(value) => setAttributes({ showLineNumbers: value, ...(value && isCompact ? { isCompact: false } : {}) })} />
                 </PanelBody>
->>>>>>> main
                 <PanelBody title={__('Design & Layout', 'intelligent-code-assistant')} initialOpen={false}>
                     <ToggleControl label={__('Use Dark Theme', 'intelligent-code-assistant')} checked={isDarkMode} onChange={(value) => setAttributes({ isDarkMode: value })} />
                     <ToggleControl label={__('Compact Spacing Layout', 'intelligent-code-assistant')} checked={isCompact} disabled={showLineNumbers} onChange={(value) => setAttributes({ isCompact: value })} />
@@ -746,52 +430,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
 
             <div {...blockProps}>
                 <div className="editor-combined-container">
-<<<<<<< HEAD
-                    {showLanguageBadge && codeLanguage && (
-                        <span className={`code-badge lang-${codeLanguage.toLowerCase()}`}>
-                            {codeLanguage}
-                        </span>
-                    )}
-
-                    <div className="editor-inner-blocks-wrapper">
-                        <InnerBlocks
-                            allowedBlocks={['wpe/code-header', 'wpe/code-content']}
-                            template={[['wpe/code-header', {}], ['wpe/code-content', {}]]}
-                            templateLock="all"
-                        />
-
-                        {showLineNumbers && (
-                            <div className="line-numbers-gutter" aria-hidden="true">
-                                {Array.from({ length: lineCount }).map((_, index) => {
-                                    const lineNum = index + 1;
-                                    const highlighted = isLineHighlighted(lineNum, highlightLines);
-                                    return (
-                                        <span
-                                            key={index}
-                                            className={highlighted ? 'is-highlighted' : ''}
-                                        >
-                                            {lineNum}
-                                        </span>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="code-footer">
-                        <div className="code-analytics-meta">
-                            {filename && (
-                                <>
-                                    <span className="code-filename">{filename}</span>
-                                    <span className="meta-divider">•</span>
-                                </>
-                            )}
-                            <span>{lineCount} {lineCount === 1 ? 'line' : 'lines'}</span>
-                            <span className="meta-divider">•</span>
-                            <span>{characterCount.toLocaleString()} chars</span>
-                        </div>
-                    </div>
-=======
                     {showLanguageBadge && codeLanguage && <span className={`code-badge lang-${codeLanguage.toLowerCase()}`}>{codeLanguage}</span>}
                     <div className="panel-scroll-container">
                         <div className="panel-content-flex-wrapper">
@@ -817,7 +455,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                             {characterCount} {characterCount === 1 ? __('character', 'intelligent-code-assistant') : __('characters', 'intelligent-code-assistant')}
                         </span>
                     </div>
->>>>>>> main
                 </div>
             </div>
         </>

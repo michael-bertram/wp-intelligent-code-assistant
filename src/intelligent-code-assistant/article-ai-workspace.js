@@ -550,17 +550,17 @@ function ArticlePostSummary() {
 
     return createPortal(
         <section className="ica-post-summary" aria-label={__('Code Assistant article summary', 'intelligent-code-assistant')}>
-            <strong className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</strong>
             <button
                 type="button"
                 className="ica-post-summary__toggle"
                 aria-expanded={expanded}
                 onClick={() => setExpanded((previous) => !previous)}
             >
-                <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
-                    {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('Code Snippets ready', 'intelligent-code-assistant')}`}
-                </span>
+                <strong className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</strong>
                 <span className="ica-post-summary__toggle-right">
+                    <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
+                        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('Code Snippets ready', 'intelligent-code-assistant')}`}
+                    </span>
                     <span aria-hidden="true">{expanded ? '⌃' : '⌄'}</span>
                 </span>
             </button>

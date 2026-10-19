@@ -941,10 +941,11 @@
 
     &__heading {
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
-        font-size: 14px;
+        flex: 1 1 auto;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 13px;
     }
 
     &__count {
@@ -1020,17 +1021,19 @@
         justify-content: space-between;
         gap: 12px;
         width: 100%;
-        padding: 12px;
-        border: 1px solid #dcdcde;
-        border-radius: 4px;
-        background: #f6f7f7;
+        padding: 8px 0;
+        border: 0;
+        border-bottom: 1px solid #dcdcde;
+        border-radius: 0;
+        background: transparent;
         color: inherit;
         font: inherit;
         text-align: left;
         cursor: pointer;
 
         &:hover {
-            background: #f0f0f1;
+            background: transparent;
+            color: var(--wp-admin-theme-color, #3858e9);
         }
 
         &:focus-visible {

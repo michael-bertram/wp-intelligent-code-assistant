@@ -192,7 +192,7 @@ function Status({ block }) {
 function sprintfSafe(template, value) {
     const values = String(value).split('|');
     let index = 0;
-    return template.replace(/%[ds]/g, () => String(values[index++] ?? values[values.length - 1] ?? ''));
+    return template.replace(/%\d+\$[ds]/g, () => String(values[index++] ?? values[values.length - 1] ?? ''));
 }
 
 function SnippetCard({ item, tutorialTitle, onChanged }) {
@@ -470,6 +470,7 @@ function ArticlePostSummary() {
 
     // Show every block instance, not just unique linked records: local and linked
     // snippets each have their own article-context validation state.
+    const linkedItems = snippets.filter((item) => item.codeExampleId);
     const articleItems = snippets.map((item, index) => ({
         ...item,
         status: statuses[index],

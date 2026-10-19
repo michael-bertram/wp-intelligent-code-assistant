@@ -476,23 +476,26 @@
 .ica-post-summary-host {
     display: block;
     width: 100%;
+    min-width: 0;
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
+/* Match the label/value columns used by native Post settings rows. */
 .ica-post-summary {
-    display: flex;
-    flex-direction: column;
+    display: block;
     width: 100%;
+    min-width: 0;
     box-sizing: border-box;
 
     &__toggle {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         align-items: center;
-        justify-content: space-between;
         gap: 12px;
         width: 100%;
+        min-width: 0;
         padding: 12px 0;
         border: 0;
         border-bottom: 1px solid #dcdcde;
@@ -520,12 +523,16 @@
     }
 
     &__toggle-right {
-        display: inline-flex;
+        display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 6px;
+        min-width: 0;
     }
 
     &__count {
+        min-width: 0;
+        overflow-wrap: anywhere;
         font-size: 13px;
         font-weight: 500;
         color: #996800;

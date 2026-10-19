@@ -363,11 +363,19 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 )}
                 <PanelBody title={__('✦ Code Assistant', 'intelligent-code-assistant')} initialOpen={true}>
                     {(() => {
-                        const expectedLines = cleanRawText.replace(/\r/g, '').split('\n').filter((line) => line.trim()).length;
-                        const storedLines = Object.keys(generatedLineExplanations || {}).filter((key) => generatedLineExplanations?.[key]?.trim()).length;
+                        const requiredLineNumbers = cleanRawText.replace(/\r/g, '').split('\n')
+                            .reduce((numbers, line, index) => {
+                                if (line.trim()) numbers.push(String(index + 1));
+                                return numbers;
+                            }, []);
+                        const expectedLines = requiredLineNumbers.length;
+                        const storedLines = requiredLineNumbers.filter(
+                            (lineNumber) => typeof generatedLineExplanations?.[lineNumber] === 'string'
+                                && generatedLineExplanations[lineNumber].trim()
+                        ).length;
                         const explanationReady = Boolean(generatedExplanation?.trim());
                         const knowledgeReady = Boolean(generatedKnowledgeCheck?.question);
-                        const linesReady = expectedLines > 0 && storedLines >= expectedLines;
+                        const linesReady = expectedLines > 0 && storedLines === expectedLines;
                         const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
                         const codeMatches = Boolean(attributes.generatedAssistanceCodeHash)
                             && attributes.generatedAssistanceCodeHash === getCodeFingerprint(cleanRawText.replace(/\r/g, ''));

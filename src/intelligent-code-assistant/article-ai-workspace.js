@@ -263,6 +263,17 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         }
     };
 
+    // The single toolbar overview can request generation from every mounted card.
+    useEffect(() => {
+        const handleGenerateAll = () => {
+            if (!loading && canonical && !getAssistanceStatus(canonical).ready && !generating) {
+                handleGenerate();
+            }
+        };
+        window.addEventListener('ica:generate-all-assistance', handleGenerateAll);
+        return () => window.removeEventListener('ica:generate-all-assistance', handleGenerateAll);
+    }, [loading, canonical, generating, handleGenerate]);
+
     return (
         <section className="ica-ai-workspace__card">
             <div className="ica-ai-workspace__card-heading">
@@ -600,12 +611,23 @@ function CodeAssistantToolbar() {
                             </>
                         )}
                     </div>
-                    <Button variant="primary" onClick={() => {
-                        onClose();
-                        window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
-                    }}>
-                        {__('Open Code Assistant', 'intelligent-code-assistant')}
-                    </Button>
+                    <div className="ica-header-toolbar__actions">
+                        <Button variant="primary" disabled={loading || complete || unavailable > 0} onClick={() => {
+                            onClose();
+                            window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+                            window.setTimeout(() => {
+                                window.dispatchEvent(new CustomEvent('ica:generate-all-assistance'));
+                            }, 500);
+                        }}>
+                            {__('Generate all', 'intelligent-code-assistant')}
+                        </Button>
+                        <Button variant="secondary" onClick={() => {
+                            onClose();
+                            window.dispatchEvent(new CustomEvent('ica:open-code-assistant'));
+                        }}>
+                            {__('Open Code Assistant', 'intelligent-code-assistant')}
+                        </Button>
+                    </div>
                 </section>
             )}
         />,

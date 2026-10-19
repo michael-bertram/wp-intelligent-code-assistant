@@ -277,13 +277,15 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
     // The single toolbar overview can request generation from every mounted card.
     useEffect(() => {
         const handleGenerateAll = () => {
-            if (!loading && canonical && !getAssistanceStatus(canonical).ready && !generating) {
+            const contextValidated = Boolean(item.block?.attributes?.assistanceContextTitle)
+                && item.block.attributes.assistanceContextTitle === String(tutorialTitle || '');
+            if (!loading && canonical && (!getAssistanceStatus(canonical).ready || !contextValidated) && !generating) {
                 handleGenerate();
             }
         };
         window.addEventListener('ica:generate-all-assistance', handleGenerateAll);
         return () => window.removeEventListener('ica:generate-all-assistance', handleGenerateAll);
-    }, [loading, canonical, generating, handleGenerate]);
+    }, [loading, canonical, generating, handleGenerate, item.block, tutorialTitle]);
 
     return (
         <section className="ica-ai-workspace__card">
@@ -413,7 +415,12 @@ function useArticleCodeStatus() {
         return () => { active = false; };
     }, [linkedIdsKey, linkedIds, refreshVersion]);
 
-    const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block));
+    const statuses = snippets.map((item) => {
+        const status = item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block);
+        const contextTitle = String(item.block?.attributes?.assistanceContextTitle || '');
+        const contextValidated = Boolean(contextTitle) && contextTitle === String(tutorialTitle || '');
+        return status ? { ...status, contextValidated, ready: status.ready && contextValidated } : null;
+    });
     const ready = statuses.filter((item) => item?.ready).length;
     const complete = !loading && ready === snippets.length && snippets.length > 0;
     return { snippets, linked, loading, ready, complete, statuses };

@@ -222,6 +222,7 @@
                             generatedKnowledgeCheck: overview.knowledgeCheck,
                         },
                     });
+                    window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved', { detail: { codeExampleId: item.id } }));
                     done += 1;
                     setProgress({ done, total: pending.length });
                 }

@@ -1837,6 +1837,7 @@ add_action( 'rest_api_init', function () {
 				'generatedExplanation' => array( 'required' => true, 'type' => 'string' ),
 				'generatedLineExplanations' => array( 'required' => true, 'type' => 'object' ),
 				'generatedKnowledgeCheck' => array( 'required' => true, 'type' => 'object' ),
+				'generatedAssistanceCodeHash' => array( 'required' => true, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ),
 			),
 			'callback'            => function ( WP_REST_Request $request ) {
 				$id = absint( $request->get_param( 'codeExampleId' ) );
@@ -1876,13 +1877,15 @@ add_action( 'rest_api_init', function () {
 
 				$blocks = parse_blocks( $post->post_content );
 				$updated = false;
-				$update_block = function ( &$items ) use ( &$update_block, &$updated, $explanation, $line_explanations, $knowledge_check ) {
+				$code_hash = sanitize_text_field( (string) $request->get_param( 'generatedAssistanceCodeHash' ) );
+				$update_block = function ( &$items ) use ( &$update_block, &$updated, $explanation, $line_explanations, $knowledge_check, $code_hash ) {
 					foreach ( $items as &$block ) {
 						if ( 'wpe/intelligent-code-assistant' === ( $block['blockName'] ?? '' ) ) {
 							$block['attrs'] = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : array();
 							$block['attrs']['generatedExplanation'] = $explanation;
 							$block['attrs']['generatedLineExplanations'] = $line_explanations;
 							$block['attrs']['generatedKnowledgeCheck'] = $knowledge_check;
+							$block['attrs']['generatedAssistanceCodeHash'] = $code_hash;
 							$block['attrs']['enableAIAssistant'] = true;
 							$updated = true;
 						}
@@ -1915,6 +1918,7 @@ add_action( 'rest_api_init', function () {
 					'generatedExplanation'       => $explanation,
 					'generatedLineExplanations'  => $line_explanations,
 					'generatedKnowledgeCheck'    => $knowledge_check,
+					'generatedAssistanceCodeHash' => $code_hash,
 					'enableAIAssistant'          => true,
 				) );
 			},

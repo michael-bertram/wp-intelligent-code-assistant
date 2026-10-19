@@ -369,6 +369,7 @@ function ArticleAIWorkspace() {
  */
 function useArticleCodeStatus() {
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
+    const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
     const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
         block,
         codeExampleId: Number(block.attributes?.codeExampleId || 0),

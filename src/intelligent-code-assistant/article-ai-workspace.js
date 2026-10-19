@@ -147,7 +147,7 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
     };
 }
 
-function getAssistanceStatus(block) {
+function getAssistanceStatus(block, articleTitle = '') {
     const attrs = block?.attributes || {};
     const codeText = getCode(block);
     const expectedLines = codeText.replace(/\r/g, '').split('\n').filter((line) => line.trim()).length;
@@ -157,11 +157,16 @@ function getAssistanceStatus(block) {
     const explanationReady = Boolean(attrs.generatedExplanation?.trim());
     const knowledgeReady = Boolean(attrs.generatedKnowledgeCheck?.question);
     const linesReady = expectedLines > 0 && storedLines >= expectedLines;
-    const ready = explanationReady && linesReady && knowledgeReady;
+    const contextTitle = String(attrs.assistanceContextTitle || '');
+    const contextValidated = !articleTitle || (contextTitle && contextTitle === String(articleTitle));
+    const assistanceReady = explanationReady && linesReady && knowledgeReady;
+    const ready = assistanceReady && contextValidated;
     const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
 
     return {
         expectedLines,
+        contextValidated,
+        assistanceReady,
         storedLines,
         explanationReady,
         knowledgeReady,
@@ -246,6 +251,8 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
     };
 
     const assistanceStatus = canonical ? getAssistanceStatus(canonical) : null;
+    const articleContextValidated = Boolean(item.block?.attributes?.assistanceContextTitle)
+        && item.block.attributes.assistanceContextTitle === String(tutorialTitle || '');
 
     const handleGenerate = async () => {
         if (!canonical || generating) return;
@@ -255,6 +262,9 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         try {
             const generated = await generateAssistance(canonical, tutorialTitle, setProgress);
             await saveGenerated(generated);
+            // Context validation belongs to this article's block instance, not the shared snippet.
+            updateBlockAttributes(item.clientId, { assistanceContextTitle: String(tutorialTitle || '') });
+            window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
             onChanged?.();
         } catch (err) {
             setError(err?.message || __('Unable to generate reader assistance.', 'intelligent-code-assistant'));
@@ -287,6 +297,11 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
                 </Button>
             </div>
             {loading ? <Spinner /> : canonical && <Status block={canonical} />}
+            {item.codeExampleId > 0 && !articleContextValidated && (
+                <Notice status="warning" isDismissible={false}>
+                    {__('Saved assistance has not been validated for this article context yet.', 'intelligent-code-assistant')}
+                </Notice>
+            )}
             {error && <Notice status="error" isDismissible={false}>{error}</Notice>}
             {generating && progress && <p className="ica-ai-workspace__progress" role="status" aria-live="polite">{progress}</p>}
             <Button variant="primary" disabled={loading || !canonical || generating} isBusy={generating} onClick={handleGenerate}>

@@ -162,13 +162,22 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
 function getAssistanceStatus(block, articleTitle = '') {
     const attrs = block?.attributes || {};
     const codeText = getCode(block);
-    const expectedLines = codeText.replace(/\r/g, '').split('\n').filter((line) => line.trim()).length;
-    const storedLines = Object.keys(attrs.generatedLineExplanations || {}).filter(
-        (key) => attrs.generatedLineExplanations?.[key]?.trim()
+    const requiredLineNumbers = codeText.replace(/\r/g, '').split('\n')
+        .reduce((numbers, line, index) => {
+            if (line.trim()) numbers.push(String(index + 1));
+            return numbers;
+        }, []);
+    const storedLineExplanations = attrs.generatedLineExplanations || {};
+    const storedLines = Object.keys(storedLineExplanations).filter(
+        (key) => typeof storedLineExplanations[key] === 'string' && storedLineExplanations[key].trim()
     ).length;
+    const missingLineNumbers = requiredLineNumbers.filter(
+        (lineNumber) => !storedLineExplanations[lineNumber]?.trim()
+    );
+    const expectedLines = requiredLineNumbers.length;
     const explanationReady = Boolean(attrs.generatedExplanation?.trim());
     const knowledgeReady = Boolean(attrs.generatedKnowledgeCheck?.question);
-    const linesReady = expectedLines > 0 && storedLines >= expectedLines;
+    const linesReady = expectedLines > 0 && missingLineNumbers.length === 0;
     const contextTitle = String(attrs.assistanceContextTitle || '');
     const contextValidated = !articleTitle || (contextTitle && contextTitle === String(articleTitle));
     const hasAny = explanationReady || storedLines > 0 || knowledgeReady;

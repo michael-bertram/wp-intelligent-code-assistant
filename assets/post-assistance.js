@@ -10,7 +10,6 @@
     const registerPlugin = wp.plugins.registerPlugin;
     const PluginSidebar = wp.editPost && wp.editPost.PluginSidebar;
     const PluginSidebarMoreMenuItem = wp.editPost && wp.editPost.PluginSidebarMoreMenuItem;
-    const PluginPostStatusInfo = wp.editor && wp.editor.PluginPostStatusInfo;
     const PanelBody = wp.components.PanelBody;
     const Button = wp.components.Button;
     const Notice = wp.components.Notice;
@@ -263,14 +262,6 @@
         const dotColor = allComplete ? '#16a34a' : (items.length ? '#d97706' : '#94a3b8');
 
         return el(Fragment, null,
-            PluginPostStatusInfo ? el(PluginPostStatusInfo, null,
-                el('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
-                    el('span', { 'aria-hidden': 'true', style: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: dotColor } }),
-                    allComplete
-                        ? __('Code assistance complete', 'intelligent-code-assistant')
-                        : (items.length ? completeCount + '/' + items.length + ' ' + __('Code Snippets ready', 'intelligent-code-assistant') : __('No reusable Code Snippets found', 'intelligent-code-assistant'))
-                )
-            ) : null,
             el(PluginSidebarMoreMenuItem, { target: 'ica-post-assistance' }, __('Code Assistance', 'intelligent-code-assistant')),
             el(PluginSidebar, { name: 'ica-post-assistance', title: __('Code Assistance', 'intelligent-code-assistant'), icon: 'editor-code' },
                 el(PanelBody, { title: __('Reader assistance for this post', 'intelligent-code-assistant'), initialOpen: true },

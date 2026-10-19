@@ -468,8 +468,10 @@ function ArticlePostSummary() {
     useEffect(() => {
         let mountedHost = null;
         const ensureHost = () => {
+            // Mount in WordPress's native post-status area above "Move to Trash".
+            // Do not fall back to the summary panel: that places a duplicate row below the actions.
             const summary = document.querySelector(
-                '.editor-post-summary__panel, .editor-post-summary, .edit-post-post-status, .editor-post-status'
+                '.editor-post-status, .edit-post-post-status'
             );
             if (!summary) {
                 if (mountedHost && !mountedHost.isConnected) {

@@ -232,6 +232,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         ...nextAttributes,
                     },
                 });
+                window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved', { detail: { codeExampleId: canonicalEntityId } }));
             }
         } catch (err) {
             setAssistanceError(err?.message || __('Unable to generate and save reader assistance.', 'intelligent-code-assistant'));

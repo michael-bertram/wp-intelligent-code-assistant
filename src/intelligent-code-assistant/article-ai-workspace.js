@@ -223,6 +223,7 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         if (!item.codeExampleId) {
             updateBlockAttributes(item.clientId, generated);
             setCanonical((current) => ({ ...current, attributes: { ...(current?.attributes || {}), ...generated } }));
+            window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
             return;
         }
 
@@ -360,6 +361,13 @@ function useArticleCodeStatus() {
     const linkedIds = useMemo(() => [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))], [snippets]);
 
     const linkedIdsKey = linkedIds.join(',');
+    const [refreshVersion, setRefreshVersion] = useState(0);
+
+    useEffect(() => {
+        const refresh = () => setRefreshVersion((version) => version + 1);
+        window.addEventListener('ica:reader-assistance-saved', refresh);
+        return () => window.removeEventListener('ica:reader-assistance-saved', refresh);
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -388,7 +396,7 @@ function useArticleCodeStatus() {
             setLoading(false);
         });
         return () => { active = false; };
-    }, [linkedIdsKey, linkedIds]);
+    }, [linkedIdsKey, linkedIds, refreshVersion]);
 
     const statuses = snippets.map((item) => item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block));
     const ready = statuses.filter((item) => item?.ready).length;

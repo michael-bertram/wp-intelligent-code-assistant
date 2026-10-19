@@ -1029,12 +1029,23 @@
 
 /* Compact, expandable Code Assistant inventory in the native Post summary. */
 .ica-post-summary-host {
+    /* Native post-status wrappers can be horizontal flex rows. Keep Readiness
+     * on its own full-width row instead of squeezing it beside Status. */
+    display: block;
+    flex: 0 0 100%;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    clear: both;
     padding-top: 0;
     margin-top: 12px;
 }
 
 .ica-post-summary {
     display: block;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 
     &__toggle {
         display: flex;
@@ -1042,6 +1053,7 @@
         justify-content: space-between;
         gap: 12px;
         width: 100%;
+        min-width: 0;
         padding: 8px 0;
         border: 0;
         border-bottom: 1px solid #dcdcde;
@@ -1106,6 +1118,28 @@
 
             &:hover, &:focus-visible { text-decoration: underline; }
         }
+    }
+
+    &__label {
+        flex: 0 0 auto;
+        font-size: 13px;
+        font-weight: 400;
+    }
+
+    &__toggle-right {
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        min-width: 0;
+        flex: 0 1 auto;
+        margin-left: auto;
+    }
+
+    &__count {
+        min-width: 0;
+        text-align: right;
+        overflow-wrap: anywhere;
     }
 
     &__state { grid-column: 1; grid-row: 1; }

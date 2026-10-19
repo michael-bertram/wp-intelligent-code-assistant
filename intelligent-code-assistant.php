@@ -1809,3 +1809,115 @@ add_action( 'enqueue_block_editor_assets', function () {
 		true
 	);
 } );
+
+
+/**
+ * Persist generated reader assistance on the canonical Code Snippet.
+ *
+ * The editor's block attributes are stored in the canonical post content.
+ * Updating them through this endpoint avoids relying on the embedding
+ * article's save cycle, which intentionally does not store a second copy.
+ */
+add_action( 'rest_api_init', function () {
+	register_rest_route(
+		'intelligent-code-assistant/v1',
+		'/save-reader-assistance',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'permission_callback' => function ( WP_REST_Request $request ) {
+				$id = absint( $request->get_param( 'codeExampleId' ) );
+				return $id > 0 && 'ica_code_example' === get_post_type( $id ) && current_user_can( 'edit_post', $id );
+			},
+			'args'                => array(
+				'codeExampleId' => array(
+					'required'          => true,
+					'type'              => 'integer',
+					'sanitize_callback' => 'absint',
+				),
+				'generatedExplanation' => array( 'required' => true, 'type' => 'string' ),
+				'generatedLineExplanations' => array( 'required' => true, 'type' => 'object' ),
+				'generatedKnowledgeCheck' => array( 'required' => true, 'type' => 'object' ),
+			),
+			'callback'            => function ( WP_REST_Request $request ) {
+				$id = absint( $request->get_param( 'codeExampleId' ) );
+				$post = get_post( $id );
+				if ( ! $post || 'ica_code_example' !== $post->post_type ) {
+					return new WP_Error( 'invalid_code_example', __( 'A valid Code Snippet ID is required.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+				}
+
+				$explanation = sanitize_textarea_field( (string) $request->get_param( 'generatedExplanation' ) );
+				$raw_lines = $request->get_param( 'generatedLineExplanations' );
+				$raw_check = $request->get_param( 'generatedKnowledgeCheck' );
+				if ( '' === trim( $explanation ) || ! is_array( $raw_lines ) || ! is_array( $raw_check ) ) {
+					return new WP_Error( 'invalid_reader_assistance', __( 'The generated reader assistance payload is incomplete.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+				}
+
+				$line_explanations = array();
+				foreach ( $raw_lines as $line_number => $line_text ) {
+					$line_number = (string) absint( $line_number );
+					$line_text = is_scalar( $line_text ) ? sanitize_textarea_field( (string) $line_text ) : '';
+					if ( '0' !== $line_number && '' !== trim( $line_text ) ) {
+						$line_explanations[ $line_number ] = $line_text;
+					}
+				}
+				$question = isset( $raw_check['question'] ) ? sanitize_text_field( (string) $raw_check['question'] ) : '';
+				$options = isset( $raw_check['options'] ) && is_array( $raw_check['options'] )
+					? array_values( array_slice( array_map( 'sanitize_text_field', $raw_check['options'] ), 0, 3 ) )
+					: array();
+				if ( '' === $question || count( $options ) < 2 || empty( $line_explanations ) ) {
+					return new WP_Error( 'invalid_reader_assistance', __( 'The generated reader assistance payload is incomplete.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+				}
+				$knowledge_check = array(
+					'question'      => $question,
+					'options'       => $options,
+					'correctAnswer' => max( 0, min( count( $options ) - 1, absint( $raw_check['correctAnswer'] ?? 0 ) ) ),
+					'explanation'   => isset( $raw_check['explanation'] ) ? sanitize_textarea_field( (string) $raw_check['explanation'] ) : '',
+				);
+
+				$blocks = parse_blocks( $post->post_content );
+				$updated = false;
+				$update_block = function ( &$items ) use ( &$update_block, &$updated, $explanation, $line_explanations, $knowledge_check ) {
+					foreach ( $items as &$block ) {
+						if ( 'wpe/intelligent-code-assistant' === ( $block['blockName'] ?? '' ) ) {
+							$block['attrs'] = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : array();
+							$block['attrs']['generatedExplanation'] = $explanation;
+							$block['attrs']['generatedLineExplanations'] = $line_explanations;
+							$block['attrs']['generatedKnowledgeCheck'] = $knowledge_check;
+							$block['attrs']['enableAIAssistant'] = true;
+							$updated = true;
+						}
+						if ( ! empty( $block['innerBlocks'] ) ) {
+							$update_block( $block['innerBlocks'] );
+						}
+					}
+					unset( $block );
+				};
+				$update_block( $blocks );
+
+				if ( ! $updated ) {
+					return new WP_Error( 'code_block_not_found', __( 'No Intelligent Code block was found in this Code Snippet.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
+				}
+
+				$result = wp_update_post(
+					array(
+						'ID'           => $id,
+						'post_content' => serialize_blocks( $blocks ),
+					),
+					true
+				);
+				if ( is_wp_error( $result ) ) {
+					return $result;
+				}
+
+				return rest_ensure_response( array(
+					'success'                    => true,
+					'codeExampleId'              => $id,
+					'generatedExplanation'       => $explanation,
+					'generatedLineExplanations'  => $line_explanations,
+					'generatedKnowledgeCheck'    => $knowledge_check,
+					'enableAIAssistant'          => true,
+				) );
+			},
+		)
+	);
+} );

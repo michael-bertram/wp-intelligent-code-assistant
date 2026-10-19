@@ -468,8 +468,10 @@ function ArticlePostSummary() {
     useEffect(() => {
         let mountedHost = null;
         const ensureHost = () => {
-            const summary = document.querySelector('.editor-post-status, .edit-post-post-status');
-            if (!summary) {
+            // Keep Readiness as a sibling row, not nested inside WordPress's Status row.
+            const statusRow = document.querySelector('.editor-post-status, .edit-post-post-status');
+            const rowList = statusRow?.parentElement;
+            if (!statusRow || !rowList) {
                 if (mountedHost && !mountedHost.isConnected) {
                     mountedHost = null;
                     setHost(null);
@@ -477,27 +479,20 @@ function ArticlePostSummary() {
                 return;
             }
             const existingHosts = Array.from(document.querySelectorAll('.ica-post-summary-host'));
-            if (mountedHost?.parentElement === summary) {
+            if (mountedHost?.parentElement === rowList) {
                 existingHosts.forEach((candidate) => {
                     if (candidate !== mountedHost) candidate.remove();
                 });
                 return;
             }
-            const reusableHost = existingHosts.find((candidate) => candidate.parentElement === summary) || null;
+            const reusableHost = existingHosts.find((candidate) => candidate.parentElement === rowList) || null;
             existingHosts.forEach((candidate) => {
                 if (candidate !== reusableHost) candidate.remove();
             });
             mountedHost?.remove();
             mountedHost = reusableHost || document.createElement('div');
             mountedHost.className = 'ica-post-summary-host';
-            
-            // Insert directly before the Publish row if present, otherwise append
-            const publishRow = summary.querySelector('.editor-post-publish-panel, .edit-post-post-schedule');
-            if (publishRow) {
-                summary.insertBefore(mountedHost, publishRow);
-            } else {
-                summary.appendChild(mountedHost);
-            }
+            rowList.insertBefore(mountedHost, statusRow.nextSibling);
             setHost(mountedHost);
         };
         ensureHost();

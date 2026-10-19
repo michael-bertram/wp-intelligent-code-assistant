@@ -47,6 +47,7 @@ function extractCanonicalSnippet(block) {
 
     return {
         block,
+        rawCode: String(rawCode ?? '').replace(/\r/g, ''),
         code: normalizeCodeText(rawCode),
         title: decodeEntities(header?.attributes?.title || attrs.title || attrs.filename || __('Code snippet', 'intelligent-code-assistant')),
         language: attrs.codeLanguage || content?.attributes?.codeLanguage || '',
@@ -153,7 +154,7 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         generatedExplanation: overview?.explanation?.trim() || '',
         generatedLineExplanations: lineExplanations,
         generatedKnowledgeCheck: overview?.knowledgeCheck || {},
-        generatedAssistanceCodeHash: getCodeFingerprint(code),
+        generatedAssistanceCodeHash: getCodeFingerprint(snippet.rawCode),
         enableAIAssistant: true,
     };
 }
@@ -171,8 +172,9 @@ function getAssistanceStatus(block, articleTitle = '') {
     const contextTitle = String(attrs.assistanceContextTitle || '');
     const contextValidated = !articleTitle || (contextTitle && contextTitle === String(articleTitle));
     const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
+    const rawCode = extractCanonicalSnippet(block).rawCode;
     const codeMatches = Boolean(attrs.generatedAssistanceCodeHash)
-        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(codeText);
+        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(rawCode);
     const codeChanged = hasAny && !codeMatches;
     const assistanceReady = explanationReady && linesReady && knowledgeReady && codeMatches;
     const ready = assistanceReady && contextValidated;

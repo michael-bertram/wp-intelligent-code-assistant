@@ -140,13 +140,36 @@
                 attributeFilter: ['class'],
                 subtree: true,
             });
+
+            // A block can save its canonical Code Snippet without triggering a
+            // status-dot mutation. Watch the editor's canonical entity records
+            // and refresh after their saved content changes.
+            let previousSignature = '';
+            let refreshTimer = null;
+            const unsubscribe = wp.data.subscribe(() => {
+                const core = wp.data.select('core');
+                const currentIds = idsKey ? idsKey.split(',').map(Number) : [];
+                const signature = JSON.stringify(currentIds.map((id) => {
+                    const record = core?.getEditedEntityRecord?.('postType', 'ica_code_example', id)
+                        || core?.getEntityRecord?.('postType', 'ica_code_example', id);
+                    return [id, record?.content?.raw || '', record?.content?.rendered || ''];
+                }));
+                if (previousSignature && signature !== previousSignature) {
+                    window.clearTimeout(refreshTimer);
+                    refreshTimer = window.setTimeout(() => refresh(), 800);
+                }
+                previousSignature = signature;
+            });
+
             const handleSaved = () => refresh();
             window.addEventListener('ica:reader-assistance-saved', handleSaved);
             return () => {
                 observer.disconnect();
+                unsubscribe();
+                window.clearTimeout(refreshTimer);
                 window.removeEventListener('ica:reader-assistance-saved', handleSaved);
             };
-        }, [refresh]);
+        }, [refresh, idsKey]);
 
         const generateAll = async () => {
             if (generating) return;

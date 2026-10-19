@@ -74,6 +74,10 @@
     "generatedKnowledgeCheck": {
       "type": "object",
       "default": {}
+    },
+    "assistanceContextTitle": {
+      "type": "string",
+      "default": ""
     }
   },
   "textdomain": "intelligent-code-assistant",

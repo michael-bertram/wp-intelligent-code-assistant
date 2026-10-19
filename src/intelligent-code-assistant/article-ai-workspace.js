@@ -168,8 +168,9 @@ function getAssistanceStatus(block, articleTitle = '') {
             return numbers;
         }, []);
     const storedLineExplanations = attrs.generatedLineExplanations || {};
-    const storedLines = Object.keys(storedLineExplanations).filter(
-        (key) => typeof storedLineExplanations[key] === 'string' && storedLineExplanations[key].trim()
+    // Count only explanations mapped to non-empty lines in the current code.
+    const storedLines = requiredLineNumbers.filter(
+        (lineNumber) => typeof storedLineExplanations[lineNumber] === 'string' && storedLineExplanations[lineNumber].trim()
     ).length;
     const missingLineNumbers = requiredLineNumbers.filter(
         (lineNumber) => !storedLineExplanations[lineNumber]?.trim()
@@ -193,6 +194,7 @@ function getAssistanceStatus(block, articleTitle = '') {
         contextValidated,
         codeMatches,
         codeChanged,
+        generatedAssistanceCodeHash: attrs.generatedAssistanceCodeHash || '',
         assistanceReady,
         storedLines,
         explanationReady,
@@ -448,7 +450,23 @@ function useArticleCodeStatus() {
         const status = item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block);
         const contextTitle = String(item.block?.attributes?.assistanceContextTitle || '');
         const contextValidated = Boolean(contextTitle) && contextTitle === String(tutorialTitle || '');
-        return status ? { ...status, contextValidated, ready: status.ready && contextValidated } : null;
+        // Linked Code Examples can mirror their canonical code in the article editor.
+        // Compare that live source with the hash used to generate assistance so readiness
+        // changes immediately when the code is edited, without waiting for a REST refresh.
+        const articleRawCode = extractCanonicalSnippet(item.block).rawCode;
+        const localCodeChanged = Boolean(
+            item.codeExampleId
+            && articleRawCode.trim()
+            && status?.generatedAssistanceCodeHash
+            && getCodeFingerprint(articleRawCode) !== status.generatedAssistanceCodeHash
+        );
+        return status ? {
+            ...status,
+            codeChanged: status.codeChanged || localCodeChanged,
+            assistanceReady: status.assistanceReady && !localCodeChanged,
+            contextValidated,
+            ready: status.ready && contextValidated && !localCodeChanged,
+        } : null;
     });
     const ready = statuses.filter((item) => item?.ready).length;
     const complete = !loading && ready === snippets.length && snippets.length > 0;
@@ -480,11 +498,21 @@ function ArticlePostSummary() {
                 }
                 return;
             }
-            if (mountedHost?.parentElement === summary) return;
+            const existingHosts = Array.from(document.querySelectorAll('.ica-post-summary-host'));
+            if (mountedHost?.parentElement === summary) {
+                existingHosts.forEach((candidate) => {
+                    if (candidate !== mountedHost) candidate.remove();
+                });
+                return;
+            }
+            const reusableHost = existingHosts.find((candidate) => candidate.parentElement === summary) || null;
+            existingHosts.forEach((candidate) => {
+                if (candidate !== reusableHost) candidate.remove();
+            });
             mountedHost?.remove();
-            mountedHost = document.createElement('div');
+            mountedHost = reusableHost || document.createElement('div');
             mountedHost.className = 'ica-post-summary-host';
-            summary.appendChild(mountedHost);
+            if (!reusableHost) summary.appendChild(mountedHost);
             setHost(mountedHost);
         };
         ensureHost();
@@ -522,17 +550,15 @@ function ArticlePostSummary() {
 
     return createPortal(
         <section className="ica-post-summary" aria-label={__('Code Assistant article summary', 'intelligent-code-assistant')}>
+            <strong className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</strong>
             <button
                 type="button"
                 className="ica-post-summary__toggle"
                 aria-expanded={expanded}
                 onClick={() => setExpanded((previous) => !previous)}
             >
-                <span className="ica-post-summary__heading">
-                    <strong>{__('Readiness', 'intelligent-code-assistant')}</strong>
-                    <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
-                        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('Code Snippets ready', 'intelligent-code-assistant')}`}
-                    </span>
+                <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
+                    {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('Code Snippets ready', 'intelligent-code-assistant')}`}
                 </span>
                 <span className="ica-post-summary__toggle-right">
                     <span aria-hidden="true">{expanded ? '⌃' : '⌄'}</span>

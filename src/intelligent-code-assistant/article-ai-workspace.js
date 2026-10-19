@@ -468,15 +468,15 @@ function ArticlePostSummary() {
     useEffect(() => {
         let mountedHost = null;
         const ensureHost = () => {
-            // Place Readiness in the space previously occupied by the redundant
-            // status message, immediately above WordPress's Move to trash control.
+            // Locate the trash button / container at the bottom of the status panel
             const trashControl = document.querySelector(
                 '.editor-post-trash, .editor-post-trash-button, .edit-post-post-trash'
             );
             const trashRow = trashControl?.closest('.editor-post-trash, .editor-post-trash-button, .edit-post-post-trash')
                 || trashControl;
-            const rowList = trashRow?.parentElement;
-            if (!trashRow || !rowList) {
+            const container = trashRow?.parentElement;
+
+            if (!trashRow || !container) {
                 if (mountedHost && !mountedHost.isConnected) {
                     mountedHost = null;
                     setHost(null);
@@ -484,33 +484,37 @@ function ArticlePostSummary() {
                 return;
             }
 
-            // Remove only the old, exact amber readiness message. Do not touch
-            // unrelated WordPress notices or the expandable Readiness section.
-            rowList.querySelectorAll('p, div, span').forEach((node) => {
-                if (node.classList.contains('ica-post-summary') || node.closest('.ica-post-summary')) return;
+            // Hide any legacy standalone readiness text nodes right above the trash button
+            Array.from(container.children).forEach((node) => {
+                if (node.classList.contains('ica-post-summary-host')) return;
                 const text = (node.textContent || '').trim();
-                if (/^\\d+\\/\\d+ Code Snippets ready$/.test(text) && node.children.length === 0) {
-                    node.remove();
+                if (/^\d+\/\d+ Code Snippets ready$/i.test(text)) {
+                    node.style.display = 'none';
                 }
             });
 
             const existingHosts = Array.from(document.querySelectorAll('.ica-post-summary-host'));
-            if (mountedHost?.parentElement === rowList && mountedHost.nextElementSibling === trashRow) {
+            if (mountedHost?.parentElement === container && mountedHost.nextElementSibling === trashRow) {
                 existingHosts.forEach((candidate) => {
                     if (candidate !== mountedHost) candidate.remove();
                 });
                 return;
             }
-            const reusableHost = existingHosts.find((candidate) => candidate.parentElement === rowList) || null;
+
+            const reusableHost = existingHosts.find((candidate) => candidate.parentElement === container) || null;
             existingHosts.forEach((candidate) => {
                 if (candidate !== reusableHost) candidate.remove();
             });
+
             mountedHost?.remove();
             mountedHost = reusableHost || document.createElement('div');
             mountedHost.className = 'ica-post-summary-host';
-            rowList.insertBefore(mountedHost, trashRow);
+
+            // Insert directly above the trash row
+            container.insertBefore(mountedHost, trashRow);
             setHost(mountedHost);
         };
+
         ensureHost();
         const observer = new MutationObserver(ensureHost);
         observer.observe(document.body, { childList: true, subtree: true });

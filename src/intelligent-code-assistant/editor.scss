@@ -471,138 +471,266 @@
 }
 
 /* ==========================================================================
-   NATIVE POST SIDEBAR INTEGRATION (FIXED ALIGNMENT)
+   BLOCK INSPECTOR CARD STYLES (RESTORED)
    ========================================================================== */
-.ica-post-summary-host {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+.ica-ai-sidebar-summary {
+    padding: 4px 0;
 
-/* Match the label/value columns used by native Post settings rows. */
-.ica-post-summary {
-    display: block;
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-
-    &__toggle {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        align-items: center;
-        gap: 12px;
-        width: 100%;
-        min-width: 0;
-        padding: 12px 0;
-        border: 0;
-        border-bottom: 1px solid #dcdcde;
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        text-align: left;
-        cursor: pointer;
-
-        &:hover {
-            color: var(--wp-admin-theme-color, #3858e9);
-        }
-
-        &:focus-visible {
-            outline: 2px solid var(--wp-admin-theme-color, #3858e9);
-            outline-offset: 2px;
-        }
-    }
-
-    &__label {
-        font-size: 13px;
-        font-weight: 400;
-        color: #1e1e1e;
-        line-height: 1.4;
-    }
-
-    &__toggle-right {
+    &__heading {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 6px;
-        min-width: 0;
-    }
+        gap: 10px;
+        align-items: flex-start;
 
-    &__count {
-        min-width: 0;
-        overflow-wrap: anywhere;
-        font-size: 13px;
-        font-weight: 500;
-        color: #996800;
-        line-height: 1.4;
-
-        &.is-ready {
-            color: #008a20;
-        }
-    }
-
-    &__body {
-        width: 100%;
-        padding: 12px 0;
-    }
-
-    &__links {
-        display: grid;
-        gap: 8px;
-
-        strong {
-            font-size: 11px;
-            letter-spacing: .04em;
+        p {
+            margin: 3px 0 0;
             color: #646970;
-        }
-
-        ul {
-            margin: 0;
-            padding: 0;
-            list-style: none;
-        }
-
-        li {
-            display: grid;
-            grid-template-columns: 16px minmax(0, 1fr);
-            gap: 2px 8px;
-            padding: 6px 0;
-            border-bottom: 1px solid #f0f0f0;
             font-size: 12px;
         }
+    }
 
-        a {
-            color: var(--wp-admin-theme-color, #3858e9);
-            text-decoration: none;
-            overflow-wrap: anywhere;
+    &__mark {
+        display: grid;
+        place-items: center;
+        flex: 0 0 30px;
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        background: #3858e9;
+        color: #fff;
+        font-size: 17px;
+    }
 
-            &:hover, &:focus-visible {
-                text-decoration: underline;
-            }
+    &__counts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 14px 0;
+
+        span {
+            padding: 4px 7px;
+            border-radius: 999px;
+            background: #f0f0f0;
+            color: #50575e;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .is-ready {
+            background: #edfaef;
+            color: #116329;
+        }
+
+        .is-incomplete {
+            background: #fcf0e3;
+            color: #8a4b08;
         }
     }
 
-    &__state {
-        grid-column: 1;
-        grid-row: 1;
+    > .components-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
 
-        &.is-ready { color: #008a20; }
-        &.needs-attention { color: #996800; }
+.ica-block-ai-card {
+    margin: 0 -16px -16px;
+    padding: 16px;
+    border-top: 1px solid #e0e0e0;
+    background: #f6f7f7;
+
+    &__headline {
+        display: flex;
+        gap: 10px;
+
+        p {
+            margin: 3px 0 0;
+            color: #646970;
+            font-size: 12px;
+            line-height: 1.4;
+        }
     }
 
-    &__state-label {
-        grid-column: 2;
-        grid-row: 2;
+    &__mark {
+        display: grid;
+        place-items: center;
+        flex: 0 0 32px;
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: #3858e9;
+        color: #fff;
+        font-size: 18px;
+    }
+
+    &__checks {
+        display: grid;
+        gap: 6px;
+        margin-top: 14px;
+
+        span {
+            padding: 7px 9px;
+            border-radius: 4px;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 600;
+        }
+    }
+
+    &__hint {
+        margin: 12px 0 0;
         color: #646970;
         font-size: 11px;
+        line-height: 1.4;
     }
 
-    &__external {
-        margin-left: 4px;
-        font-size: 10px;
+    &.is-ready {
+        border-left: 3px solid #00a32a;
     }
+
+    &.is-incomplete {
+        border-left: 3px solid #dba617;
+    }
+
+    &.is-unconfigured {
+        border-left: 3px solid #8c8f94;
+    }
+}
+
+/* Visually align header toolbar icon */
+.editor-header__settings > .ica-header-toolbar-host,
+.edit-post-header__settings > .ica-header-toolbar-host {
+    order: -9999;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    margin-right: 6px;
+}
+
+/* ==========================================================================
+   NATIVE POST SIDEBAR INTEGRATION (PLACEMENT ABOVE MOVE TO TRASH)
+   ========================================================================== */
+.ica-post-summary-host {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    margin: 12px 0 8px 0 !important;
+    padding: 0 !important;
+}
+
+.ica-post-summary {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.ica-post-summary__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 0;
+    border: 0;
+    border-top: 1px solid #dcdcde;
+    border-bottom: 1px solid #dcdcde;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--wp-admin-theme-color, #3858e9);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+        outline-offset: 2px;
+    }
+}
+
+.ica-post-summary__label {
+    font-size: 13px;
+    font-weight: 400;
+    color: #1e1e1e;
+    line-height: 1.4;
+}
+
+.ica-post-summary__toggle-right {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ica-post-summary__count {
+    font-size: 13px;
+    font-weight: 500;
+    color: #996800;
+    line-height: 1.4;
+
+    &.is-ready {
+        color: #008a20;
+    }
+}
+
+.ica-post-summary__body {
+    width: 100%;
+    padding: 12px 0;
+}
+
+.ica-post-summary__links {
+    display: grid;
+    gap: 8px;
+
+    strong {
+        font-size: 11px;
+        letter-spacing: .04em;
+        color: #646970;
+    }
+
+    ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    li {
+        display: grid;
+        grid-template-columns: 16px minmax(0, 1fr);
+        gap: 2px 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 12px;
+    }
+
+    a {
+        color: var(--wp-admin-theme-color, #3858e9);
+        text-decoration: none;
+        overflow-wrap: anywhere;
+
+        &:hover, &:focus-visible {
+            text-decoration: underline;
+        }
+    }
+}
+
+.ica-post-summary__state {
+    grid-column: 1;
+    grid-row: 1;
+
+    &.is-ready { color: #008a20; }
+    &.needs-attention { color: #996800; }
+}
+
+.ica-post-summary__state-label {
+    grid-column: 2;
+    grid-row: 2;
+    color: #646970;
+    font-size: 11px;
+}
+
+.ica-post-summary__external {
+    margin-left: 4px;
+    font-size: 10px;
 }
 
 /* Header Toolbar SlotFill Styles */

@@ -67,7 +67,6 @@ function getCode(block) {
     return extractCanonicalSnippet(block).code;
 }
 
-// Fingerprint assistance against the exact normalized source code.
 function getCodeFingerprint(code = '') {
     let hash = 0x811c9dc5;
     for (let index = 0; index < code.length; index += 1) {
@@ -96,6 +95,12 @@ async function runAbility(slug, data) {
             data,
         });
     }
+}
+
+function sprintfSafe(template, value) {
+    const values = String(value).split('|');
+    let index = 0;
+    return template.replace(/%\d+\$[ds]/g, () => String(values[index++] ?? values[values.length - 1] ?? ''));
 }
 
 async function generateAssistance(block, tutorialTitle, onProgress) {
@@ -129,8 +134,7 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         const last = Math.min(offset + batch.length, expectedLines.length);
         onProgress?.(
             sprintfSafe(
-                // translators: 1: The current line range; 2: The total number of lines.
-                __('Generating line explanations %1$s of %2$s…', 'intelligent-code-assistant'),
+                __('Generating line explanations %1$s of \%2$s…', 'intelligent-code-assistant'),
                 `${first}–${last}|${expectedLines.length}`
             )
         );
@@ -168,7 +172,6 @@ function getAssistanceStatus(block, articleTitle = '') {
             return numbers;
         }, []);
     const storedLineExplanations = attrs.generatedLineExplanations || {};
-    // Count only explanations mapped to non-empty lines in the current code.
     const storedLines = requiredLineNumbers.filter(
         (lineNumber) => typeof storedLineExplanations[lineNumber] === 'string' && storedLineExplanations[lineNumber].trim()
     ).length;
@@ -216,12 +219,6 @@ function Status({ block }) {
             <span>{status.knowledgeReady ? '✓' : '—'} {__('Knowledge check', 'intelligent-code-assistant')}</span>
         </div>
     );
-}
-
-function sprintfSafe(template, value) {
-    const values = String(value).split('|');
-    let index = 0;
-    return template.replace(/%\d+\$[ds]/g, () => String(values[index++] ?? values[values.length - 1] ?? ''));
 }
 
 function SnippetCard({ item, tutorialTitle, onChanged }) {
@@ -292,7 +289,6 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         try {
             const generated = await generateAssistance(canonical, tutorialTitle, setProgress);
             await saveGenerated(generated);
-            // Context validation belongs to this article's block instance, not the shared snippet.
             updateBlockAttributes(item.clientId, { assistanceContextTitle: String(tutorialTitle || '') });
             window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
             onChanged?.();
@@ -304,7 +300,6 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         }
     };
 
-    // The single toolbar overview can request generation from every mounted card.
     useEffect(() => {
         const handleGenerateAll = () => {
             const contextValidated = Boolean(item.block?.attributes?.assistanceContextTitle)
@@ -392,11 +387,6 @@ function ArticleAIWorkspace() {
     );
 }
 
-
-/**
- * Resolve linked Code Examples once for both the Post summary and toolbar.
- * A linked reference is not necessarily complete: inspect its canonical record.
- */
 function useArticleCodeStatus() {
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
     const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
@@ -450,9 +440,6 @@ function useArticleCodeStatus() {
         const status = item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block);
         const contextTitle = String(item.block?.attributes?.assistanceContextTitle || '');
         const contextValidated = Boolean(contextTitle) && contextTitle === String(tutorialTitle || '');
-        // Linked Code Examples can mirror their canonical code in the article editor.
-        // Compare that live source with the hash used to generate assistance so readiness
-        // changes immediately when the code is edited, without waiting for a REST refresh.
         const articleRawCode = extractCanonicalSnippet(item.block).rawCode;
         const localCodeChanged = Boolean(
             item.codeExampleId
@@ -473,11 +460,6 @@ function useArticleCodeStatus() {
     return { snippets, linked, loading, ready, complete, statuses };
 }
 
-/**
- * Add the assistant overview inside the native Post summary where available.
- * Only our own portal host is managed by React. If WordPress changes the
- * summary markup, the toolbar remains available without a duplicate panel.
- */
 function ArticlePostSummary() {
     const { snippets, linked, loading, ready, statuses } = useArticleCodeStatus();
     const [host, setHost] = useState(null);
@@ -486,11 +468,7 @@ function ArticlePostSummary() {
     useEffect(() => {
         let mountedHost = null;
         const ensureHost = () => {
-            // Mount in WordPress's native post-status area above "Move to Trash".
-            // Do not fall back to the summary panel: that places a duplicate row below the actions.
-            const summary = document.querySelector(
-                '.editor-post-status, .edit-post-post-status'
-            );
+            const summary = document.querySelector('.editor-post-status, .edit-post-post-status');
             if (!summary) {
                 if (mountedHost && !mountedHost.isConnected) {
                     mountedHost = null;
@@ -512,7 +490,14 @@ function ArticlePostSummary() {
             mountedHost?.remove();
             mountedHost = reusableHost || document.createElement('div');
             mountedHost.className = 'ica-post-summary-host';
-            if (!reusableHost) summary.appendChild(mountedHost);
+            
+            // Insert directly before the Publish row if present, otherwise append
+            const publishRow = summary.querySelector('.editor-post-publish-panel, .edit-post-post-schedule');
+            if (publishRow) {
+                summary.insertBefore(mountedHost, publishRow);
+            } else {
+                summary.appendChild(mountedHost);
+            }
             setHost(mountedHost);
         };
         ensureHost();
@@ -526,8 +511,6 @@ function ArticlePostSummary() {
 
     if (!host || !snippets.length) return null;
 
-    // Show every block instance, not just unique linked records: local and linked
-    // snippets each have their own article-context validation state.
     const articleItems = snippets.map((item, index) => ({
         ...item,
         status: statuses[index],
@@ -535,9 +518,8 @@ function ArticlePostSummary() {
             ? (linked[item.codeExampleId]?.title || `#${item.codeExampleId}`)
             : getTitle(item.block),
     }));
+
     const editUrl = (id) => {
-        // WordPress exposes the correct admin directory via ajaxurl, including
-        // subdirectory installations. Fall back to the current editor directory.
         const adminBase = typeof window.ajaxurl === 'string' && window.ajaxurl
             ? window.ajaxurl
             : window.location.href;
@@ -556,10 +538,10 @@ function ArticlePostSummary() {
                 aria-expanded={expanded}
                 onClick={() => setExpanded((previous) => !previous)}
             >
-                <strong className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</strong>
+                <span className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</span>
                 <span className="ica-post-summary__toggle-right">
                     <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
-                        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('Code Snippets ready', 'intelligent-code-assistant')}`}
+                        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('ready', 'intelligent-code-assistant')}`}
                     </span>
                     <span aria-hidden="true">{expanded ? '⌃' : '⌄'}</span>
                 </span>
@@ -611,7 +593,6 @@ function ArticlePostSummary() {
     );
 }
 
-/** The header icon is a status overview; only its explicit action opens the workspace. */
 function CodeAssistantToolbar() {
     const { snippets, loading, ready, complete, statuses } = useArticleCodeStatus();
     const [toolbarHost, setToolbarHost] = useState(null);

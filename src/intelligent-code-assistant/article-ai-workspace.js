@@ -487,7 +487,6 @@ function ArticlePostSummary() {
 
     // Show every block instance, not just unique linked records: local and linked
     // snippets each have their own article-context validation state.
-    const linkedItems = snippets.filter((item) => item.codeExampleId);
     const articleItems = snippets.map((item, index) => ({
         ...item,
         status: statuses[index],

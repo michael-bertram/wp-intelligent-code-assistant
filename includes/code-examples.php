@@ -350,6 +350,7 @@ add_action(
 					'generatedExplanation'    => array( 'required' => true, 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field' ),
 					'generatedLineExplanations' => array( 'required' => true, 'type' => 'object' ),
 					'generatedKnowledgeCheck'  => array( 'required' => true, 'type' => 'object' ),
+					'generatedAssistanceCodeHash' => array( 'required' => true, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ),
 				),
 				'callback'            => function ( WP_REST_Request $request ) {
 					$id   = absint( $request->get_param( 'codeExampleId' ) );
@@ -385,6 +386,7 @@ add_action(
 						$block['attrs']['generatedExplanation']      = sanitize_textarea_field( $request->get_param( 'generatedExplanation' ) );
 						$block['attrs']['generatedLineExplanations'] = $clean_lines;
 						$block['attrs']['generatedKnowledgeCheck']   = $clean_check;
+						$block['attrs']['generatedAssistanceCodeHash'] = sanitize_text_field( $request->get_param( 'generatedAssistanceCodeHash' ) );
 						$block['attrs']['enableAIAssistant']        = true;
 						$found = true;
 						break;

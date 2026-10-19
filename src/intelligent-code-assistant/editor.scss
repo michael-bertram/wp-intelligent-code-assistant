@@ -926,9 +926,9 @@
 
 /* Article assistance belongs to the native Post summary, not a second panel. */
 .ica-post-summary-host {
-    padding: 16px 0 4px;
-    margin-top: 12px;
-    border-top: 1px solid #e0e0e0;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #dcdcde;
 }
 
 .ica-post-summary {
@@ -938,6 +938,27 @@
 
     p { margin: 0; }
     .is-ready { color: #008a20; font-weight: 600; }
+
+    &__toggle {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover { color: #1d2327; }
+        &:focus-visible {
+            outline: 2px solid #2271b1;
+            outline-offset: 2px;
+        }
+    }
 
     &__heading {
         display: flex;

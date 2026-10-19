@@ -468,18 +468,34 @@ function ArticlePostSummary() {
     useEffect(() => {
         let mountedHost = null;
         const ensureHost = () => {
-            // Keep Readiness as a sibling row, not nested inside WordPress's Status row.
-            const statusRow = document.querySelector('.editor-post-status, .edit-post-post-status');
-            const rowList = statusRow?.parentElement;
-            if (!statusRow || !rowList) {
+            // Place Readiness in the space previously occupied by the redundant
+            // status message, immediately above WordPress's Move to trash control.
+            const trashControl = document.querySelector(
+                '.editor-post-trash, .editor-post-trash-button, .edit-post-post-trash'
+            );
+            const trashRow = trashControl?.closest('.editor-post-trash, .editor-post-trash-button, .edit-post-post-trash')
+                || trashControl;
+            const rowList = trashRow?.parentElement;
+            if (!trashRow || !rowList) {
                 if (mountedHost && !mountedHost.isConnected) {
                     mountedHost = null;
                     setHost(null);
                 }
                 return;
             }
+
+            // Remove only the old, exact amber readiness message. Do not touch
+            // unrelated WordPress notices or the expandable Readiness section.
+            rowList.querySelectorAll('p, div, span').forEach((node) => {
+                if (node.classList.contains('ica-post-summary') || node.closest('.ica-post-summary')) return;
+                const text = (node.textContent || '').trim();
+                if (/^\\d+\\/\\d+ Code Snippets ready$/.test(text) && node.children.length === 0) {
+                    node.remove();
+                }
+            });
+
             const existingHosts = Array.from(document.querySelectorAll('.ica-post-summary-host'));
-            if (mountedHost?.parentElement === rowList) {
+            if (mountedHost?.parentElement === rowList && mountedHost.nextElementSibling === trashRow) {
                 existingHosts.forEach((candidate) => {
                     if (candidate !== mountedHost) candidate.remove();
                 });
@@ -492,7 +508,7 @@ function ArticlePostSummary() {
             mountedHost?.remove();
             mountedHost = reusableHost || document.createElement('div');
             mountedHost.className = 'ica-post-summary-host';
-            rowList.insertBefore(mountedHost, statusRow.nextSibling);
+            rowList.insertBefore(mountedHost, trashRow);
             setHost(mountedHost);
         };
         ensureHost();

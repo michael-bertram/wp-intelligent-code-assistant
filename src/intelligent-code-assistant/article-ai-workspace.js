@@ -22,13 +22,15 @@ function decodeEntities(value = '') {
 }
 
 function normalizeCodeText(value = '') {
-    const raw = String(value)
+    // Handle legacy RichText wrappers without stripping literal HTML source code.
+    const raw = String(value ?? '')
         .replace(/<br\s*\/?\s*>/gi, '\n')
-        .replace(/<\/p>\s*<p[^>]*>/gi, '\n');
-    return decodeEntities(raw)
-        .replace(/<[^>]+>/g, '')
+        .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
+        .replace(/^<p(?:\s[^>]*)?>/i, '')
+        .replace(/<\/p>$/i, '')
         .replace(/\u00a0/g, ' ')
         .replace(/\r/g, '');
+    return decodeEntities(raw);
 }
 
 function getInnerBlock(block, name) {
@@ -103,7 +105,7 @@ function sprintfSafe(template, value) {
     return template.replace(/%\d+\$[ds]/g, () => String(values[index++] ?? values[values.length - 1] ?? ''));
 }
 
-async function generateAssistance(block, tutorialTitle, onProgress) {
+async function generateAssistance(block, tutorialTitle, onProgress, preserveExisting = true) {
     const code = getCode(block);
     if (!code.trim()) throw new Error(__('This snippet has no code to analyse.', 'intelligent-code-assistant'));
 
@@ -117,25 +119,40 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         tutorialTitle,
         tutorialContext: attrs.tutorialContextOverride || '',
     };
-    const expectedLines = code.replace(/\r/g, '').split('\n')
+    const expectedLines = code.split('\n')
         .reduce((numbers, line, index) => {
             if (line.trim()) numbers.push(index + 1);
             return numbers;
         }, []);
+    const attrs = block.attributes || {};
+    const existingLines = attrs.generatedLineExplanations || {};
+    const codeMatches = Boolean(attrs.generatedAssistanceCodeHash)
+        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(code);
+    const keepOverview = preserveExisting && codeMatches
+        && Boolean(attrs.generatedExplanation?.trim())
+        && Boolean(attrs.generatedKnowledgeCheck?.question);
+    const lineExplanations = codeMatches ? { ...existingLines } : {};
+    const linesToGenerate = keepOverview
+        ? expectedLines.filter((lineNumber) => !lineExplanations[String(lineNumber)]?.trim())
+        : expectedLines;
 
-    onProgress?.(__('Generating explanation and knowledge check…', 'intelligent-code-assistant'));
-    const overview = await runAbility('generate-reader-overview', payload);
+    let overview = null;
+    if (!keepOverview) {
+        onProgress?.(__('Refreshing explanation and knowledge check…', 'intelligent-code-assistant'));
+        overview = await runAbility('generate-reader-overview', payload);
+    } else {
+        onProgress?.(__('Checking line explanations…', 'intelligent-code-assistant'));
+    }
 
-    const lineExplanations = {};
     const batchSize = 40;
-    for (let offset = 0; offset < expectedLines.length; offset += batchSize) {
-        const batch = expectedLines.slice(offset, offset + batchSize);
+    for (let offset = 0; offset < linesToGenerate.length; offset += batchSize) {
+        const batch = linesToGenerate.slice(offset, offset + batchSize);
         const first = offset + 1;
-        const last = Math.min(offset + batch.length, expectedLines.length);
+        const last = Math.min(offset + batch.length, linesToGenerate.length);
         onProgress?.(
             sprintfSafe(
-                __('Generating line explanations %1$s of \%2$s…', 'intelligent-code-assistant'),
-                `${first}–${last}|${expectedLines.length}`
+                __('Generating line explanations %1$s of %2$s…', 'intelligent-code-assistant'),
+                `${first}–${last}|${linesToGenerate.length}`
             )
         );
         const result = await runAbility('generate-line-explanations-batch', {
@@ -154,11 +171,15 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         );
     }
 
+    const currentLineKeys = new Set(expectedLines.map(String));
+    const currentLineExplanations = Object.fromEntries(
+        Object.entries(lineExplanations).filter(([lineNumber]) => currentLineKeys.has(lineNumber))
+    );
     return {
-        generatedExplanation: overview?.explanation?.trim() || '',
-        generatedLineExplanations: lineExplanations,
-        generatedKnowledgeCheck: overview?.knowledgeCheck || {},
-        generatedAssistanceCodeHash: getCodeFingerprint(snippet.rawCode),
+        generatedExplanation: overview?.explanation?.trim() || attrs.generatedExplanation || '',
+        generatedLineExplanations: currentLineExplanations,
+        generatedKnowledgeCheck: overview?.knowledgeCheck || attrs.generatedKnowledgeCheck || {},
+        generatedAssistanceCodeHash: getCodeFingerprint(code),
         enableAIAssistant: true,
     };
 }
@@ -185,9 +206,8 @@ function getAssistanceStatus(block, articleTitle = '') {
     const contextTitle = String(attrs.assistanceContextTitle || '');
     const contextValidated = !articleTitle || (contextTitle && contextTitle === String(articleTitle));
     const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
-    const rawCode = extractCanonicalSnippet(block).rawCode;
     const codeMatches = Boolean(attrs.generatedAssistanceCodeHash)
-        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(rawCode);
+        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(codeText);
     const codeChanged = hasAny && !codeMatches;
     const assistanceReady = explanationReady && linesReady && knowledgeReady && codeMatches;
     const ready = assistanceReady && contextValidated;
@@ -305,7 +325,7 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
         setError('');
         setProgress(__('Preparing assistance…', 'intelligent-code-assistant'));
         try {
-            const generated = await generateAssistance(canonical, tutorialTitle, setProgress);
+            const generated = await generateAssistance(canonical, tutorialTitle, setProgress, articleContextValidated);
             await saveGenerated(generated);
             updateBlockAttributes(item.clientId, {
                 assistanceContextTitle: String(tutorialTitle || ''),
@@ -424,6 +444,7 @@ function useArticleCodeStatus() {
     const linkedIds = useMemo(() => [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))], [snippets]);
 
     const linkedIdsKey = linkedIds.join(',');
+    const localCodeSignature = snippets.map((item) => `${item.clientId}:${getCode(item.block)}`).join('|');
     const [refreshVersion, setRefreshVersion] = useState(0);
 
     useEffect(() => {
@@ -459,7 +480,7 @@ function useArticleCodeStatus() {
             setLoading(false);
         });
         return () => { active = false; };
-    }, [linkedIdsKey, linkedIds, refreshVersion]);
+    }, [linkedIdsKey, linkedIds, refreshVersion, localCodeSignature]);
 
     const statuses = snippets.map((item) => {
         const status = item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block);
@@ -470,7 +491,7 @@ function useArticleCodeStatus() {
             item.codeExampleId
             && articleRawCode.trim()
             && status?.generatedAssistanceCodeHash
-            && getCodeFingerprint(articleRawCode) !== status.generatedAssistanceCodeHash
+            && getCodeFingerprint(normalizeCodeText(articleRawCode)) !== status.generatedAssistanceCodeHash
         );
         return status ? {
             ...status,

@@ -2,8 +2,8 @@ import { __ } from '@wordpress/i18n';
 import { useBlockProps, InnerBlocks, InspectorControls, BlockControls } from '@wordpress/block-editor';
 import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl, ToolbarButton } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
-import { serialize } from '@wordpress/blocks';
-import { useContext, useState } from '@wordpress/element';
+import { parse, serialize } from '@wordpress/blocks';
+import { useContext, useEffect, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import CodeExampleChooser from './CodeExampleChooser';
 import CanonicalCodeExampleEditor from './CanonicalCodeExampleEditor';
@@ -40,6 +40,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     const [conversionError, setConversionError] = useState('');
     const [isGeneratingAssistance, setIsGeneratingAssistance] = useState(false);
     const [assistanceError, setAssistanceError] = useState('');
+    const [linkedCanonical, setLinkedCanonical] = useState(null);
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
     const { saveEntityRecord } = useDispatch('core');
@@ -84,6 +85,37 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLocalBlockStructure;
     const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;
     const isLegacyStandalone = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && hasLocalBlockStructure;
+
+    useEffect(() => {
+        let active = true;
+        if (!isLinkedReference || !Number(codeExampleId || 0)) {
+            setLinkedCanonical(null);
+            return () => { active = false; };
+        }
+
+        apiFetch({ path: `/wp/v2/ica_code_example/${Number(codeExampleId)}?context=edit` })
+            .then((record) => {
+                const roots = parse(record?.content?.raw || '');
+                const findSnippet = (blocks) => {
+                    for (const candidate of blocks || []) {
+                        if (candidate.name === 'wpe/intelligent-code-assistant') {
+                            const contentBlock = (candidate.innerBlocks || []).find((inner) => inner.name === 'wpe/code-content');
+                            const code = contentBlock?.attributes?.code ?? contentBlock?.attributes?.content ?? '';
+                            if (code) return { block: candidate, code: normalizeCodeText(code) };
+                        }
+                        const nested = findSnippet(candidate.innerBlocks);
+                        if (nested) return nested;
+                    }
+                    return null;
+                };
+                if (active) setLinkedCanonical(findSnippet(roots));
+            })
+            .catch(() => {
+                if (active) setLinkedCanonical(null);
+            });
+
+        return () => { active = false; };
+    }, [isLinkedReference, codeExampleId]);
 
     // The canonical Code Example post owns the full ICA block and its children.
     // It must remain unlinked internally (codeExampleId = 0), otherwise save.js

@@ -1,4 +1,4 @@
-import { useBlockProps, RichText } from '@wordpress/block-editor';
+import { useBlockProps, PlainText } from '@wordpress/block-editor';
 import { __ } from '@wordpress/i18n';
 import { useDispatch, useSelect } from '@wordpress/data';
 
@@ -40,13 +40,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
     return (
         <div {...blockProps}>
-            <RichText
-                tagName="pre"
+            <PlainText
                 value={codeValue}
                 onChange={(value) => setAttributes({ code: value, content: value })}
                 placeholder={__('Add code here...', 'intelligent-code-assistant')}
-                allowedFormats={[]}
-            />
+                className="code-content-editor__textarea"
+/>
         </div>
     );
 }

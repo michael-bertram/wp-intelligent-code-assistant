@@ -99,21 +99,25 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
         const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
             && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
-        if (!isLegacyRichText) {
-            if (typeof document === 'undefined' || !/[&](?:lt|gt|quot|apos|amp|#\d+|#x[\da-f]+);/i.test(raw)) return raw;
+        const decodeEntities = (text) => {
+            if (typeof document === 'undefined' || !/[&](?:lt|gt|quot|apos|amp|#\d+|#x[\da-f]+);/i.test(text)) return text;
             const textarea = document.createElement('textarea');
-            textarea.innerHTML = raw;
-            return textarea.value;
-        }
+            let decoded = text;
+            for (let pass = 0; pass < 2; pass += 1) {
+                textarea.innerHTML = decoded;
+                const next = textarea.value;
+                if (next === decoded) break;
+                decoded = next;
+            }
+            return decoded;
+        };
+        if (!isLegacyRichText) return decodeEntities(raw);
         const text = raw
             .replace(/<br\s*\/?\s*>/gi, '\n')
             .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
             .replace(/^<p(?:\s[^>]*)?>/i, '')
             .replace(/<\/p>$/i, '');
-        if (typeof document === 'undefined') return text;
-        const textarea = document.createElement('textarea');
-        textarea.innerHTML = text;
-        return textarea.value;
+        return decodeEntities(text);
     };
 
     const cleanCodeText = normalizeCodeText(cleanRawText);

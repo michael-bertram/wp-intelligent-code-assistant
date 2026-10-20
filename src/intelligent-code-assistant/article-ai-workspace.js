@@ -244,9 +244,11 @@ function Status({ block, contextValidated = true }) {
             </span>
             <span>{status.knowledgeReady ? '✓' : '—'} {__('Knowledge check', 'intelligent-code-assistant')}</span>
             <span className={status.codeMatches ? 'is-ready' : 'needs-attention'}>
-                {status.codeMatches ? '✓' : '⚠'} {status.codeMatches
-                    ? __('Code matches saved explanations', 'intelligent-code-assistant')
-                    : __('Code changed — regenerate explanations', 'intelligent-code-assistant')}
+                {status.codeMatches ? '✓' : '⚠'} {status.ready && contextValidated
+                    ? __('Verified for this article', 'intelligent-code-assistant')
+                    : status.codeMatches
+                        ? __('Code matches saved explanations', 'intelligent-code-assistant')
+                        : __('Explanations need updating', 'intelligent-code-assistant')}
             </span>
             {!contextValidated && (
                 <span className="ica-ai-workspace__context-status needs-attention">
@@ -638,7 +640,7 @@ function ArticlePostSummary() {
                                             ? __('Complete for this article', 'intelligent-code-assistant')
                                             : status
                                                 ? (status.codeChanged
-                                                    ? __('Code changed — regenerate explanations', 'intelligent-code-assistant')
+                                                    ? __('Explanations need updating', 'intelligent-code-assistant')
                                                     : status.assistanceReady
                                                         ? __('Needs article-context validation', 'intelligent-code-assistant')
                                                         : __('Needs explanations', 'intelligent-code-assistant'))

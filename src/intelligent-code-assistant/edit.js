@@ -95,13 +95,21 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     }
 
     // Preserve source-code characters while normalising legacy RichText wrappers.
-    const normalizeCodeText = (value = '') => String(value ?? '')
-        .replace(/<br\s*\/?\s*>/gi, '\n')
-        .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
-        .replace(/^<p(?:\s[^>]*)?>/i, '')
-        .replace(/<\/p>$/i, '')
-        .replace(/\u00a0/g, ' ')
-        .replace(/\r/g, '');
+    const normalizeCodeText = (value = '') => {
+        const raw = String(value ?? '')
+            .replace(/<br\s*\/?\s*>/gi, '\n')
+            .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
+            .replace(/^<p(?:\s[^>]*)?>/i, '')
+            .replace(/<\/p>$/i, '')
+            .replace(/\u00a0/g, ' ')
+            .replace(/\r/g, '');
+        if (typeof document === 'undefined' || !/[&](?:lt|gt|quot|apos|amp|#\d+|#x[\da-f]+);/i.test(raw)) {
+            return raw;
+        }
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = raw;
+        return textarea.value;
+    };
 
     const cleanCodeText = normalizeCodeText(cleanRawText);
     const characterCount = cleanCodeText.length;

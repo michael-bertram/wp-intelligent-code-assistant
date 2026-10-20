@@ -94,7 +94,17 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         setAttributes({ codeExampleId: 0 });
     }
 
-    const characterCount = cleanRawText.replace(/\r/g, '').length;
+    // Preserve source-code characters while normalising legacy RichText wrappers.
+    const normalizeCodeText = (value = '') => String(value ?? '')
+        .replace(/<br\s*\/?\s*>/gi, '\n')
+        .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
+        .replace(/^<p(?:\s[^>]*)?>/i, '')
+        .replace(/<\/p>$/i, '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\r/g, '');
+
+    const cleanCodeText = normalizeCodeText(cleanRawText);
+    const characterCount = cleanCodeText.length;
     const getCodeFingerprint = (code = '') => {
         let hash = 0x811c9dc5;
         for (let index = 0; index < code.length; index += 1) {
@@ -137,7 +147,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     };
 
     const handleAutoFill = async () => {
-        if (!cleanRawText || !cleanRawText.trim()) {
+        if (!cleanCodeText || !cleanCodeText.trim()) {
             setAiError(__('Please enter some code into the block first.', 'intelligent-code-assistant'));
             return;
         }
@@ -146,13 +156,13 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         try {
             let response;
             try {
-                response = await apiFetch({ path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run', method: 'POST', data: { code: cleanRawText } });
+                response = await apiFetch({ path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run', method: 'POST', data: { code: cleanCodeText } });
             } catch (routeErr) {
                 if (routeErr.code === 'rest_no_route' || routeErr.status === 404) {
                     response = await apiFetch({ path: '/intelligent-code-assistant/v1/auto-fill-metadata', method: 'POST', data: { code: cleanRawText } });
                 } else throw routeErr;
             }
-            const detectedLanguage = detectCodeLanguage(cleanRawText);
+            const detectedLanguage = detectCodeLanguage(cleanCodeText);
             const responseLanguage = response.codeLanguage || '';
             setAttributes({
                 codeLanguage: detectedLanguage || (responseLanguage !== 'PHP' ? responseLanguage : ''),
@@ -385,7 +395,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                                 </div>
                             );
                         }
-                        const requiredLineNumbers = cleanRawText.replace(/\r/g, '').split('\n')
+                        const requiredLineNumbers = cleanCodeText.split('\n')
                             .reduce((numbers, line, index) => {
                                 if (line.trim()) numbers.push(String(index + 1));
                                 return numbers;
@@ -400,7 +410,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         const linesReady = expectedLines > 0 && storedLines === expectedLines;
                         const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
                         const codeMatches = Boolean(attributes.generatedAssistanceCodeHash)
-                            && attributes.generatedAssistanceCodeHash === getCodeFingerprint(cleanRawText.replace(/\r/g, ''));
+                            && attributes.generatedAssistanceCodeHash === getCodeFingerprint(cleanCodeText);
                         const codeChanged = hasAny && !codeMatches;
                         const assistanceReady = explanationReady && linesReady && knowledgeReady && codeMatches;
                         const contextValidated = !isLinkedReference || (
@@ -464,7 +474,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         <div className="panel-content-flex-wrapper">
                             {showLineNumbers && (
                                 <div className="line-numbers-gutter" aria-hidden="true">
-                                    {cleanRawText.split('\n').map((_, index) => <span key={index} className={isLineHighlighted(index + 1, highlightLines) ? 'is-highlighted' : ''}>{index + 1}</span>)}
+                                    {cleanCodeText.split('\n').map((_, index) => <span key={index} className={isLineHighlighted(index + 1, highlightLines) ? 'is-highlighted' : ''}>{index + 1}</span>)}
                                 </div>
                             )}
                             <div className="editor-inner-blocks-wrapper">

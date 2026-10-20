@@ -198,8 +198,9 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         setIsGeneratingAssistance(true);
         setAssistanceError('');
 
+        const normalizedCode = cleanCodeText;
         const base = {
-            code: cleanRawText,
+            code: normalizedCode,
             language: codeLanguage || 'code',
             filename: filename || '',
             title: headerTitle || '',
@@ -224,7 +225,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             // Keep overview generation separate from bounded line batches so
             // larger snippets do not exceed the AI provider's request limits.
             const overview = await runRoute('generate-reader-overview', 'generate-reader-overview', base);
-            const lines = cleanRawText.replace(/\r/g, '').split('\n');
+            const lines = normalizedCode.split('\n');
             const requiredLines = lines
                 .map((line, index) => line.trim() ? index + 1 : null)
                 .filter(Boolean);
@@ -243,7 +244,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 generatedExplanation: overview?.explanation?.trim() || '',
                 generatedLineExplanations: lineExplanations,
                 generatedKnowledgeCheck: overview?.knowledgeCheck || {},
-                generatedAssistanceCodeHash: getCodeFingerprint(cleanRawText.replace(/\r/g, '')),
+                generatedAssistanceCodeHash: getCodeFingerprint(normalizedCode),
                 enableAIAssistant: true,
             };
 

@@ -243,6 +243,11 @@ function Status({ block, contextValidated = true }) {
                 {status.linesReady ? '✓' : (status.storedLines ? '⚠' : '—')} {__('Explain This Line', 'intelligent-code-assistant')} · {status.storedLines}/{status.expectedLines}
             </span>
             <span>{status.knowledgeReady ? '✓' : '—'} {__('Knowledge check', 'intelligent-code-assistant')}</span>
+            <span className={status.codeMatches ? 'is-ready' : 'needs-attention'}>
+                {status.codeMatches ? '✓' : '⚠'} {status.codeMatches
+                    ? __('Code matches saved assistance', 'intelligent-code-assistant')
+                    : __('Code changed — regenerate assistance', 'intelligent-code-assistant')}
+            </span>
             {!contextValidated && (
                 <span className="ica-ai-workspace__context-status needs-attention">
                     ⚠ {__('Article context not validated', 'intelligent-code-assistant')}
@@ -301,11 +306,20 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
             },
         });
 
-        setCanonical((current) => ({
-            ...current,
-            attributes: { ...(current?.attributes || {}), ...generated },
+        // Re-read the saved canonical record instead of treating the optimistic
+        // client state as proof that the server persisted every assistance field.
+        // This keeps the modal, post summary, and linked block sidebar in agreement.
+        const savedRecord = await apiFetch({
+            path: `/wp/v2/ica_code_example/${item.codeExampleId}?context=edit`,
+        });
+        const savedCanonical = flattenBlocks(parse(savedRecord?.content?.raw || ''))[0] || null;
+        if (!savedCanonical) {
+            throw new Error(__('Assistance was submitted, but the saved Code Snippet could not be reloaded for verification.', 'intelligent-code-assistant'));
+        }
+        setCanonical(savedCanonical);
+        window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved', {
+            detail: { codeExampleId: item.codeExampleId },
         }));
-        window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
     };
 
     const articleContextValidated = item.codeExampleId > 0

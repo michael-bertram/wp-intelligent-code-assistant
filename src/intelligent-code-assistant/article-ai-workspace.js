@@ -496,9 +496,16 @@ function useArticleCodeStatus() {
         const status = item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block);
         const contextValidated = Number(item.block?.attributes?.assistanceContextPostId || 0) === Number(tutorialPostId || 0)
             && Number(tutorialPostId || 0) > 0;
-        const articleRawCode = extractCanonicalSnippet(item.block).rawCode;
+        // Linked references normally contain no code of their own. Only compare
+        // an article-local code fingerprint when the block really has local code
+        // content; otherwise canonical saved code is the single source of truth.
+        const hasArticleLocalCode = (item.block.innerBlocks || []).some(
+            (innerBlock) => innerBlock.name === 'wpe/code-content'
+        );
+        const articleRawCode = hasArticleLocalCode ? extractCanonicalSnippet(item.block).rawCode : '';
         const localCodeChanged = Boolean(
             item.codeExampleId
+            && hasArticleLocalCode
             && articleRawCode.trim()
             && status?.generatedAssistanceCodeHash
             && getCodeFingerprint(normalizeCodeText(articleRawCode)) !== status.generatedAssistanceCodeHash

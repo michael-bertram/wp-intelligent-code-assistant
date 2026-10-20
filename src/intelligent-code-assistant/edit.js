@@ -363,6 +363,22 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 )}
                 <PanelBody title={__('✦ Code Assistant', 'intelligent-code-assistant')} initialOpen={true}>
                     {(() => {
+                        // Linked article references intentionally do not contain the
+                        // canonical code or its generated assistance. Do not mark them
+                        // stale based on an empty local code string.
+                        if (isLinkedReference && !cleanRawText.trim()) {
+                            return (
+                                <div className="ica-block-ai-card is-ready">
+                                    <div className="ica-block-ai-card__headline">
+                                        <span className="ica-block-ai-card__mark">✦</span>
+                                        <div>
+                                            <strong>{__('Assistance managed by reusable Code Snippet', 'intelligent-code-assistant')}</strong>
+                                            <p>{__('The saved assistance belongs to the linked Code Snippet. Check its status in the article Code Assistant; opening this post will not regenerate it.', 'intelligent-code-assistant')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
                         const requiredLineNumbers = cleanRawText.replace(/\r/g, '').split('\n')
                             .reduce((numbers, line, index) => {
                                 if (line.trim()) numbers.push(String(index + 1));

@@ -208,8 +208,18 @@ function getAssistanceStatus(block, articleTitle = '') {
     };
 }
 
-function Status({ block }) {
-    const status = getAssistanceStatus(block);
+function Status({ block, contextValidated = true }) {
+    const assistance = getAssistanceStatus(block);
+    const status = {
+        ...assistance,
+        contextValidated,
+        ready: assistance.ready && contextValidated,
+        state: assistance.ready && contextValidated
+            ? 'ready'
+            : (assistance.explanationReady || assistance.storedLines > 0 || assistance.knowledgeReady
+                ? 'incomplete'
+                : 'not-configured'),
+    };
     return (
         <div className={`ica-ai-workspace__status is-${status.state}`}>
             <span>{status.explanationReady ? '✓' : '—'} {__('Explanation', 'intelligent-code-assistant')}</span>
@@ -217,6 +227,11 @@ function Status({ block }) {
                 {status.linesReady ? '✓' : (status.storedLines ? '⚠' : '—')} {__('Explain This Line', 'intelligent-code-assistant')} · {status.storedLines}/{status.expectedLines}
             </span>
             <span>{status.knowledgeReady ? '✓' : '—'} {__('Knowledge check', 'intelligent-code-assistant')}</span>
+            {!contextValidated && (
+                <span className="ica-ai-workspace__context-status needs-attention">
+                    ⚠ {__('Article context not validated', 'intelligent-code-assistant')}
+                </span>
+            )}
         </div>
     );
 }
@@ -277,9 +292,12 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
         window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
     };
 
+    const articleContextValidated = item.codeExampleId > 0
+        ? Number(item.block?.attributes?.assistanceContextPostId || 0) === Number(tutorialPostId || 0)
+            && Number(tutorialPostId || 0) > 0
+        : true;
     const assistanceStatus = canonical ? getAssistanceStatus(canonical) : null;
-    const articleContextValidated = Number(item.block?.attributes?.assistanceContextPostId || 0) === Number(tutorialPostId || 0)
-        && Number(tutorialPostId || 0) > 0;
+    const readyForThisArticle = Boolean(assistanceStatus?.ready && articleContextValidated);
 
     const handleGenerate = async () => {
         if (!canonical || generating) return;
@@ -326,7 +344,7 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
                     {__('Show in article', 'intelligent-code-assistant')}
                 </Button>
             </div>
-            {loading ? <Spinner /> : canonical && <Status block={canonical} />}
+            {loading ? <Spinner /> : canonical && <Status block={canonical} contextValidated={item.codeExampleId > 0 ? articleContextValidated : true} />}
             {item.codeExampleId > 0 && !articleContextValidated && (
                 <Notice status="warning" isDismissible={false}>
                     {__('Saved assistance has not been validated for this article context yet.', 'intelligent-code-assistant')}
@@ -337,8 +355,10 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
             <Button variant="primary" disabled={loading || !canonical || generating} isBusy={generating} onClick={handleGenerate}>
                 {generating
                     ? __('Generating…', 'intelligent-code-assistant')
-                    : (assistanceStatus && !assistanceStatus.ready && (assistanceStatus.explanationReady || assistanceStatus.storedLines > 0 || assistanceStatus.knowledgeReady)
-                        ? __('Complete assistance', 'intelligent-code-assistant')
+                    : (assistanceStatus && !readyForThisArticle && (assistanceStatus.explanationReady || assistanceStatus.storedLines > 0 || assistanceStatus.knowledgeReady)
+                        ? (assistanceStatus.ready && !articleContextValidated
+                            ? __('Validate article context', 'intelligent-code-assistant')
+                            : __('Complete assistance', 'intelligent-code-assistant'))
                         : (canonical?.attributes?.generatedExplanation
                             ? __('Regenerate assistance', 'intelligent-code-assistant')
                             : __('Generate assistance', 'intelligent-code-assistant')))}

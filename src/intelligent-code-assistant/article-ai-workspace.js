@@ -127,7 +127,6 @@ async function generateAssistance(block, tutorialTitle, onProgress, preserveExis
             if (line.trim()) numbers.push(index + 1);
             return numbers;
         }, []);
-    const attrs = block.attributes || {};
     const existingLines = attrs.generatedLineExplanations || {};
     const codeMatches = Boolean(attrs.generatedAssistanceCodeHash)
         && attrs.generatedAssistanceCodeHash === getCodeFingerprint(code);

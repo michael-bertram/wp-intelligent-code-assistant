@@ -2,8 +2,8 @@ import { __ } from '@wordpress/i18n';
 import { useBlockProps, InnerBlocks, InspectorControls, BlockControls } from '@wordpress/block-editor';
 import { PanelBody, ToggleControl, SelectControl, Button, Spinner, TextControl, TextareaControl, ToolbarButton } from '@wordpress/components';
 import { useSelect, useDispatch } from '@wordpress/data';
-import { serialize } from '@wordpress/blocks';
-import { useContext, useState } from '@wordpress/element';
+import { parse, serialize } from '@wordpress/blocks';
+import { useContext, useEffect, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import CodeExampleChooser from './CodeExampleChooser';
 import CanonicalCodeExampleEditor from './CanonicalCodeExampleEditor';
@@ -40,17 +40,19 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     const [conversionError, setConversionError] = useState('');
     const [isGeneratingAssistance, setIsGeneratingAssistance] = useState(false);
     const [assistanceError, setAssistanceError] = useState('');
+    const [linkedCanonical, setLinkedCanonical] = useState(null);
 
     const { updateBlockAttributes } = useDispatch('core/block-editor');
     const { saveEntityRecord } = useDispatch('core');
 
-    const { cleanRawText, hasLocalBlockStructure, headerBlockId, headerTitle, tutorialTitle, derivedTutorialContext, currentPostType, blockForConversion } = useSelect((select) => {
+    const { cleanRawText, hasLocalBlockStructure, headerBlockId, headerTitle, tutorialTitle, derivedTutorialContext, currentPostType, currentPostId, blockForConversion } = useSelect((select) => {
         const block = select('core/block-editor').getBlock(clientId);
         const headerBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-header');
         const contentBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-content');
         const rawText = contentBlock?.attributes?.code ?? contentBlock?.attributes?.content ?? '';
         const postTitle = select('core/editor')?.getEditedPostAttribute?.('title') || '';
         const postType = select('core/editor')?.getCurrentPostType?.() || '';
+        const postId = Number(select('core/editor')?.getCurrentPostId?.() || 0);
 
         const rootBlocks = select('core/block-editor').getBlocks();
         let contextResult = '';
@@ -74,6 +76,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             tutorialTitle: postTitle,
             derivedTutorialContext: contextResult,
             currentPostType: postType,
+            currentPostId: postId,
             blockForConversion: block || null,
         };
     }, [clientId]);
@@ -83,16 +86,65 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;
     const isLegacyStandalone = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && hasLocalBlockStructure;
 
-    // The canonical Code Example post owns the full ICA block and its children.
-    // It must remain unlinked internally (codeExampleId = 0), otherwise save.js
-    // treats it like an article reference and intentionally omits InnerBlocks.
-    // Older canonical posts may still contain their own post ID from the earlier
-    // implementation, so normalize those records as soon as they are edited.
-    if (currentPostType === 'ica_code_example' && Number(codeExampleId || 0) !== 0) {
-        setAttributes({ codeExampleId: 0 });
-    }
+    useEffect(() => {
+        let active = true;
+        if (!isLinkedReference || !Number(codeExampleId || 0)) {
+            setLinkedCanonical(null);
+            return () => { active = false; };
+        }
 
-    const characterCount = cleanRawText.replace(/\r/g, '').length;
+        const loadCanonical = () => {
+            apiFetch({ path: `/wp/v2/ica_code_example/${Number(codeExampleId)}?context=edit` })
+                .then((record) => {
+                    const roots = parse(record?.content?.raw || '');
+                    const findSnippet = (blocks) => {
+                        for (const candidate of blocks || []) {
+                            if (candidate.name === 'wpe/intelligent-code-assistant') {
+                                const contentBlock = (candidate.innerBlocks || []).find((inner) => inner.name === 'wpe/code-content');
+                                const code = contentBlock?.attributes?.code ?? contentBlock?.attributes?.content ?? '';
+                                if (code) return { block: candidate, code: normalizeCodeText(code) };
+                            }
+                            const nested = findSnippet(candidate.innerBlocks);
+                            if (nested) return nested;
+                        }
+                        return null;
+                    };
+                    if (active) setLinkedCanonical(findSnippet(roots));
+                })
+                .catch(() => {
+                    if (active) setLinkedCanonical(null);
+                });
+        };
+
+        loadCanonical();
+        window.addEventListener('ica:reader-assistance-saved', loadCanonical);
+        return () => {
+            active = false;
+            window.removeEventListener('ica:reader-assistance-saved', loadCanonical);
+        };
+    }, [isLinkedReference, codeExampleId]);
+    // Preserve source-code characters while normalising legacy RichText wrappers.
+    const normalizeCodeText = (value = '') => {
+        const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
+        const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
+            && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
+        const decodeEntities = (text) => {
+            if (typeof document === 'undefined' || !/[&](?:lt|gt|quot|apos|amp|#\d+|#x[\da-f]+);/i.test(text)) return text;
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = text;
+            return textarea.value;
+        };
+        if (!isLegacyRichText) return decodeEntities(raw);
+        const text = raw
+            .replace(/<br\s*\/?\s*>/gi, '\n')
+            .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
+            .replace(/^<p(?:\s[^>]*)?>/i, '')
+            .replace(/<\/p>$/i, '');
+        return decodeEntities(text);
+    };
+
+    const cleanCodeText = normalizeCodeText(cleanRawText);
+    const characterCount = cleanCodeText.length;
     const getCodeFingerprint = (code = '') => {
         let hash = 0x811c9dc5;
         for (let index = 0; index < code.length; index += 1) {
@@ -135,7 +187,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     };
 
     const handleAutoFill = async () => {
-        if (!cleanRawText || !cleanRawText.trim()) {
+        if (!cleanCodeText || !cleanCodeText.trim()) {
             setAiError(__('Please enter some code into the block first.', 'intelligent-code-assistant'));
             return;
         }
@@ -144,13 +196,13 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         try {
             let response;
             try {
-                response = await apiFetch({ path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run', method: 'POST', data: { code: cleanRawText } });
+                response = await apiFetch({ path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run', method: 'POST', data: { code: cleanCodeText } });
             } catch (routeErr) {
                 if (routeErr.code === 'rest_no_route' || routeErr.status === 404) {
-                    response = await apiFetch({ path: '/intelligent-code-assistant/v1/auto-fill-metadata', method: 'POST', data: { code: cleanRawText } });
+                    response = await apiFetch({ path: '/intelligent-code-assistant/v1/auto-fill-metadata', method: 'POST', data: { code: cleanCodeText } });
                 } else throw routeErr;
             }
-            const detectedLanguage = detectCodeLanguage(cleanRawText);
+            const detectedLanguage = detectCodeLanguage(cleanCodeText);
             const responseLanguage = response.codeLanguage || '';
             setAttributes({
                 codeLanguage: detectedLanguage || (responseLanguage !== 'PHP' ? responseLanguage : ''),
@@ -173,8 +225,9 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         setIsGeneratingAssistance(true);
         setAssistanceError('');
 
+        const normalizedCode = cleanCodeText;
         const base = {
-            code: cleanRawText,
+            code: normalizedCode,
             language: codeLanguage || 'code',
             filename: filename || '',
             title: headerTitle || '',
@@ -199,7 +252,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             // Keep overview generation separate from bounded line batches so
             // larger snippets do not exceed the AI provider's request limits.
             const overview = await runRoute('generate-reader-overview', 'generate-reader-overview', base);
-            const lines = cleanRawText.replace(/\r/g, '').split('\n');
+            const lines = normalizedCode.split('\n');
             const requiredLines = lines
                 .map((line, index) => line.trim() ? index + 1 : null)
                 .filter(Boolean);
@@ -218,7 +271,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 generatedExplanation: overview?.explanation?.trim() || '',
                 generatedLineExplanations: lineExplanations,
                 generatedKnowledgeCheck: overview?.knowledgeCheck || {},
-                generatedAssistanceCodeHash: getCodeFingerprint(cleanRawText.replace(/\r/g, '')),
+                generatedAssistanceCodeHash: getCodeFingerprint(normalizedCode),
                 enableAIAssistant: true,
             };
 
@@ -227,7 +280,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 !requiredLines.every((line) => typeof lineExplanations[String(line)] === 'string' && lineExplanations[String(line)].trim()) ||
                 !nextAttributes.generatedKnowledgeCheck?.question
             ) {
-                throw new Error(__('The AI response was incomplete. No generated assistance was saved.', 'intelligent-code-assistant'));
+                throw new Error(__('The AI response was incomplete. No explanations were saved.', 'intelligent-code-assistant'));
             }
 
             setAttributes(nextAttributes);
@@ -244,7 +297,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved', { detail: { codeExampleId: canonicalEntityId } }));
             }
         } catch (err) {
-            setAssistanceError(err?.message || __('Unable to generate and save reader assistance.', 'intelligent-code-assistant'));
+            setAssistanceError(err?.message || __('Unable to generate and save explanations.', 'intelligent-code-assistant'));
         } finally {
             setIsGeneratingAssistance(false);
         }
@@ -363,37 +416,75 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 )}
                 <PanelBody title={__('✦ Code Assistant', 'intelligent-code-assistant')} initialOpen={true}>
                     {(() => {
-                        const requiredLineNumbers = cleanRawText.replace(/\r/g, '').split('\n')
+                        // Linked article references intentionally do not contain the
+                        // canonical code or its generated assistance. Do not mark them
+                        // stale based on an empty local code string.
+                        if (isLinkedReference && !linkedCanonical?.code?.trim()) {
+                            const contextValidated = Number(attributes.assistanceContextPostId || 0) === Number(currentPostId || 0)
+                                && Number(currentPostId || 0) > 0;
+                            return (
+                                <div className="ica-block-ai-card is-incomplete">
+                                    <div className="ica-block-ai-card__headline">
+                                        <span className="ica-block-ai-card__mark">✦</span>
+                                        <div>
+                                            <strong>{contextValidated ? __('Not ready for readers', 'intelligent-code-assistant') : __('Context validation required', 'intelligent-code-assistant')}</strong>
+                                            <p>{contextValidated
+                                                ? __('The reusable Code Snippet content is not available in this block yet, so readiness cannot be confirmed. Check the article Code Assistant summary.', 'intelligent-code-assistant')
+                                                : __('The saved explanations have not been verified for this article. Use the article Code Assistant to verify them.', 'intelligent-code-assistant')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        const statusCode = isLinkedReference ? linkedCanonical.code : cleanCodeText;
+                        const statusAttributes = isLinkedReference ? linkedCanonical.block.attributes || {} : attributes;
+                        const statusLines = statusCode.split('\n');
+                        const requiredLineNumbers = statusLines
                             .reduce((numbers, line, index) => {
                                 if (line.trim()) numbers.push(String(index + 1));
                                 return numbers;
                             }, []);
                         const expectedLines = requiredLineNumbers.length;
+                        const statusLineExplanations = statusAttributes.generatedLineExplanations || {};
                         const storedLines = requiredLineNumbers.filter(
-                            (lineNumber) => typeof generatedLineExplanations?.[lineNumber] === 'string'
-                                && generatedLineExplanations[lineNumber].trim()
+                            (lineNumber) => typeof statusLineExplanations[lineNumber] === 'string'
+                                && statusLineExplanations[lineNumber].trim()
                         ).length;
-                        const explanationReady = Boolean(generatedExplanation?.trim());
-                        const knowledgeReady = Boolean(generatedKnowledgeCheck?.question);
+                        const statusExplanation = statusAttributes.generatedExplanation;
+                        const statusKnowledgeCheck = statusAttributes.generatedKnowledgeCheck || {};
+                        const explanationReady = Boolean(statusExplanation?.trim());
+                        const knowledgeReady = Boolean(statusKnowledgeCheck.question);
                         const linesReady = expectedLines > 0 && storedLines === expectedLines;
                         const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
-                        const codeMatches = Boolean(attributes.generatedAssistanceCodeHash)
-                            && attributes.generatedAssistanceCodeHash === getCodeFingerprint(cleanRawText.replace(/\r/g, ''));
+                        const codeMatches = Boolean(statusAttributes.generatedAssistanceCodeHash)
+                            && statusAttributes.generatedAssistanceCodeHash === getCodeFingerprint(statusCode);
                         const codeChanged = hasAny && !codeMatches;
-                        const ready = explanationReady && linesReady && knowledgeReady && codeMatches;
+                        const assistanceReady = explanationReady && linesReady && knowledgeReady && codeMatches;
+                        const contextValidated = !isLinkedReference || (
+                            Number(attributes.assistanceContextPostId || 0) === Number(currentPostId || 0)
+                            && Number(currentPostId || 0) > 0
+                        );
+                        const ready = assistanceReady && contextValidated;
                         return (
                             <div className={`ica-block-ai-card ${ready ? 'is-ready' : (hasAny ? 'is-incomplete' : 'is-unconfigured')}`}>
                                 <div className="ica-block-ai-card__headline">
                                     <span className="ica-block-ai-card__mark">✦</span>
                                     <div>
-                                        <strong>{ready ? __('Ready for readers', 'intelligent-code-assistant') : (codeChanged ? __('Code changed — regenerate assistance', 'intelligent-code-assistant') : (hasAny ? __('Assistance incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant')))}</strong>
-                                        <p>{__('Manage generated reader assistance from the article Code Assistant.', 'intelligent-code-assistant')}</p>
+                                        <strong>{ready ? __('Verified for this article', 'intelligent-code-assistant') : (!contextValidated ? __('Context validation required', 'intelligent-code-assistant') : (codeChanged ? __('Explanations need updating', 'intelligent-code-assistant') : (hasAny ? __('Explanations incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant'))))}</strong>
+                                        <p>{!contextValidated
+                                            ? __('The explanations must be verified for this article before they are ready for readers.', 'intelligent-code-assistant')
+                                            : __('Manage generated explanations from the article Code Assistant.', 'intelligent-code-assistant')}</p>
                                     </div>
                                 </div>
                                 <div className="ica-block-ai-card__checks">
                                     <span>{explanationReady ? '✓' : '—'} {__('Explain Code', 'intelligent-code-assistant')}</span>
                                     <span>{linesReady ? '✓' : (storedLines ? '⚠' : '—')} {__('Explain This Line', 'intelligent-code-assistant')} · {storedLines}/{expectedLines}</span>
                                     <span>{knowledgeReady ? '✓' : '—'} {__('Knowledge Check', 'intelligent-code-assistant')}</span>
+                                    <span className={codeMatches ? 'is-ready' : 'needs-attention'}>
+                                        {codeMatches ? '✓' : '⚠'} {codeMatches
+                                            ? __('Code matches saved explanations', 'intelligent-code-assistant')
+                                            : __('Explanations need updating', 'intelligent-code-assistant')}
+                                    </span>
                                 </div>
                                 <p className="ica-block-ai-card__hint">
                                     {__('Use the Code Assistant icon in the editor toolbar or the Post sidebar to configure this snippet.', 'intelligent-code-assistant')}
@@ -435,7 +526,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         <div className="panel-content-flex-wrapper">
                             {showLineNumbers && (
                                 <div className="line-numbers-gutter" aria-hidden="true">
-                                    {cleanRawText.split('\n').map((_, index) => <span key={index} className={isLineHighlighted(index + 1, highlightLines) ? 'is-highlighted' : ''}>{index + 1}</span>)}
+                                    {cleanCodeText.split('\n').map((_, index) => <span key={index} className={isLineHighlighted(index + 1, highlightLines) ? 'is-highlighted' : ''}>{index + 1}</span>)}
                                 </div>
                             )}
                             <div className="editor-inner-blocks-wrapper">

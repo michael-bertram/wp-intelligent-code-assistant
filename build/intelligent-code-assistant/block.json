@@ -82,6 +82,10 @@
     "assistanceContextTitle": {
       "type": "string",
       "default": ""
+    },
+    "assistanceContextPostId": {
+      "type": "integer",
+      "default": 0
     }
   },
   "textdomain": "intelligent-code-assistant",

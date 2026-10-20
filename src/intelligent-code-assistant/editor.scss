@@ -124,6 +124,31 @@
    BACKEND EDITOR PANEL EXCLUSIVE SEAMLESS LAYOUTS
    ========================================================================== */
 .wp-block-wpe-intelligent-code-assistant-editor {
+    .plain-code-editor,
+    .plain-code-editor textarea,
+    .code-content-editor__textarea {
+        white-space: pre !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
+    }
+
+    .code-content-editor__textarea {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 180px;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: inherit;
+        font-family: 'Fira Code', Consolas, Monaco, monospace;
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: auto;
+        resize: vertical;
+    }
+
     position: relative !important; 
     box-sizing: border-box;
     width: 100%;
@@ -437,6 +462,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     margin-top: 18px;
+    margin-bottom: 12px;
 
     span {
         padding: 10px 12px;
@@ -577,7 +603,7 @@
     }
 
     &__hint {
-        margin: 12px 0 0;
+        margin: 18px 0 0!important;
         color: #646970;
         font-size: 11px;
         line-height: 1.4;
@@ -613,7 +639,7 @@
     grid-column: 1 / -1 !important;
     width: 100% !important;
     box-sizing: border-box;
-    margin: 12px 0 8px 0 !important;
+    margin: 0px 0 8px 0 !important;
     padding: 0 !important;
 }
 
@@ -623,19 +649,30 @@
     width: 100%;
 }
 
-.ica-post-summary__toggle {
+.ica-post-summary-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 8px 0;
+    padding: 0;
+}
+
+.ica-post-summary-row__right {
+    display: flex;
+    align-items: left;
+    width: 145px;
+    padding: 0;
+}
+
+.ica-post-summary__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
     border: 0;
-    border-top: 1px solid #dcdcde;
-    border-bottom: 1px solid #dcdcde;
-    background: transparent;
-    color: inherit;
+    background-color:#ddf1ff;
+    border-radius:20px;
     font: inherit;
-    text-align: left;
     cursor: pointer;
 
     &:hover {
@@ -648,21 +685,36 @@
     }
 }
 
+.ica-post-summary__chevron {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    transition: transform 0.15s ease-in-out;
+}
+
+/* Smoothly flip the exact same chevron without layout shifts */
+.ica-post-summary__chevron.is-expanded {
+    transform: rotate(-180deg);
+}
+
 .ica-post-summary__label {
     font-size: 13px;
     font-weight: 400;
     color: #1e1e1e;
     line-height: 1.4;
+    width:94px;
 }
 
 .ica-post-summary__toggle-right {
     display: inline-flex;
-    align-items: center;
+    align-items: start;
+    width:145px;
     gap: 6px;
 }
 
 .ica-post-summary__count {
     font-size: 13px;
+    padding-left:12px;
     font-weight: 500;
     color: #996800;
     line-height: 1.4;
@@ -672,9 +724,15 @@
     }
 }
 
+.ica-post-summary__icon {
+    width: 20px;
+    padding: 0;
+}
+
 .ica-post-summary__body {
     width: 100%;
     padding: 12px 0;
+    margin-top:15px;
 }
 
 .ica-post-summary__links {
@@ -701,6 +759,10 @@
         border-bottom: 1px solid #f0f0f0;
         font-size: 12px;
     }
+
+    li:last-child {
+    border-bottom: none;
+} 
 
     a {
         color: var(--wp-admin-theme-color, #3858e9);

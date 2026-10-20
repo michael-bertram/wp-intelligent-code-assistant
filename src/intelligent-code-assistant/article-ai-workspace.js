@@ -11,24 +11,23 @@ const BLOCK_NAME = 'wpe/intelligent-code-assistant';
 function decodeEntities(value = '') {
     if (typeof document === 'undefined') return String(value);
     const textarea = document.createElement('textarea');
-    let decoded = String(value);
-    for (let pass = 0; pass < 2; pass += 1) {
-        textarea.innerHTML = decoded;
-        const next = textarea.value;
-        if (next === decoded) break;
-        decoded = next;
-    }
-    return decoded;
+    textarea.innerHTML = String(value);
+    return textarea.value;
 }
 
 function normalizeCodeText(value = '') {
-    const raw = String(value)
+    const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
+    // Convert only recognizable legacy RichText wrappers. Leave literal HTML
+    // source code untouched when it is already plain text in the editor.
+    const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
+        && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
+    if (!isLegacyRichText) return decodeEntities(raw);
+    const text = raw
         .replace(/<br\s*\/?\s*>/gi, '\n')
-        .replace(/<\/p>\s*<p[^>]*>/gi, '\n');
-    return decodeEntities(raw)
-        .replace(/<[^>]+>/g, '')
-        .replace(/\u00a0/g, ' ')
-        .replace(/\r/g, '');
+        .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
+        .replace(/^<p(?:\s[^>]*)?>/i, '')
+        .replace(/<\/p>$/i, '');
+    return decodeEntities(text);
 }
 
 function getInnerBlock(block, name) {
@@ -103,7 +102,7 @@ function sprintfSafe(template, value) {
     return template.replace(/%\d+\$[ds]/g, () => String(values[index++] ?? values[values.length - 1] ?? ''));
 }
 
-async function generateAssistance(block, tutorialTitle, onProgress) {
+async function generateAssistance(block, tutorialTitle, onProgress, preserveExisting = true) {
     const code = getCode(block);
     if (!code.trim()) throw new Error(__('This snippet has no code to analyse.', 'intelligent-code-assistant'));
 
@@ -117,25 +116,39 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         tutorialTitle,
         tutorialContext: attrs.tutorialContextOverride || '',
     };
-    const expectedLines = code.replace(/\r/g, '').split('\n')
+    const expectedLines = code.split('\n')
         .reduce((numbers, line, index) => {
             if (line.trim()) numbers.push(index + 1);
             return numbers;
         }, []);
+    const existingLines = attrs.generatedLineExplanations || {};
+    const codeMatches = Boolean(attrs.generatedAssistanceCodeHash)
+        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(code);
+    const keepOverview = preserveExisting && codeMatches
+        && Boolean(attrs.generatedExplanation?.trim())
+        && Boolean(attrs.generatedKnowledgeCheck?.question);
+    const lineExplanations = codeMatches ? { ...existingLines } : {};
+    const linesToGenerate = keepOverview
+        ? expectedLines.filter((lineNumber) => !lineExplanations[String(lineNumber)]?.trim())
+        : expectedLines;
 
-    onProgress?.(__('Generating explanation and knowledge check…', 'intelligent-code-assistant'));
-    const overview = await runAbility('generate-reader-overview', payload);
+    let overview = null;
+    if (!keepOverview) {
+        onProgress?.(__('Refreshing explanation and knowledge check…', 'intelligent-code-assistant'));
+        overview = await runAbility('generate-reader-overview', payload);
+    } else {
+        onProgress?.(__('Checking line explanations…', 'intelligent-code-assistant'));
+    }
 
-    const lineExplanations = {};
     const batchSize = 40;
-    for (let offset = 0; offset < expectedLines.length; offset += batchSize) {
-        const batch = expectedLines.slice(offset, offset + batchSize);
+    for (let offset = 0; offset < linesToGenerate.length; offset += batchSize) {
+        const batch = linesToGenerate.slice(offset, offset + batchSize);
         const first = offset + 1;
-        const last = Math.min(offset + batch.length, expectedLines.length);
+        const last = Math.min(offset + batch.length, linesToGenerate.length);
         onProgress?.(
             sprintfSafe(
-                __('Generating line explanations %1$s of \%2$s…', 'intelligent-code-assistant'),
-                `${first}–${last}|${expectedLines.length}`
+                __('Generating line explanations %1$s of %2$s…', 'intelligent-code-assistant'),
+                `${first}–${last}|${linesToGenerate.length}`
             )
         );
         const result = await runAbility('generate-line-explanations-batch', {
@@ -154,11 +167,15 @@ async function generateAssistance(block, tutorialTitle, onProgress) {
         );
     }
 
+    const currentLineKeys = new Set(expectedLines.map(String));
+    const currentLineExplanations = Object.fromEntries(
+        Object.entries(lineExplanations).filter(([lineNumber]) => currentLineKeys.has(lineNumber))
+    );
     return {
-        generatedExplanation: overview?.explanation?.trim() || '',
-        generatedLineExplanations: lineExplanations,
-        generatedKnowledgeCheck: overview?.knowledgeCheck || {},
-        generatedAssistanceCodeHash: getCodeFingerprint(snippet.rawCode),
+        generatedExplanation: overview?.explanation?.trim() || attrs.generatedExplanation || '',
+        generatedLineExplanations: currentLineExplanations,
+        generatedKnowledgeCheck: overview?.knowledgeCheck || attrs.generatedKnowledgeCheck || {},
+        generatedAssistanceCodeHash: getCodeFingerprint(code),
         enableAIAssistant: true,
     };
 }
@@ -185,9 +202,8 @@ function getAssistanceStatus(block, articleTitle = '') {
     const contextTitle = String(attrs.assistanceContextTitle || '');
     const contextValidated = !articleTitle || (contextTitle && contextTitle === String(articleTitle));
     const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
-    const rawCode = extractCanonicalSnippet(block).rawCode;
     const codeMatches = Boolean(attrs.generatedAssistanceCodeHash)
-        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(rawCode);
+        && attrs.generatedAssistanceCodeHash === getCodeFingerprint(codeText);
     const codeChanged = hasAny && !codeMatches;
     const assistanceReady = explanationReady && linesReady && knowledgeReady && codeMatches;
     const ready = assistanceReady && contextValidated;
@@ -208,8 +224,18 @@ function getAssistanceStatus(block, articleTitle = '') {
     };
 }
 
-function Status({ block }) {
-    const status = getAssistanceStatus(block);
+function Status({ block, contextValidated = true }) {
+    const assistance = getAssistanceStatus(block);
+    const status = {
+        ...assistance,
+        contextValidated,
+        ready: assistance.ready && contextValidated,
+        state: assistance.ready && contextValidated
+            ? 'ready'
+            : (assistance.explanationReady || assistance.storedLines > 0 || assistance.knowledgeReady
+                ? 'incomplete'
+                : 'not-configured'),
+    };
     return (
         <div className={`ica-ai-workspace__status is-${status.state}`}>
             <span>{status.explanationReady ? '✓' : '—'} {__('Explanation', 'intelligent-code-assistant')}</span>
@@ -217,11 +243,21 @@ function Status({ block }) {
                 {status.linesReady ? '✓' : (status.storedLines ? '⚠' : '—')} {__('Explain This Line', 'intelligent-code-assistant')} · {status.storedLines}/{status.expectedLines}
             </span>
             <span>{status.knowledgeReady ? '✓' : '—'} {__('Knowledge check', 'intelligent-code-assistant')}</span>
+            <span className={status.codeMatches ? 'is-ready' : 'needs-attention'}>
+                {status.codeMatches ? '✓' : '⚠'} {status.codeMatches
+                    ? __('Code matches saved assistance', 'intelligent-code-assistant')
+                    : __('Code changed — regenerate assistance', 'intelligent-code-assistant')}
+            </span>
+            {!contextValidated && (
+                <span className="ica-ai-workspace__context-status needs-attention">
+                    ⚠ {__('Article context not validated', 'intelligent-code-assistant')}
+                </span>
+            )}
         </div>
     );
 }
 
-function SnippetCard({ item, tutorialTitle, onChanged }) {
+function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
     const [canonical, setCanonical] = useState(null);
     const [loading, setLoading] = useState(Boolean(item.codeExampleId));
     const [generating, setGenerating] = useState(false);
@@ -270,16 +306,28 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
             },
         });
 
-        setCanonical((current) => ({
-            ...current,
-            attributes: { ...(current?.attributes || {}), ...generated },
+        // Re-read the saved canonical record instead of treating the optimistic
+        // client state as proof that the server persisted every assistance field.
+        // This keeps the modal, post summary, and linked block sidebar in agreement.
+        const savedRecord = await apiFetch({
+            path: `/wp/v2/ica_code_example/${item.codeExampleId}?context=edit`,
+        });
+        const savedCanonical = flattenBlocks(parse(savedRecord?.content?.raw || ''))[0] || null;
+        if (!savedCanonical) {
+            throw new Error(__('Assistance was submitted, but the saved Code Snippet could not be reloaded for verification.', 'intelligent-code-assistant'));
+        }
+        setCanonical(savedCanonical);
+        window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved', {
+            detail: { codeExampleId: item.codeExampleId },
         }));
-        window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
     };
 
+    const articleContextValidated = item.codeExampleId > 0
+        ? Number(item.block?.attributes?.assistanceContextPostId || 0) === Number(tutorialPostId || 0)
+            && Number(tutorialPostId || 0) > 0
+        : true;
     const assistanceStatus = canonical ? getAssistanceStatus(canonical) : null;
-    const articleContextValidated = Boolean(item.block?.attributes?.assistanceContextTitle)
-        && item.block.attributes.assistanceContextTitle === String(tutorialTitle || '');
+    const readyForThisArticle = Boolean(assistanceStatus?.ready && articleContextValidated);
 
     const handleGenerate = async () => {
         if (!canonical || generating) return;
@@ -287,9 +335,12 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         setError('');
         setProgress(__('Preparing assistance…', 'intelligent-code-assistant'));
         try {
-            const generated = await generateAssistance(canonical, tutorialTitle, setProgress);
+            const generated = await generateAssistance(canonical, tutorialTitle, setProgress, articleContextValidated);
             await saveGenerated(generated);
-            updateBlockAttributes(item.clientId, { assistanceContextTitle: String(tutorialTitle || '') });
+            updateBlockAttributes(item.clientId, {
+                assistanceContextTitle: String(tutorialTitle || ''),
+                assistanceContextPostId: Number(tutorialPostId || 0),
+            });
             window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
             onChanged?.();
         } catch (err) {
@@ -302,15 +353,15 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
 
     useEffect(() => {
         const handleGenerateAll = () => {
-            const contextValidated = Boolean(item.block?.attributes?.assistanceContextTitle)
-                && item.block.attributes.assistanceContextTitle === String(tutorialTitle || '');
+            const contextValidated = Number(item.block?.attributes?.assistanceContextPostId || 0) === Number(tutorialPostId || 0)
+                && Number(tutorialPostId || 0) > 0;
             if (!loading && canonical && (!getAssistanceStatus(canonical).ready || !contextValidated) && !generating) {
                 handleGenerate();
             }
         };
         window.addEventListener('ica:generate-all-assistance', handleGenerateAll);
         return () => window.removeEventListener('ica:generate-all-assistance', handleGenerateAll);
-    }, [loading, canonical, generating, handleGenerate, item.block, tutorialTitle]);
+    }, [loading, canonical, generating, handleGenerate, item.block, tutorialTitle, tutorialPostId]);
 
     return (
         <section className="ica-ai-workspace__card">
@@ -323,7 +374,7 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
                     {__('Show in article', 'intelligent-code-assistant')}
                 </Button>
             </div>
-            {loading ? <Spinner /> : canonical && <Status block={canonical} />}
+            {loading ? <Spinner /> : canonical && <Status block={canonical} contextValidated={item.codeExampleId > 0 ? articleContextValidated : true} />}
             {item.codeExampleId > 0 && !articleContextValidated && (
                 <Notice status="warning" isDismissible={false}>
                     {__('Saved assistance has not been validated for this article context yet.', 'intelligent-code-assistant')}
@@ -334,8 +385,10 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
             <Button variant="primary" disabled={loading || !canonical || generating} isBusy={generating} onClick={handleGenerate}>
                 {generating
                     ? __('Generating…', 'intelligent-code-assistant')
-                    : (assistanceStatus && !assistanceStatus.ready && (assistanceStatus.explanationReady || assistanceStatus.storedLines > 0 || assistanceStatus.knowledgeReady)
-                        ? __('Complete assistance', 'intelligent-code-assistant')
+                    : (assistanceStatus && !readyForThisArticle && (assistanceStatus.explanationReady || assistanceStatus.storedLines > 0 || assistanceStatus.knowledgeReady)
+                        ? (assistanceStatus.ready && !articleContextValidated
+                            ? __('Validate article context', 'intelligent-code-assistant')
+                            : __('Complete assistance', 'intelligent-code-assistant'))
                         : (canonical?.attributes?.generatedExplanation
                             ? __('Regenerate assistance', 'intelligent-code-assistant')
                             : __('Generate assistance', 'intelligent-code-assistant')))}
@@ -348,6 +401,7 @@ function ArticleAIWorkspace() {
     const [open, setOpen] = useState(false);
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
     const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
+    const tutorialPostId = useSelect((select) => select('core/editor')?.getCurrentPostId?.() || 0, []);
     const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
         block,
         clientId: block.clientId,
@@ -378,7 +432,7 @@ function ArticleAIWorkspace() {
                     </header>
                     <div className="ica-ai-workspace__grid">
                         {snippets.map((item) => (
-                            <SnippetCard key={item.clientId} item={item} tutorialTitle={tutorialTitle} />
+                            <SnippetCard key={item.clientId} item={item} tutorialTitle={tutorialTitle} tutorialPostId={tutorialPostId} />
                         ))}
                     </div>
                 </Modal>
@@ -390,6 +444,7 @@ function ArticleAIWorkspace() {
 function useArticleCodeStatus() {
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
     const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
+    const tutorialPostId = useSelect((select) => select('core/editor')?.getCurrentPostId?.() || 0, []);
     const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
         block,
         codeExampleId: Number(block.attributes?.codeExampleId || 0),
@@ -399,6 +454,7 @@ function useArticleCodeStatus() {
     const linkedIds = useMemo(() => [...new Set(snippets.map((item) => item.codeExampleId).filter(Boolean))], [snippets]);
 
     const linkedIdsKey = linkedIds.join(',');
+    const localCodeSignature = snippets.map((item) => `${item.clientId}:${getCode(item.block)}`).join('|');
     const [refreshVersion, setRefreshVersion] = useState(0);
 
     useEffect(() => {
@@ -434,18 +490,25 @@ function useArticleCodeStatus() {
             setLoading(false);
         });
         return () => { active = false; };
-    }, [linkedIdsKey, linkedIds, refreshVersion]);
+    }, [linkedIdsKey, linkedIds, refreshVersion, localCodeSignature]);
 
     const statuses = snippets.map((item) => {
         const status = item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block);
-        const contextTitle = String(item.block?.attributes?.assistanceContextTitle || '');
-        const contextValidated = Boolean(contextTitle) && contextTitle === String(tutorialTitle || '');
-        const articleRawCode = extractCanonicalSnippet(item.block).rawCode;
+        const contextValidated = Number(item.block?.attributes?.assistanceContextPostId || 0) === Number(tutorialPostId || 0)
+            && Number(tutorialPostId || 0) > 0;
+        // Linked references normally contain no code of their own. Only compare
+        // an article-local code fingerprint when the block really has local code
+        // content; otherwise canonical saved code is the single source of truth.
+        const hasArticleLocalCode = (item.block.innerBlocks || []).some(
+            (innerBlock) => innerBlock.name === 'wpe/code-content'
+        );
+        const articleRawCode = hasArticleLocalCode ? extractCanonicalSnippet(item.block).rawCode : '';
         const localCodeChanged = Boolean(
             item.codeExampleId
+            && hasArticleLocalCode
             && articleRawCode.trim()
             && status?.generatedAssistanceCodeHash
-            && getCodeFingerprint(articleRawCode) !== status.generatedAssistanceCodeHash
+            && getCodeFingerprint(normalizeCodeText(articleRawCode)) !== status.generatedAssistanceCodeHash
         );
         return status ? {
             ...status,
@@ -547,63 +610,84 @@ function ArticlePostSummary() {
 
     return createPortal(
         <section className="ica-post-summary" aria-label={__('Code Assistant article summary', 'intelligent-code-assistant')}>
+    <div className="ica-post-summary-row">
+        {/* Left Column: Label */}
+        <span className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</span>
+
+        {/* Right Column: Toggle Control */}
+        <div className="ica-post-summary-row__right">
             <button
-                type="button"
-                className="ica-post-summary__toggle"
-                aria-expanded={expanded}
-                onClick={() => setExpanded((previous) => !previous)}
-            >
-                <span className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</span>
-                <span className="ica-post-summary__toggle-right">
-                    <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
-                        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('ready', 'intelligent-code-assistant')}`}
-                    </span>
-                    <span aria-hidden="true">{expanded ? '⌃' : '⌄'}</span>
-                </span>
-            </button>
-            {expanded && (
-                <div className="ica-post-summary__body">
-                    {articleItems.length > 0 && (
-                        <div className="ica-post-summary__links">
-                            <strong>{__('CODE SNIPPETS IN THIS ARTICLE', 'intelligent-code-assistant')}</strong>
-                            <ul>
-                                {articleItems.map((item, index) => {
-                                    const status = item.status;
-                                    const stateLabel = loading
-                                        ? __('Checking…', 'intelligent-code-assistant')
-                                        : status?.ready
-                                            ? __('Complete for this article', 'intelligent-code-assistant')
-                                            : status
-                                                ? (status.codeChanged
-                                                    ? __('Code changed — regenerate assistance', 'intelligent-code-assistant')
-                                                    : status.assistanceReady
-                                                        ? __('Needs article-context validation', 'intelligent-code-assistant')
-                                                        : __('Needs assistance', 'intelligent-code-assistant'))
-                                                : __('Status unavailable', 'intelligent-code-assistant');
-                                    const href = item.codeExampleId
-                                        ? editUrl(item.codeExampleId)
-                                        : '';
-                                    return (
-                                        <li key={`${item.clientId}-${index}`}>
-                                            <span className={`ica-post-summary__state ${status?.ready ? 'is-ready' : 'needs-attention'}`} aria-hidden="true">
-                                                {loading ? '○' : status?.ready ? '✓' : '⚠'}
-                                            </span>
-                                            {href ? (
-                                                <a href={href} title={__('Edit linked Code Example', 'intelligent-code-assistant')}>
-                                                    {item.title}
-                                                    <span className="ica-post-summary__external" aria-hidden="true">↗</span>
-                                                </a>
-                                            ) : <span>{item.title}</span>}
-                                            <span className="ica-post-summary__state-label">{stateLabel}</span>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-                    )}
+    type="button"
+    className="ica-post-summary__toggle"
+    aria-expanded={expanded}
+    onClick={() => setExpanded((previous) => !previous)}
+>
+    <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
+        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('ready', 'intelligent-code-assistant')}`}
+    </span>
+    <svg 
+        className={`ica-post-summary__chevron ${expanded ? 'is-expanded' : ''}`}
+        width="12" 
+        height="12" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        aria-hidden="true"
+    >
+        <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+</button>
+
+        </div>
+        
+    </div>
+
+    {expanded && (
+        <div className="ica-post-summary__body">
+            {articleItems.length > 0 && (
+                <div className="ica-post-summary__links">
+                    <strong>{__('CODE SNIPPETS IN THIS ARTICLE', 'intelligent-code-assistant')}</strong>
+                    <ul>
+                        {articleItems.map((item, index) => {
+                            const status = item.status;
+                            const stateLabel = loading
+                                ? __('Checking…', 'intelligent-code-assistant')
+                                : status?.ready
+                                    ? __('Complete for this article', 'intelligent-code-assistant')
+                                    : status
+                                        ? (status.codeChanged
+                                            ? __('Explanations need updating', 'intelligent-code-assistant')
+                                            : status.assistanceReady
+                                                ? __('Needs article-context validation', 'intelligent-code-assistant')
+                                                : __('Needs explanations', 'intelligent-code-assistant'))
+                                        : __('Status unavailable', 'intelligent-code-assistant');
+                            const href = item.codeExampleId
+                                ? editUrl(item.codeExampleId)
+                                : '';
+                            return (
+                                <li key={`${item.clientId}-${index}`}>
+                                    <span className={`ica-post-summary__state ${status?.ready ? 'is-ready' : 'needs-attention'}`} aria-hidden="true">
+                                        {loading ? '○' : status?.ready ? '✓' : '⚠'}
+                                    </span>
+                                    {href ? (
+                                        <a href={href} title={__('Edit linked Code Example', 'intelligent-code-assistant')}>
+                                            {item.title}
+                                            <span className="ica-post-summary__external" aria-hidden="true">↗</span>
+                                        </a>
+                                    ) : <span>{item.title}</span>}
+                                    <span className="ica-post-summary__state-label">{stateLabel}</span>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 </div>
             )}
-        </section>,
+        </div>
+    )}
+</section>,
         host
     );
 }

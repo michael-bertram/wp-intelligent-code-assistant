@@ -502,6 +502,15 @@ a:focus { outline: none; }
    STAGE 2: INTERACTIVE CODE LINES
    ========================================================================== */
 .panel-content .code-lines { margin: 0 !important; padding: 0 !important; display: block; background: transparent !important; }
+
+/* The saved Code Content block is plain text. Preserve its newlines in both
+   the editor preview and any standalone rendering of that source block. */
+.wp-block-wpe-code-content,
+.wp-block-wpe-code-content > * {
+    white-space: pre !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+}
 .panel-content .code-lines .code-line {
 	display: block;
 	box-sizing: border-box;

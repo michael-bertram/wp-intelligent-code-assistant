@@ -69,7 +69,11 @@ if ( ! empty( $content_html ) ) {
 	$clean_breaks = preg_replace( '/<\/p><p>/i', "\n", $clean_breaks );
 	$clean_breaks = preg_replace( '/<\/div><div>/i', "\n", $clean_breaks );
 
-	$raw_code_text = trim( str_replace( "\r", '', strip_tags( $clean_breaks ) ) );
+	$raw_code_text = str_replace(
+		"\r",
+		'',
+		html_entity_decode( strip_tags( $clean_breaks ), ENT_QUOTES | ENT_HTML5, 'UTF-8' )
+	);
 	$character_count = strlen( $raw_code_text );
 
 	$count_lines = explode( "\n", $raw_code_text );

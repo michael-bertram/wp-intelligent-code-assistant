@@ -124,6 +124,23 @@
    BACKEND EDITOR PANEL EXCLUSIVE SEAMLESS LAYOUTS
    ========================================================================== */
 .wp-block-wpe-intelligent-code-assistant-editor {
+    .code-content-editor__textarea {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 180px;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: inherit;
+        font-family: 'Fira Code', Consolas, Monaco, monospace;
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: auto;
+        resize: vertical;
+    }
+
     position: relative !important; 
     box-sizing: border-box;
     width: 100%;

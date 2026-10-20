@@ -93,39 +93,36 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             return () => { active = false; };
         }
 
-        apiFetch({ path: `/wp/v2/ica_code_example/${Number(codeExampleId)}?context=edit` })
-            .then((record) => {
-                const roots = parse(record?.content?.raw || '');
-                const findSnippet = (blocks) => {
-                    for (const candidate of blocks || []) {
-                        if (candidate.name === 'wpe/intelligent-code-assistant') {
-                            const contentBlock = (candidate.innerBlocks || []).find((inner) => inner.name === 'wpe/code-content');
-                            const code = contentBlock?.attributes?.code ?? contentBlock?.attributes?.content ?? '';
-                            if (code) return { block: candidate, code: normalizeCodeText(code) };
+        const loadCanonical = () => {
+            apiFetch({ path: `/wp/v2/ica_code_example/${Number(codeExampleId)}?context=edit` })
+                .then((record) => {
+                    const roots = parse(record?.content?.raw || '');
+                    const findSnippet = (blocks) => {
+                        for (const candidate of blocks || []) {
+                            if (candidate.name === 'wpe/intelligent-code-assistant') {
+                                const contentBlock = (candidate.innerBlocks || []).find((inner) => inner.name === 'wpe/code-content');
+                                const code = contentBlock?.attributes?.code ?? contentBlock?.attributes?.content ?? '';
+                                if (code) return { block: candidate, code: normalizeCodeText(code) };
+                            }
+                            const nested = findSnippet(candidate.innerBlocks);
+                            if (nested) return nested;
                         }
-                        const nested = findSnippet(candidate.innerBlocks);
-                        if (nested) return nested;
-                    }
-                    return null;
-                };
-                if (active) setLinkedCanonical(findSnippet(roots));
-            })
-            .catch(() => {
-                if (active) setLinkedCanonical(null);
-            });
+                        return null;
+                    };
+                    if (active) setLinkedCanonical(findSnippet(roots));
+                })
+                .catch(() => {
+                    if (active) setLinkedCanonical(null);
+                });
+        };
 
-        return () => { active = false; };
+        loadCanonical();
+        window.addEventListener('ica:reader-assistance-saved', loadCanonical);
+        return () => {
+            active = false;
+            window.removeEventListener('ica:reader-assistance-saved', loadCanonical);
+        };
     }, [isLinkedReference, codeExampleId]);
-
-    // The canonical Code Example post owns the full ICA block and its children.
-    // It must remain unlinked internally (codeExampleId = 0), otherwise save.js
-    // treats it like an article reference and intentionally omits InnerBlocks.
-    // Older canonical posts may still contain their own post ID from the earlier
-    // implementation, so normalize those records as soon as they are edited.
-    if (currentPostType === 'ica_code_example' && Number(codeExampleId || 0) !== 0) {
-        setAttributes({ codeExampleId: 0 });
-    }
-
     // Preserve source-code characters while normalising legacy RichText wrappers.
     const normalizeCodeText = (value = '') => {
         const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');

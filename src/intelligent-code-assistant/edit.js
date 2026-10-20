@@ -44,13 +44,14 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     const { updateBlockAttributes } = useDispatch('core/block-editor');
     const { saveEntityRecord } = useDispatch('core');
 
-    const { cleanRawText, hasLocalBlockStructure, headerBlockId, headerTitle, tutorialTitle, derivedTutorialContext, currentPostType, blockForConversion } = useSelect((select) => {
+    const { cleanRawText, hasLocalBlockStructure, headerBlockId, headerTitle, tutorialTitle, derivedTutorialContext, currentPostType, currentPostId, blockForConversion } = useSelect((select) => {
         const block = select('core/block-editor').getBlock(clientId);
         const headerBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-header');
         const contentBlock = block?.innerBlocks?.find((innerBlock) => innerBlock.name === 'wpe/code-content');
         const rawText = contentBlock?.attributes?.code ?? contentBlock?.attributes?.content ?? '';
         const postTitle = select('core/editor')?.getEditedPostAttribute?.('title') || '';
         const postType = select('core/editor')?.getCurrentPostType?.() || '';
+        const postId = Number(select('core/editor')?.getCurrentPostId?.() || 0);
 
         const rootBlocks = select('core/block-editor').getBlocks();
         let contextResult = '';
@@ -74,6 +75,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             tutorialTitle: postTitle,
             derivedTutorialContext: contextResult,
             currentPostType: postType,
+            currentPostId: postId,
             blockForConversion: block || null,
         };
     }, [clientId]);
@@ -367,13 +369,17 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         // canonical code or its generated assistance. Do not mark them
                         // stale based on an empty local code string.
                         if (isLinkedReference && !cleanRawText.trim()) {
+                            const contextValidated = Number(attributes.assistanceContextPostId || 0) === Number(currentPostId || 0)
+                                && Number(currentPostId || 0) > 0;
                             return (
-                                <div className="ica-block-ai-card is-ready">
+                                <div className={`ica-block-ai-card ${contextValidated ? 'is-incomplete' : 'is-incomplete'}`}>
                                     <div className="ica-block-ai-card__headline">
                                         <span className="ica-block-ai-card__mark">✦</span>
                                         <div>
-                                            <strong>{__('Assistance managed by reusable Code Snippet', 'intelligent-code-assistant')}</strong>
-                                            <p>{__('The saved assistance belongs to the linked Code Snippet. Check its status in the article Code Assistant; opening this post will not regenerate it.', 'intelligent-code-assistant')}</p>
+                                            <strong>{contextValidated ? __('Assistance managed by reusable Code Snippet', 'intelligent-code-assistant') : __('Context validation required', 'intelligent-code-assistant')}</strong>
+                                            <p>{contextValidated
+                                                ? __('The reusable Code Snippet owns the saved assistance. Its readiness is confirmed by the article Code Assistant summary.', 'intelligent-code-assistant')
+                                                : __('The saved assistance has not been validated for this article context. Use the article Code Assistant to validate it.', 'intelligent-code-assistant')}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -396,14 +402,21 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         const codeMatches = Boolean(attributes.generatedAssistanceCodeHash)
                             && attributes.generatedAssistanceCodeHash === getCodeFingerprint(cleanRawText.replace(/\r/g, ''));
                         const codeChanged = hasAny && !codeMatches;
-                        const ready = explanationReady && linesReady && knowledgeReady && codeMatches;
+                        const assistanceReady = explanationReady && linesReady && knowledgeReady && codeMatches;
+                        const contextValidated = !isLinkedReference || (
+                            Number(attributes.assistanceContextPostId || 0) === Number(currentPostId || 0)
+                            && Number(currentPostId || 0) > 0
+                        );
+                        const ready = assistanceReady && contextValidated;
                         return (
                             <div className={`ica-block-ai-card ${ready ? 'is-ready' : (hasAny ? 'is-incomplete' : 'is-unconfigured')}`}>
                                 <div className="ica-block-ai-card__headline">
                                     <span className="ica-block-ai-card__mark">✦</span>
                                     <div>
-                                        <strong>{ready ? __('Ready for readers', 'intelligent-code-assistant') : (codeChanged ? __('Code changed — regenerate assistance', 'intelligent-code-assistant') : (hasAny ? __('Assistance incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant')))}</strong>
-                                        <p>{__('Manage generated reader assistance from the article Code Assistant.', 'intelligent-code-assistant')}</p>
+                                        <strong>{ready ? __('Ready for readers', 'intelligent-code-assistant') : (!contextValidated ? __('Context validation required', 'intelligent-code-assistant') : (codeChanged ? __('Code changed — regenerate assistance', 'intelligent-code-assistant') : (hasAny ? __('Assistance incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant'))))}</strong>
+                                        <p>{!contextValidated
+                                            ? __('Saved assistance must be validated for this article before it is ready for readers.', 'intelligent-code-assistant')
+                                            : __('Manage generated reader assistance from the article Code Assistant.', 'intelligent-code-assistant')}</p>
                                     </div>
                                 </div>
                                 <div className="ica-block-ai-card__checks">

@@ -462,6 +462,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     margin-top: 18px;
+    margin-bottom: 12px;
 
     span {
         padding: 10px 12px;
@@ -602,7 +603,7 @@
     }
 
     &__hint {
-        margin: 12px 0 0;
+        margin: 18px 0 0;
         color: #646970;
         font-size: 11px;
         line-height: 1.4;

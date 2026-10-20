@@ -159,7 +159,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 response = await apiFetch({ path: '/wp/v2/abilities/intelligent-code-assistant/auto-fill-metadata/run', method: 'POST', data: { code: cleanCodeText } });
             } catch (routeErr) {
                 if (routeErr.code === 'rest_no_route' || routeErr.status === 404) {
-                    response = await apiFetch({ path: '/intelligent-code-assistant/v1/auto-fill-metadata', method: 'POST', data: { code: cleanRawText } });
+                    response = await apiFetch({ path: '/intelligent-code-assistant/v1/auto-fill-metadata', method: 'POST', data: { code: cleanCodeText } });
                 } else throw routeErr;
             }
             const detectedLanguage = detectCodeLanguage(cleanCodeText);

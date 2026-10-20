@@ -124,6 +124,14 @@
    BACKEND EDITOR PANEL EXCLUSIVE SEAMLESS LAYOUTS
    ========================================================================== */
 .wp-block-wpe-intelligent-code-assistant-editor {
+    .plain-code-editor,
+    .plain-code-editor textarea,
+    .code-content-editor__textarea {
+        white-space: pre !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
+    }
+
     .code-content-editor__textarea {
         display: block;
         box-sizing: border-box;

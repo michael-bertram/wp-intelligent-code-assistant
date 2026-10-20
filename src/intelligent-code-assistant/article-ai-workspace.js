@@ -11,14 +11,8 @@ const BLOCK_NAME = 'wpe/intelligent-code-assistant';
 function decodeEntities(value = '') {
     if (typeof document === 'undefined') return String(value);
     const textarea = document.createElement('textarea');
-    let decoded = String(value);
-    for (let pass = 0; pass < 2; pass += 1) {
-        textarea.innerHTML = decoded;
-        const next = textarea.value;
-        if (next === decoded) break;
-        decoded = next;
-    }
-    return decoded;
+    textarea.innerHTML = String(value);
+    return textarea.value;
 }
 
 function normalizeCodeText(value = '') {

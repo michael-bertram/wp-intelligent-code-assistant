@@ -96,18 +96,23 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
 
     // Preserve source-code characters while normalising legacy RichText wrappers.
     const normalizeCodeText = (value = '') => {
-        const raw = String(value ?? '')
+        const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
+        const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
+            && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
+        if (!isLegacyRichText) {
+            if (typeof document === 'undefined' || !/[&](?:lt|gt|quot|apos|amp|#\d+|#x[\da-f]+);/i.test(raw)) return raw;
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = raw;
+            return textarea.value;
+        }
+        const text = raw
             .replace(/<br\s*\/?\s*>/gi, '\n')
             .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
             .replace(/^<p(?:\s[^>]*)?>/i, '')
-            .replace(/<\/p>$/i, '')
-            .replace(/\u00a0/g, ' ')
-            .replace(/\r/g, '');
-        if (typeof document === 'undefined' || !/[&](?:lt|gt|quot|apos|amp|#\d+|#x[\da-f]+);/i.test(raw)) {
-            return raw;
-        }
+            .replace(/<\/p>$/i, '');
+        if (typeof document === 'undefined') return text;
         const textarea = document.createElement('textarea');
-        textarea.innerHTML = raw;
+        textarea.innerHTML = text;
         return textarea.value;
     };
 

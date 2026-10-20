@@ -372,13 +372,13 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                             const contextValidated = Number(attributes.assistanceContextPostId || 0) === Number(currentPostId || 0)
                                 && Number(currentPostId || 0) > 0;
                             return (
-                                <div className={`ica-block-ai-card ${contextValidated ? 'is-incomplete' : 'is-incomplete'}`}>
+                                <div className="ica-block-ai-card is-incomplete">
                                     <div className="ica-block-ai-card__headline">
                                         <span className="ica-block-ai-card__mark">✦</span>
                                         <div>
-                                            <strong>{contextValidated ? __('Assistance managed by reusable Code Snippet', 'intelligent-code-assistant') : __('Context validation required', 'intelligent-code-assistant')}</strong>
+                                            <strong>{contextValidated ? __('Not ready for readers', 'intelligent-code-assistant') : __('Context validation required', 'intelligent-code-assistant')}</strong>
                                             <p>{contextValidated
-                                                ? __('The reusable Code Snippet owns the saved assistance. Its readiness is confirmed by the article Code Assistant summary.', 'intelligent-code-assistant')
+                                                ? __('The reusable Code Snippet content is not available in this block yet, so readiness cannot be confirmed. Check the article Code Assistant summary.', 'intelligent-code-assistant')
                                                 : __('The saved assistance has not been validated for this article context. Use the article Code Assistant to validate it.', 'intelligent-code-assistant')}</p>
                                         </div>
                                     </div>

@@ -221,7 +221,7 @@ function Status({ block }) {
     );
 }
 
-function SnippetCard({ item, tutorialTitle, onChanged }) {
+function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
     const [canonical, setCanonical] = useState(null);
     const [loading, setLoading] = useState(Boolean(item.codeExampleId));
     const [generating, setGenerating] = useState(false);
@@ -278,8 +278,8 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
     };
 
     const assistanceStatus = canonical ? getAssistanceStatus(canonical) : null;
-    const articleContextValidated = Boolean(item.block?.attributes?.assistanceContextTitle)
-        && item.block.attributes.assistanceContextTitle === String(tutorialTitle || '');
+    const articleContextValidated = Number(item.block?.attributes?.assistanceContextPostId || 0) === Number(tutorialPostId || 0)
+        && Number(tutorialPostId || 0) > 0;
 
     const handleGenerate = async () => {
         if (!canonical || generating) return;
@@ -289,7 +289,10 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
         try {
             const generated = await generateAssistance(canonical, tutorialTitle, setProgress);
             await saveGenerated(generated);
-            updateBlockAttributes(item.clientId, { assistanceContextTitle: String(tutorialTitle || '') });
+            updateBlockAttributes(item.clientId, {
+                assistanceContextTitle: String(tutorialTitle || ''),
+                assistanceContextPostId: Number(tutorialPostId || 0),
+            });
             window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
             onChanged?.();
         } catch (err) {
@@ -302,15 +305,15 @@ function SnippetCard({ item, tutorialTitle, onChanged }) {
 
     useEffect(() => {
         const handleGenerateAll = () => {
-            const contextValidated = Boolean(item.block?.attributes?.assistanceContextTitle)
-                && item.block.attributes.assistanceContextTitle === String(tutorialTitle || '');
+            const contextValidated = Number(item.block?.attributes?.assistanceContextPostId || 0) === Number(tutorialPostId || 0)
+                && Number(tutorialPostId || 0) > 0;
             if (!loading && canonical && (!getAssistanceStatus(canonical).ready || !contextValidated) && !generating) {
                 handleGenerate();
             }
         };
         window.addEventListener('ica:generate-all-assistance', handleGenerateAll);
         return () => window.removeEventListener('ica:generate-all-assistance', handleGenerateAll);
-    }, [loading, canonical, generating, handleGenerate, item.block, tutorialTitle]);
+    }, [loading, canonical, generating, handleGenerate, item.block, tutorialTitle, tutorialPostId]);
 
     return (
         <section className="ica-ai-workspace__card">
@@ -348,6 +351,7 @@ function ArticleAIWorkspace() {
     const [open, setOpen] = useState(false);
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
     const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
+    const tutorialPostId = useSelect((select) => select('core/editor')?.getCurrentPostId?.() || 0, []);
     const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
         block,
         clientId: block.clientId,
@@ -378,7 +382,7 @@ function ArticleAIWorkspace() {
                     </header>
                     <div className="ica-ai-workspace__grid">
                         {snippets.map((item) => (
-                            <SnippetCard key={item.clientId} item={item} tutorialTitle={tutorialTitle} />
+                            <SnippetCard key={item.clientId} item={item} tutorialTitle={tutorialTitle} tutorialPostId={tutorialPostId} />
                         ))}
                     </div>
                 </Modal>
@@ -390,6 +394,7 @@ function ArticleAIWorkspace() {
 function useArticleCodeStatus() {
     const blocks = useSelect((select) => select('core/block-editor').getBlocks(), []);
     const tutorialTitle = useSelect((select) => select('core/editor')?.getEditedPostAttribute?.('title') || '', []);
+    const tutorialPostId = useSelect((select) => select('core/editor')?.getCurrentPostId?.() || 0, []);
     const snippets = useMemo(() => flattenBlocks(blocks).map((block) => ({
         block,
         codeExampleId: Number(block.attributes?.codeExampleId || 0),
@@ -438,8 +443,8 @@ function useArticleCodeStatus() {
 
     const statuses = snippets.map((item) => {
         const status = item.codeExampleId ? linked[item.codeExampleId]?.status : getAssistanceStatus(item.block);
-        const contextTitle = String(item.block?.attributes?.assistanceContextTitle || '');
-        const contextValidated = Boolean(contextTitle) && contextTitle === String(tutorialTitle || '');
+        const contextValidated = Number(item.block?.attributes?.assistanceContextPostId || 0) === Number(tutorialPostId || 0)
+            && Number(tutorialPostId || 0) > 0;
         const articleRawCode = extractCanonicalSnippet(item.block).rawCode;
         const localCodeChanged = Boolean(
             item.codeExampleId

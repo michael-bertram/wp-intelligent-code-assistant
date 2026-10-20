@@ -422,7 +422,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                         // Linked article references intentionally do not contain the
                         // canonical code or its generated assistance. Do not mark them
                         // stale based on an empty local code string.
-                        if (isLinkedReference && !cleanRawText.trim()) {
+                        if (isLinkedReference && !linkedCanonical?.code?.trim()) {
                             const contextValidated = Number(attributes.assistanceContextPostId || 0) === Number(currentPostId || 0)
                                 && Number(currentPostId || 0) > 0;
                             return (
@@ -439,22 +439,28 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                                 </div>
                             );
                         }
-                        const requiredLineNumbers = cleanCodeText.split('\n')
+                        const statusCode = isLinkedReference ? linkedCanonical.code : cleanCodeText;
+                        const statusAttributes = isLinkedReference ? linkedCanonical.block.attributes || {} : attributes;
+                        const statusLines = statusCode.split('\n');
+                        const requiredLineNumbers = statusLines
                             .reduce((numbers, line, index) => {
                                 if (line.trim()) numbers.push(String(index + 1));
                                 return numbers;
                             }, []);
                         const expectedLines = requiredLineNumbers.length;
+                        const statusLineExplanations = statusAttributes.generatedLineExplanations || {};
                         const storedLines = requiredLineNumbers.filter(
-                            (lineNumber) => typeof generatedLineExplanations?.[lineNumber] === 'string'
-                                && generatedLineExplanations[lineNumber].trim()
+                            (lineNumber) => typeof statusLineExplanations[lineNumber] === 'string'
+                                && statusLineExplanations[lineNumber].trim()
                         ).length;
-                        const explanationReady = Boolean(generatedExplanation?.trim());
-                        const knowledgeReady = Boolean(generatedKnowledgeCheck?.question);
+                        const statusExplanation = statusAttributes.generatedExplanation;
+                        const statusKnowledgeCheck = statusAttributes.generatedKnowledgeCheck || {};
+                        const explanationReady = Boolean(statusExplanation?.trim());
+                        const knowledgeReady = Boolean(statusKnowledgeCheck.question);
                         const linesReady = expectedLines > 0 && storedLines === expectedLines;
                         const hasAny = explanationReady || storedLines > 0 || knowledgeReady;
-                        const codeMatches = Boolean(attributes.generatedAssistanceCodeHash)
-                            && attributes.generatedAssistanceCodeHash === getCodeFingerprint(cleanCodeText);
+                        const codeMatches = Boolean(statusAttributes.generatedAssistanceCodeHash)
+                            && statusAttributes.generatedAssistanceCodeHash === getCodeFingerprint(statusCode);
                         const codeChanged = hasAny && !codeMatches;
                         const assistanceReady = explanationReady && linesReady && knowledgeReady && codeMatches;
                         const contextValidated = !isLinkedReference || (

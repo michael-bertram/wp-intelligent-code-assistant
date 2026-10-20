@@ -280,7 +280,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 !requiredLines.every((line) => typeof lineExplanations[String(line)] === 'string' && lineExplanations[String(line)].trim()) ||
                 !nextAttributes.generatedKnowledgeCheck?.question
             ) {
-                throw new Error(__('The AI response was incomplete. No generated assistance was saved.', 'intelligent-code-assistant'));
+                throw new Error(__('The AI response was incomplete. No explanations were saved.', 'intelligent-code-assistant'));
             }
 
             setAttributes(nextAttributes);
@@ -297,7 +297,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                 window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved', { detail: { codeExampleId: canonicalEntityId } }));
             }
         } catch (err) {
-            setAssistanceError(err?.message || __('Unable to generate and save reader assistance.', 'intelligent-code-assistant'));
+            setAssistanceError(err?.message || __('Unable to generate and save explanations.', 'intelligent-code-assistant'));
         } finally {
             setIsGeneratingAssistance(false);
         }
@@ -430,7 +430,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                                             <strong>{contextValidated ? __('Not ready for readers', 'intelligent-code-assistant') : __('Context validation required', 'intelligent-code-assistant')}</strong>
                                             <p>{contextValidated
                                                 ? __('The reusable Code Snippet content is not available in this block yet, so readiness cannot be confirmed. Check the article Code Assistant summary.', 'intelligent-code-assistant')
-                                                : __('The saved assistance has not been validated for this article context. Use the article Code Assistant to validate it.', 'intelligent-code-assistant')}</p>
+                                                : __('The saved explanations have not been verified for this article. Use the article Code Assistant to verify them.', 'intelligent-code-assistant')}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -470,10 +470,10 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                                 <div className="ica-block-ai-card__headline">
                                     <span className="ica-block-ai-card__mark">✦</span>
                                     <div>
-                                        <strong>{ready ? __('Ready for readers', 'intelligent-code-assistant') : (!contextValidated ? __('Context validation required', 'intelligent-code-assistant') : (codeChanged ? __('Code changed — regenerate assistance', 'intelligent-code-assistant') : (hasAny ? __('Assistance incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant'))))}</strong>
+                                        <strong>{ready ? __('Verified for this article', 'intelligent-code-assistant') : (!contextValidated ? __('Context validation required', 'intelligent-code-assistant') : (codeChanged ? __('Explanations need updating', 'intelligent-code-assistant') : (hasAny ? __('Explanations incomplete', 'intelligent-code-assistant') : __('Not configured', 'intelligent-code-assistant'))))}</strong>
                                         <p>{!contextValidated
-                                            ? __('Saved assistance must be validated for this article before it is ready for readers.', 'intelligent-code-assistant')
-                                            : __('Manage generated reader assistance from the article Code Assistant.', 'intelligent-code-assistant')}</p>
+                                            ? __('The explanations must be verified for this article before they are ready for readers.', 'intelligent-code-assistant')
+                                            : __('Manage generated explanations from the article Code Assistant.', 'intelligent-code-assistant')}</p>
                                     </div>
                                 </div>
                                 <div className="ica-block-ai-card__checks">
@@ -482,8 +482,8 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                                     <span>{knowledgeReady ? '✓' : '—'} {__('Knowledge Check', 'intelligent-code-assistant')}</span>
                                     <span className={codeMatches ? 'is-ready' : 'needs-attention'}>
                                         {codeMatches ? '✓' : '⚠'} {codeMatches
-                                            ? __('Code matches assistance', 'intelligent-code-assistant')
-                                            : __('Code changed — regenerate assistance', 'intelligent-code-assistant')}
+                                            ? __('Code matches saved explanations', 'intelligent-code-assistant')
+                                            : __('Explanations need updating', 'intelligent-code-assistant')}
                                     </span>
                                 </div>
                                 <p className="ica-block-ai-card__hint">

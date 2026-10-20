@@ -244,11 +244,9 @@ function Status({ block, contextValidated = true }) {
             </span>
             <span>{status.knowledgeReady ? '✓' : '—'} {__('Knowledge check', 'intelligent-code-assistant')}</span>
             <span className={status.codeMatches ? 'is-ready' : 'needs-attention'}>
-                {status.codeMatches ? '✓' : '⚠'} {status.ready && contextValidated
-                    ? __('Verified for this article', 'intelligent-code-assistant')
-                    : status.codeMatches
-                        ? __('Code matches saved explanations', 'intelligent-code-assistant')
-                        : __('Explanations need updating', 'intelligent-code-assistant')}
+                {status.codeMatches ? '✓' : '⚠'} {status.codeMatches
+                    ? __('Code matches saved assistance', 'intelligent-code-assistant')
+                    : __('Code changed — regenerate assistance', 'intelligent-code-assistant')}
             </span>
             {!contextValidated && (
                 <span className="ica-ai-workspace__context-status needs-attention">
@@ -316,7 +314,7 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
         });
         const savedCanonical = flattenBlocks(parse(savedRecord?.content?.raw || ''))[0] || null;
         if (!savedCanonical) {
-            throw new Error(__('Explanations were saved, but the Code Snippet could not be reloaded for verification.', 'intelligent-code-assistant'));
+            throw new Error(__('Assistance was submitted, but the saved Code Snippet could not be reloaded for verification.', 'intelligent-code-assistant'));
         }
         setCanonical(savedCanonical);
         window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved', {
@@ -335,7 +333,7 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
         if (!canonical || generating) return;
         setGenerating(true);
         setError('');
-        setProgress(__('Preparing explanations…', 'intelligent-code-assistant'));
+        setProgress(__('Preparing assistance…', 'intelligent-code-assistant'));
         try {
             const generated = await generateAssistance(canonical, tutorialTitle, setProgress, articleContextValidated);
             await saveGenerated(generated);
@@ -346,7 +344,7 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
             window.dispatchEvent(new CustomEvent('ica:reader-assistance-saved'));
             onChanged?.();
         } catch (err) {
-            setError(err?.message || __('Unable to generate explanations.', 'intelligent-code-assistant'));
+            setError(err?.message || __('Unable to generate reader assistance.', 'intelligent-code-assistant'));
         } finally {
             setGenerating(false);
             setProgress('');
@@ -379,7 +377,7 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
             {loading ? <Spinner /> : canonical && <Status block={canonical} contextValidated={item.codeExampleId > 0 ? articleContextValidated : true} />}
             {item.codeExampleId > 0 && !articleContextValidated && (
                 <Notice status="warning" isDismissible={false}>
-                    {__('Saved explanations have not been verified for this article yet.', 'intelligent-code-assistant')}
+                    {__('Saved assistance has not been validated for this article context yet.', 'intelligent-code-assistant')}
                 </Notice>
             )}
             {error && <Notice status="error" isDismissible={false}>{error}</Notice>}
@@ -390,10 +388,10 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
                     : (assistanceStatus && !readyForThisArticle && (assistanceStatus.explanationReady || assistanceStatus.storedLines > 0 || assistanceStatus.knowledgeReady)
                         ? (assistanceStatus.ready && !articleContextValidated
                             ? __('Validate article context', 'intelligent-code-assistant')
-                            : __('Complete explanations', 'intelligent-code-assistant'))
+                            : __('Complete assistance', 'intelligent-code-assistant'))
                         : (canonical?.attributes?.generatedExplanation
-                            ? __('Regenerate explanations', 'intelligent-code-assistant')
-                            : __('Generate explanations', 'intelligent-code-assistant')))}
+                            ? __('Regenerate assistance', 'intelligent-code-assistant')
+                            : __('Generate assistance', 'intelligent-code-assistant')))}
             </Button>
         </section>
     );
@@ -430,7 +428,7 @@ function ArticleAIWorkspace() {
                     <header className="ica-ai-workspace__intro">
                         <p className="ica-ai-workspace__eyebrow">{__('ARTICLE AI WORKSPACE', 'intelligent-code-assistant')}</p>
                         <h2>{decodeEntities(tutorialTitle) || __('Untitled article', 'intelligent-code-assistant')}</h2>
-                        <p>{__('Generate and review explanations for every Code Snippet in this article from one place.', 'intelligent-code-assistant')}</p>
+                        <p>{__('Generate and review reader assistance for every Code Snippet in this article from one place.', 'intelligent-code-assistant')}</p>
                     </header>
                     <div className="ica-ai-workspace__grid">
                         {snippets.map((item) => (
@@ -612,63 +610,84 @@ function ArticlePostSummary() {
 
     return createPortal(
         <section className="ica-post-summary" aria-label={__('Code Assistant article summary', 'intelligent-code-assistant')}>
+    <div className="ica-post-summary-row">
+        {/* Left Column: Label */}
+        <span className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</span>
+
+        {/* Right Column: Toggle Control */}
+        <div className="ica-post-summary-row__right">
             <button
-                type="button"
-                className="ica-post-summary__toggle"
-                aria-expanded={expanded}
-                onClick={() => setExpanded((previous) => !previous)}
-            >
-                <span className="ica-post-summary__label">{__('Readiness', 'intelligent-code-assistant')}</span>
-                <span className="ica-post-summary__toggle-right">
-                    <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
-                        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('ready', 'intelligent-code-assistant')}`}
-                    </span>
-                    <span aria-hidden="true">{expanded ? '⌃' : '⌄'}</span>
-                </span>
-            </button>
-            {expanded && (
-                <div className="ica-post-summary__body">
-                    {articleItems.length > 0 && (
-                        <div className="ica-post-summary__links">
-                            <strong>{__('CODE SNIPPETS IN THIS ARTICLE', 'intelligent-code-assistant')}</strong>
-                            <ul>
-                                {articleItems.map((item, index) => {
-                                    const status = item.status;
-                                    const stateLabel = loading
-                                        ? __('Checking…', 'intelligent-code-assistant')
-                                        : status?.ready
-                                            ? __('Complete for this article', 'intelligent-code-assistant')
-                                            : status
-                                                ? (status.codeChanged
-                                                    ? __('Explanations need updating', 'intelligent-code-assistant')
-                                                    : status.assistanceReady
-                                                        ? __('Needs article-context validation', 'intelligent-code-assistant')
-                                                        : __('Needs explanations', 'intelligent-code-assistant'))
-                                                : __('Status unavailable', 'intelligent-code-assistant');
-                                    const href = item.codeExampleId
-                                        ? editUrl(item.codeExampleId)
-                                        : '';
-                                    return (
-                                        <li key={`${item.clientId}-${index}`}>
-                                            <span className={`ica-post-summary__state ${status?.ready ? 'is-ready' : 'needs-attention'}`} aria-hidden="true">
-                                                {loading ? '○' : status?.ready ? '✓' : '⚠'}
-                                            </span>
-                                            {href ? (
-                                                <a href={href} title={__('Edit linked Code Example', 'intelligent-code-assistant')}>
-                                                    {item.title}
-                                                    <span className="ica-post-summary__external" aria-hidden="true">↗</span>
-                                                </a>
-                                            ) : <span>{item.title}</span>}
-                                            <span className="ica-post-summary__state-label">{stateLabel}</span>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-                    )}
+    type="button"
+    className="ica-post-summary__toggle"
+    aria-expanded={expanded}
+    onClick={() => setExpanded((previous) => !previous)}
+>
+    <span className={`ica-post-summary__count ${!loading && ready === snippets.length ? 'is-ready' : 'needs-attention'}`}>
+        {loading ? __('Checking…', 'intelligent-code-assistant') : `${ready}/${snippets.length} ${__('ready', 'intelligent-code-assistant')}`}
+    </span>
+    <svg 
+        className={`ica-post-summary__chevron ${expanded ? 'is-expanded' : ''}`}
+        width="12" 
+        height="12" 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        aria-hidden="true"
+    >
+        <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+</button>
+
+        </div>
+        
+    </div>
+
+    {expanded && (
+        <div className="ica-post-summary__body">
+            {articleItems.length > 0 && (
+                <div className="ica-post-summary__links">
+                    <strong>{__('CODE SNIPPETS IN THIS ARTICLE', 'intelligent-code-assistant')}</strong>
+                    <ul>
+                        {articleItems.map((item, index) => {
+                            const status = item.status;
+                            const stateLabel = loading
+                                ? __('Checking…', 'intelligent-code-assistant')
+                                : status?.ready
+                                    ? __('Complete for this article', 'intelligent-code-assistant')
+                                    : status
+                                        ? (status.codeChanged
+                                            ? __('Explanations need updating', 'intelligent-code-assistant')
+                                            : status.assistanceReady
+                                                ? __('Needs article-context validation', 'intelligent-code-assistant')
+                                                : __('Needs explanations', 'intelligent-code-assistant'))
+                                        : __('Status unavailable', 'intelligent-code-assistant');
+                            const href = item.codeExampleId
+                                ? editUrl(item.codeExampleId)
+                                : '';
+                            return (
+                                <li key={`${item.clientId}-${index}`}>
+                                    <span className={`ica-post-summary__state ${status?.ready ? 'is-ready' : 'needs-attention'}`} aria-hidden="true">
+                                        {loading ? '○' : status?.ready ? '✓' : '⚠'}
+                                    </span>
+                                    {href ? (
+                                        <a href={href} title={__('Edit linked Code Example', 'intelligent-code-assistant')}>
+                                            {item.title}
+                                            <span className="ica-post-summary__external" aria-hidden="true">↗</span>
+                                        </a>
+                                    ) : <span>{item.title}</span>}
+                                    <span className="ica-post-summary__state-label">{stateLabel}</span>
+                                </li>
+                            );
+                        })}
+                    </ul>
                 </div>
             )}
-        </section>,
+        </div>
+    )}
+</section>,
         host
     );
 }
@@ -742,7 +761,7 @@ function CodeAssistantToolbar() {
                         <strong>{__('ARTICLE STATUS', 'intelligent-code-assistant')}</strong>
                         <p>{snippets.length} {__('code snippets', 'intelligent-code-assistant')}</p>
                         {loading ? (
-                            <p role="status">{__('Checking explanations…', 'intelligent-code-assistant')}</p>
+                            <p role="status">{__('Checking reader assistance…', 'intelligent-code-assistant')}</p>
                         ) : (
                             <>
                                 <p className={complete ? 'is-ready' : 'needs-attention'}>
@@ -757,11 +776,11 @@ function CodeAssistantToolbar() {
                                         {missingExplanations > 0 && <p>⚠ {missingExplanations} {__('missing explanations', 'intelligent-code-assistant')}</p>}
                                         {missingLines > 0 && <p>⚠ {missingLines} {__('snippets need line explanations', 'intelligent-code-assistant')}</p>}
                                         {missingChecks > 0 && <p>⚠ {missingChecks} {__('missing knowledge checks', 'intelligent-code-assistant')}</p>}
-                                        {staleAssistance > 0 && <p>⚠ {staleAssistance} {__('snippets have code changes and need explanations regenerated', 'intelligent-code-assistant')}</p>}
+                                        {staleAssistance > 0 && <p>⚠ {staleAssistance} {__('snippets have code changes and need assistance regenerated', 'intelligent-code-assistant')}</p>}
                                         {unavailable > 0 && <p>⚠ {unavailable} {__('linked Code Examples could not be checked', 'intelligent-code-assistant')}</p>}
                                     </div>
                                 )}
-                                {complete && <p className="is-ready">{__('Explanations complete', 'intelligent-code-assistant')}</p>}
+                                {complete && <p className="is-ready">{__('Reader assistance complete', 'intelligent-code-assistant')}</p>}
                             </>
                         )}
                     </div>

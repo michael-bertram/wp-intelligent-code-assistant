@@ -22,15 +22,18 @@ function decodeEntities(value = '') {
 }
 
 function normalizeCodeText(value = '') {
-    // Handle legacy RichText wrappers without stripping literal HTML source code.
-    const raw = String(value ?? '')
+    const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
+    // Convert only recognizable legacy RichText wrappers. Leave literal HTML
+    // source code untouched when it is already plain text in the editor.
+    const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
+        && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
+    if (!isLegacyRichText) return decodeEntities(raw);
+    const text = raw
         .replace(/<br\s*\/?\s*>/gi, '\n')
         .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
         .replace(/^<p(?:\s[^>]*)?>/i, '')
-        .replace(/<\/p>$/i, '')
-        .replace(/\u00a0/g, ' ')
-        .replace(/\r/g, '');
-    return decodeEntities(raw);
+        .replace(/<\/p>$/i, '');
+    return decodeEntities(text);
 }
 
 function getInnerBlock(block, name) {

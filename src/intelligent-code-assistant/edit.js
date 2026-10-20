@@ -102,14 +102,8 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         const decodeEntities = (text) => {
             if (typeof document === 'undefined' || !/[&](?:lt|gt|quot|apos|amp|#\d+|#x[\da-f]+);/i.test(text)) return text;
             const textarea = document.createElement('textarea');
-            let decoded = text;
-            for (let pass = 0; pass < 2; pass += 1) {
-                textarea.innerHTML = decoded;
-                const next = textarea.value;
-                if (next === decoded) break;
-                decoded = next;
-            }
-            return decoded;
+            textarea.innerHTML = text;
+            return textarea.value;
         };
         if (!isLegacyRichText) return decodeEntities(raw);
         const text = raw

@@ -14,7 +14,7 @@ const normalizeCanonicalBlock=(block,rawCode='')=>{if(!block)return block;const 
 const cloneBlockTree=(block)=>createBlock(block.name,{...(block.attributes||{})},(block.innerBlocks||[]).map(cloneBlockTree));
 const getRawRecordContent=(record)=>typeof record?.content==='string'?record.content:(record?.content?.raw||'');
 const getCanonicalAssistant=(record)=>{const raw=getRawRecordContent(record);if(!raw)return null;const assistant=parse(raw).find((block)=>block?.name==='wpe/intelligent-code-assistant')||null;return normalizeCanonicalBlock(assistant,extractCodeFromRawContent(raw));};
-const getSharedAttributes=(attributes={})=>{const{id,tutorialContextOverride,codeExampleId,...shared}=attributes;return shared;};
+const getSharedAttributes=(attributes={})=>{const{id,tutorialContextOverride,codeExampleId,assistanceContextPostId,assistanceContextTitle,...shared}=attributes;return shared;};
 const getSyncSignature=(block)=>{if(!block)return '';const simplify=(candidate)=>({name:candidate.name,attributes:candidate.attributes||{},innerBlocks:(candidate.innerBlocks||[]).map(simplify)});return JSON.stringify(simplify(block));};
 
 function CodeExampleProxy({codeExampleId,editProps}){

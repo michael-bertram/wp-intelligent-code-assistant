@@ -480,6 +480,11 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
                                     <span>{explanationReady ? '✓' : '—'} {__('Explain Code', 'intelligent-code-assistant')}</span>
                                     <span>{linesReady ? '✓' : (storedLines ? '⚠' : '—')} {__('Explain This Line', 'intelligent-code-assistant')} · {storedLines}/{expectedLines}</span>
                                     <span>{knowledgeReady ? '✓' : '—'} {__('Knowledge Check', 'intelligent-code-assistant')}</span>
+                                    <span className={codeMatches ? 'is-ready' : 'needs-attention'}>
+                                        {codeMatches ? '✓' : '⚠'} {codeMatches
+                                            ? __('Code matches assistance', 'intelligent-code-assistant')
+                                            : __('Code changed — regenerate assistance', 'intelligent-code-assistant')}
+                                    </span>
                                 </div>
                                 <p className="ica-block-ai-card__hint">
                                     {__('Use the Code Assistant icon in the editor toolbar or the Post sidebar to configure this snippet.', 'intelligent-code-assistant')}

@@ -229,6 +229,74 @@ function intelligent_code_assistant_resolve_code_example_reference( $parsed_bloc
 }
 add_filter( 'render_block_data', 'intelligent_code_assistant_resolve_code_example_reference', 10, 1 );
 
+
+/**
+ * Detect legacy standalone Intelligent Code Assistant blocks in article content.
+ *
+ * Canonical Code Snippets are managed as their own posts. Articles may only
+ * embed a reference to an existing Code Snippet, not store a second copy of
+ * the code and its reader-assistance data.
+ *
+ * @param array $blocks Parsed blocks.
+ * @return bool
+ */
+function intelligent_code_assistant_has_standalone_code_block( $blocks ) {
+	foreach ( $blocks as $block ) {
+		if (
+			'wpe/intelligent-code-assistant' === ( $block['blockName'] ?? '' ) &&
+			empty( $block['attrs']['codeExampleId'] )
+		) {
+			return true;
+		}
+
+		if ( ! empty( $block['innerBlocks'] ) && intelligent_code_assistant_has_standalone_code_block( $block['innerBlocks'] ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Reject REST saves that would add or preserve unmanaged standalone code blocks.
+ *
+ * Legacy blocks can be converted in the editor before the article is saved.
+ *
+ * @param WP_Post         $prepared_post Prepared post object.
+ * @param WP_REST_Request $request       REST request.
+ * @return WP_Post|WP_Error
+ */
+function intelligent_code_assistant_require_canonical_code_snippets( $prepared_post, $request ) {
+	if ( ! $prepared_post instanceof WP_Post || ! in_array( $prepared_post->post_type, array( 'post', 'page' ), true ) ) {
+		return $prepared_post;
+	}
+
+	$content = $request->get_param( 'content' );
+	if ( is_array( $content ) ) {
+		$content = $content['raw'] ?? '';
+	}
+
+	if ( ! is_string( $content ) ) {
+		$content = $prepared_post->post_content;
+	}
+
+	if ( ! is_string( $content ) || '' === $content ) {
+		return $prepared_post;
+	}
+
+	if ( intelligent_code_assistant_has_standalone_code_block( parse_blocks( $content ) ) ) {
+		return new WP_Error(
+			'ica_canonical_code_snippet_required',
+			__( 'Standalone Intelligent Code blocks are not supported in articles. Convert each block to a canonical Code Snippet before saving.', 'intelligent-code-assistant' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	return $prepared_post;
+}
+add_filter( 'rest_pre_insert_post', 'intelligent_code_assistant_require_canonical_code_snippets', 10, 2 );
+add_filter( 'rest_pre_insert_page', 'intelligent_code_assistant_require_canonical_code_snippets', 10, 2 );
+
 /**
  * Upgrade the analytics table with a stable Code Snippet relationship.
  *

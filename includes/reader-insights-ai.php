@@ -7,6 +7,73 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Expose saved Reader Insights in the REST response for supported post types.
+ *
+ * @return void
+ */
+function intelligent_code_assistant_register_reader_insights_meta() {
+	$post_types = array( 'post', 'page', 'ica_code_example' );
+
+	foreach ( $post_types as $post_type ) {
+		if ( ! post_type_exists( $post_type ) ) {
+			continue;
+		}
+
+		// REST-exposed meta requires custom-fields support on the post type.
+		add_post_type_support( $post_type, 'custom-fields' );
+
+		register_post_meta(
+			$post_type,
+			'_ica_reader_insights',
+			array(
+				'type'              => 'object',
+				'single'            => true,
+				'show_in_rest'      => array(
+					'schema' => array(
+						'type'                 => 'object',
+						'properties'           => array(
+							'summary'                     => array( 'type' => 'string' ),
+							'frictionPoints'              => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+							'recommendations'             => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+							'suggestedFaqs'               => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+							'generatedAt'                 => array( 'type' => 'string' ),
+							'analyticsTotalInteractions'  => array( 'type' => 'integer' ),
+						),
+						'additionalProperties' => false,
+					),
+				),
+				'sanitize_callback' => 'intelligent_code_assistant_sanitize_reader_insights_meta',
+				'auth_callback'     => static function ( $allowed, $meta_key, $object_id ) {
+					return current_user_can( 'edit_post', $object_id );
+				},
+			)
+		);
+	}
+}
+add_action( 'init', 'intelligent_code_assistant_register_reader_insights_meta', 20 );
+
+/**
+ * Sanitize the persisted Reader Insights object.
+ *
+ * @param mixed $value Raw metadata value.
+ * @return array
+ */
+function intelligent_code_assistant_sanitize_reader_insights_meta( $value ) {
+	if ( ! is_array( $value ) ) {
+		return array();
+	}
+
+	return array(
+		'summary'                    => isset( $value['summary'] ) && is_scalar( $value['summary'] ) ? sanitize_textarea_field( (string) $value['summary'] ) : '',
+		'frictionPoints'             => intelligent_code_assistant_sanitize_insight_list( $value['frictionPoints'] ?? array() ),
+		'recommendations'            => intelligent_code_assistant_sanitize_insight_list( $value['recommendations'] ?? array() ),
+		'suggestedFaqs'              => intelligent_code_assistant_sanitize_insight_list( $value['suggestedFaqs'] ?? array() ),
+		'generatedAt'                => isset( $value['generatedAt'] ) && is_scalar( $value['generatedAt'] ) ? sanitize_text_field( (string) $value['generatedAt'] ) : '',
+		'analyticsTotalInteractions' => absint( $value['analyticsTotalInteractions'] ?? 0 ),
+	);
+}
+
 add_action(
 	'wp_abilities_api_init',
 	function () {

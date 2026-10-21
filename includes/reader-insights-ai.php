@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return void
  */
 function intelligent_code_assistant_register_reader_insights_meta() {
-	$post_types = array( 'post', 'page', 'ica_code_example' );
+	$post_types = array( 'post', 'page', 'code_snippet' );
 
 	foreach ( $post_types as $post_type ) {
 		if ( ! post_type_exists( $post_type ) ) {
@@ -82,7 +82,7 @@ add_action(
 		}
 
 		wp_register_ability(
-			'intelligent-code-assistant/analyze-reader-insights',
+			'intelligent-code-assistant/reader-insights',
 			array(
 				'category'            => 'intelligent-code-assistant-tools',
 				'label'               => __( 'Analyze Reader Insights', 'intelligent-code-assistant' ),
@@ -264,7 +264,7 @@ add_action(
 	function () {
 		register_rest_route(
 			'intelligent-code-assistant/v1',
-			'/analyze-reader-insights',
+			'/reader-insights',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => function ( WP_REST_Request $request ) {

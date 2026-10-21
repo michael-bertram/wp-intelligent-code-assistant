@@ -14,6 +14,12 @@ function intelligent_code_assistant_register_code_example_post_type() {
 	// Migrate existing Code Snippet posts once when changing the internal post type slug.
 	if ( '1' !== get_option( 'ica_code_snippet_post_type_migrated' ) ) {
 		global $wpdb;
+		$legacy_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s",
+				'ica_code_example'
+			)
+		);
 		$migrated = $wpdb->update(
 			$wpdb->posts,
 			array( 'post_type' => 'code_snippet' ),
@@ -23,6 +29,9 @@ function intelligent_code_assistant_register_code_example_post_type() {
 		);
 
 		if ( false !== $migrated ) {
+			foreach ( $legacy_ids as $legacy_id ) {
+				clean_post_cache( absint( $legacy_id ) );
+			}
 			update_option( 'ica_code_snippet_post_type_migrated', '1', false );
 		}
 	}

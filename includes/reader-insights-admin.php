@@ -86,7 +86,7 @@ function intelligent_code_assistant_render_admin_overview() {
 		wp_die( esc_html__( 'You are not allowed to view Intelligent Code.', 'intelligent-code-assistant' ) );
 	}
 
-	$snippets_url = admin_url( 'edit.php?post_type=ica_code_example' );
+	$snippets_url = admin_url( 'edit.php?post_type=code_snippet' );
 	$insights_url = add_query_arg( 'page', 'intelligent-code-assistant-reader-insights', admin_url( 'admin.php' ) );
 	$snippet_insights_url = add_query_arg( 'page', 'intelligent-code-assistant-code-examples', admin_url( 'admin.php' ) );
 	?>

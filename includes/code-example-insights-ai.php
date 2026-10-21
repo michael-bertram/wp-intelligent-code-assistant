@@ -6,7 +6,7 @@ add_action( 'rest_api_init', function () {
 		'methods' => WP_REST_Server::CREATABLE,
 		'callback' => function ( WP_REST_Request $request ) {
 			$id=absint($request->get_param('codeExampleId'));$post=get_post($id);
-			if(!$post||'ica_code_example'!==$post->post_type)return new WP_Error('invalid_code_example',__('A valid Code Snippet ID is required.','intelligent-code-assistant'),array('status'=>400));
+			if(!$post||'code_snippet'!==$post->post_type)return new WP_Error('invalid_code_example',__('A valid Code Snippet ID is required.','intelligent-code-assistant'),array('status'=>400));
 			$summary=intelligent_code_assistant_get_code_example_analytics_summary($id);$title=get_the_title($id)?:sprintf(__('Code Snippet #%d','intelligent-code-assistant'),$id);
 			$result=intelligent_code_assistant_execute_reader_insights_ability(array('articleTitle'=>sprintf(__('Code Snippet: %s (across all referencing articles)','intelligent-code-assistant'),$title),'summary'=>$summary));
 			if ( is_wp_error( $result ) ) {

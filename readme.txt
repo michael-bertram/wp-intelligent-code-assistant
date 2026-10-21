@@ -1,7 +1,7 @@
 === WP Intelligent Code Assistant ===
 Contributors:      michael-bertram
 Tags:              code, artificial intelligence, interactivity, developer tools, blocks
-Stable tag:        1.2.3
+Stable tag:        1.2.4
 License:           GPL-2.0-or-later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -42,6 +42,12 @@ No. Public reader assistance is designed to work for logged-out visitors. Public
 Reader Insights surfaces interaction counts, commonly explained lines, repeated questions, knowledge-check activity, article context, and aggregated Code Example analytics.
 
 == Changelog ==
+
+= 1.2.4 =
+* Fixed HTML code being incorrectly escaped in code blocks after saving and reopening posts.
+* Improved code text normalisation to preserve literal HTML entities and multiline formatting.
+* Improved normalisation of legacy code line breaks in the editor and linked snippets.
+* Improved consistency when restoring saved snippet content and readiness status.
 
 = 1.1.0 =
 * Added contextual frontend AI assistance for code examples.

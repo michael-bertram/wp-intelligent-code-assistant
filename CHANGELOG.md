@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.3
+
+- Align plugin, npm package, lockfile, and WordPress readme version metadata for the next release.
+- Automate creation of the GitHub release when a version tag is pushed, then attach the built plugin ZIP.
+
 ## 1.1.0
 
 - Added contextual frontend AI assistance for code examples: Explain Code, Explain Line, Ask about this code, and Check Your Understanding.

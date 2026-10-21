@@ -276,6 +276,10 @@ function intelligent_code_assistant_require_canonical_code_snippets( $prepared_p
 		$content = $content['raw'] ?? '';
 	}
 
+	if ( ! is_string( $content ) ) {
+		$content = $prepared_post->post_content;
+	}
+
 	if ( ! is_string( $content ) || '' === $content ) {
 		return $prepared_post;
 	}

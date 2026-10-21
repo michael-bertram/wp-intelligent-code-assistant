@@ -125,20 +125,19 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     }, [isLinkedReference, codeExampleId]);
     // Preserve source-code characters while normalising legacy RichText wrappers.
     const normalizeCodeText = (value = '') => {
-        const raw = String(value ?? '').replace(/\\u00a0/g, ' ').replace(/\\r/g, '');
+        const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
         // WordPress text-source parsing decodes saved markup entities once.
         // Preserve any entities that are literal code, and only normalise the
         // known legacy RichText paragraph wrapper.
-        const isLegacyRichText = /^<p(?:\\s[^>]*)?>[\\s\\S]*<\\/p>$/i.test(raw)
-            && (/<br\\s*\\/?\\s*>/i.test(raw) || /<\\/p>\\s*<p(?:\\s[^>]*)?>/i.test(raw));
+        const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
+            && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
         if (!isLegacyRichText) return raw;
         return raw
-            .replace(/<br\\s*\\/?\\s*>/gi, '\\n')
-            .replace(/<\\/p>\\s*<p(?:\\s[^>]*)?>/gi, '\\n')
-            .replace(/^<p(?:\\s[^>]*)?>/i, '')
-            .replace(/<\\/p>$/i, '');
+            .replace(/<br\s*\/?\s*>/gi, '\n')
+            .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
+            .replace(/^<p(?:\s[^>]*)?>/i, '')
+            .replace(/<\/p>$/i, '');
     };
-
     const cleanCodeText = normalizeCodeText(cleanRawText);
     const characterCount = cleanCodeText.length;
     const getCodeFingerprint = (code = '') => {

@@ -32,7 +32,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook_suffix ) {
 		'codeExampleId' => $code_example_id,
 		'endpoint' => $is_code_example
 			? rest_url( 'intelligent-code-assistant/v1/analyze-code-example-insights' )
-			: ( $is_article ? rest_url( 'intelligent-code-assistant/v1/analyze-reader-insights' ) : '' ),
+			: ( $is_article ? rest_url( 'intelligent-code-assistant/v1/reader-insights' ) : '' ),
 		'nonce' => wp_create_nonce( 'wp_rest' ),
 		'savedInsights' => is_array( $saved_insights ) ? $saved_insights : null,
 		'i18n' => array(

@@ -11,6 +11,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /** Register the Code Snippet custom post type. */
 function intelligent_code_assistant_register_code_example_post_type() {
+	// Migrate existing Code Snippet posts once when changing the internal post type slug.
+	if ( '1' !== get_option( 'ica_code_snippet_post_type_migrated' ) ) {
+		global $wpdb;
+		$migrated = $wpdb->update(
+			$wpdb->posts,
+			array( 'post_type' => 'code_snippet' ),
+			array( 'post_type' => 'ica_code_example' ),
+			array( '%s' ),
+			array( '%s' )
+		);
+
+		if ( false !== $migrated ) {
+			update_option( 'ica_code_snippet_post_type_migrated', '1', false );
+		}
+	}
 	$labels = array(
 		'name'               => __( 'Code Snippets', 'intelligent-code-assistant' ),
 		'singular_name'      => __( 'Code Snippet', 'intelligent-code-assistant' ),
@@ -30,7 +45,7 @@ function intelligent_code_assistant_register_code_example_post_type() {
 	);
 
 	register_post_type(
-		'ica_code_example',
+		'code_snippet',
 		array(
 			'labels'              => $labels,
 			'public'              => true,
@@ -69,7 +84,7 @@ function intelligent_code_assistant_register_code_example_meta() {
 	};
 
 	register_post_meta(
-		'ica_code_example',
+		'code_snippet',
 		'_ica_code_language',
 		array(
 			'type'              => 'string',
@@ -82,7 +97,7 @@ function intelligent_code_assistant_register_code_example_meta() {
 	);
 
 	register_post_meta(
-		'ica_code_example',
+		'code_snippet',
 		'_ica_code_filename',
 		array(
 			'type'              => 'string',
@@ -104,7 +119,7 @@ add_action( 'init', 'intelligent_code_assistant_register_code_example_meta' );
  * @param bool    $update  Whether this is an update.
  */
 function intelligent_code_assistant_bind_canonical_code_example_block( $post_id, $post, $update ) {
-	if ( 'ica_code_example' !== $post->post_type || wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+	if ( 'code_snippet' !== $post->post_type || wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
 		return;
 	}
 
@@ -121,16 +136,16 @@ function intelligent_code_assistant_bind_canonical_code_example_block( $post_id,
 	$blocks[0]['attrs']['codeExampleId'] = $post_id;
 	$content                             = serialize_blocks( $blocks );
 
-	remove_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10 );
+	remove_action( 'save_post_code_snippet', 'intelligent_code_assistant_bind_canonical_code_example_block', 10 );
 	wp_update_post(
 		array(
 			'ID'           => $post_id,
 			'post_content' => $content,
 		)
 	);
-	add_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10, 3 );
+	add_action( 'save_post_code_snippet', 'intelligent_code_assistant_bind_canonical_code_example_block', 10, 3 );
 }
-add_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canonical_code_example_block', 10, 3 );
+add_action( 'save_post_code_snippet', 'intelligent_code_assistant_bind_canonical_code_example_block', 10, 3 );
 
 /**
  * Find the canonical Intelligent Code Assistant block for a Code Snippet.
@@ -140,7 +155,7 @@ add_action( 'save_post_ica_code_example', 'intelligent_code_assistant_bind_canon
  */
 function intelligent_code_assistant_get_canonical_block( $code_example_id ) {
 	$code_example = get_post( $code_example_id );
-	if ( ! $code_example || 'ica_code_example' !== $code_example->post_type ) {
+	if ( ! $code_example || 'code_snippet' !== $code_example->post_type ) {
 		return null;
 	}
 
@@ -175,7 +190,7 @@ function intelligent_code_assistant_resolve_code_example_reference( $parsed_bloc
 	}
 
 	$current_post_id = get_the_ID();
-	if ( $current_post_id === $code_example_id && 'ica_code_example' === get_post_type( $current_post_id ) ) {
+	if ( $current_post_id === $code_example_id && 'code_snippet' === get_post_type( $current_post_id ) ) {
 		return $parsed_block;
 	}
 
@@ -276,7 +291,7 @@ function intelligent_code_assistant_record_code_example_analytics_event( WP_REST
 		return new WP_Error( 'invalid_analytics_event', __( 'Invalid analytics event.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
 	}
 
-	if ( $code_example_id > 0 && 'ica_code_example' !== get_post_type( $code_example_id ) ) {
+	if ( $code_example_id > 0 && 'code_snippet' !== get_post_type( $code_example_id ) ) {
 		return new WP_Error( 'invalid_code_example', __( 'Invalid code snippet.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
 	}
 
@@ -343,7 +358,7 @@ add_action(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'permission_callback' => function ( WP_REST_Request $request ) {
 					$id = absint( $request->get_param( 'codeExampleId' ) );
-					return $id > 0 && 'ica_code_example' === get_post_type( $id ) && current_user_can( 'edit_post', $id );
+					return $id > 0 && 'code_snippet' === get_post_type( $id ) && current_user_can( 'edit_post', $id );
 				},
 				'args'                => array(
 					'codeExampleId'           => array( 'required' => true, 'type' => 'integer', 'minimum' => 1, 'sanitize_callback' => 'absint' ),
@@ -355,7 +370,7 @@ add_action(
 				'callback'            => function ( WP_REST_Request $request ) {
 					$id   = absint( $request->get_param( 'codeExampleId' ) );
 					$post = get_post( $id );
-					if ( ! $post || 'ica_code_example' !== $post->post_type ) {
+					if ( ! $post || 'code_snippet' !== $post->post_type ) {
 						return new WP_Error( 'invalid_code_example', __( 'A valid Code Snippet is required.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
 					}
 

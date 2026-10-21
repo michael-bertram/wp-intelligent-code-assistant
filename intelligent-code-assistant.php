@@ -1206,7 +1206,7 @@ if ( ! function_exists( 'intelligent_code_assistant_resolve_public_code' ) ) {
                     $source = $block;
                     if ( $code_example_id ) {
                         $canonical = get_post( absint( $code_example_id ) );
-                        if ( ! $canonical || 'ica_code_example' !== $canonical->post_type || 'publish' !== $canonical->post_status ) continue;
+                        if ( ! $canonical || 'code_snippet' !== $canonical->post_type || 'publish' !== $canonical->post_status ) continue;
                         foreach ( parse_blocks( $canonical->post_content ) as $candidate ) {
                             if ( 'wpe/intelligent-code-assistant' === ( $candidate['blockName'] ?? '' ) ) {
                                 $source = $candidate;
@@ -1826,7 +1826,7 @@ add_action( 'rest_api_init', function () {
 			'methods'             => WP_REST_Server::CREATABLE,
 			'permission_callback' => function ( WP_REST_Request $request ) {
 				$id = absint( $request->get_param( 'codeExampleId' ) );
-				return $id > 0 && 'ica_code_example' === get_post_type( $id ) && current_user_can( 'edit_post', $id );
+				return $id > 0 && 'code_snippet' === get_post_type( $id ) && current_user_can( 'edit_post', $id );
 			},
 			'args'                => array(
 				'codeExampleId' => array(
@@ -1842,7 +1842,7 @@ add_action( 'rest_api_init', function () {
 			'callback'            => function ( WP_REST_Request $request ) {
 				$id = absint( $request->get_param( 'codeExampleId' ) );
 				$post = get_post( $id );
-				if ( ! $post || 'ica_code_example' !== $post->post_type ) {
+				if ( ! $post || 'code_snippet' !== $post->post_type ) {
 					return new WP_Error( 'invalid_code_example', __( 'A valid Code Snippet ID is required.', 'intelligent-code-assistant' ), array( 'status' => 400 ) );
 				}
 

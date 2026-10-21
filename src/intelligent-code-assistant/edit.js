@@ -126,31 +126,29 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     // Preserve source-code characters while normalising legacy RichText wrappers.
     const normalizeCodeText = (value = '') => {
         const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
+        // WordPress text-source parsing decodes saved markup entities once.
+        // Preserve any entities that are literal code, and only normalise the
+        // known legacy RichText paragraph wrapper.
         const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
             && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
-        const decodeEntities = (text) => {
-            if (typeof document === 'undefined' || !/[&](?:lt|gt|quot|apos|amp|#\d+|#x[\da-f]+);/i.test(text)) return text;
-            const textarea = document.createElement('textarea');
-            textarea.innerHTML = text;
-            return textarea.value;
-        };
-        if (!isLegacyRichText) return decodeEntities(raw);
-        const text = raw
+        if (!isLegacyRichText) return raw;
+        return raw
             .replace(/<br\s*\/?\s*>/gi, '\n')
             .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
             .replace(/^<p(?:\s[^>]*)?>/i, '')
             .replace(/<\/p>$/i, '');
-        return decodeEntities(text);
     };
-
     const cleanCodeText = normalizeCodeText(cleanRawText);
     const characterCount = cleanCodeText.length;
     const getCodeFingerprint = (code = '') => {
         let hash = 0x811c9dc5;
         for (let index = 0; index < code.length; index += 1) {
+            // FNV-1a uses bitwise operations to preserve the existing fingerprint format.
+            // eslint-disable-next-line no-bitwise
             hash ^= code.charCodeAt(index);
             hash = Math.imul(hash, 0x01000193);
         }
+        // eslint-disable-next-line no-bitwise
         return (hash >>> 0).toString(16).padStart(8, '0');
     };
     const effectiveTutorialContext = tutorialContextOverride || derivedTutorialContext;

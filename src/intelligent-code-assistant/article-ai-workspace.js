@@ -17,19 +17,19 @@ function decodeEntities(value = '') {
 
 function normalizeCodeText(value = '') {
     const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
-    // Convert only recognizable legacy RichText wrappers. Leave literal HTML
-    // source code untouched when it is already plain text in the editor.
+    // Code Content now reads textContent, which decodes saved markup entities once when
+    // WordPress parses saved markup. Do not decode again here: entities such as
+    // &lt; may be intentional literal source code and must survive round trips.
+    // Only strip the known legacy RichText paragraph wrapper.
     const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
         && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
-    if (!isLegacyRichText) return decodeEntities(raw);
-    const text = raw
+    if (!isLegacyRichText) return raw;
+    return raw
         .replace(/<br\s*\/?\s*>/gi, '\n')
         .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
         .replace(/^<p(?:\s[^>]*)?>/i, '')
         .replace(/<\/p>$/i, '');
-    return decodeEntities(text);
 }
-
 function getInnerBlock(block, name) {
     return (block?.innerBlocks || []).find((item) => item.name === name) || null;
 }
@@ -69,9 +69,12 @@ function getCode(block) {
 function getCodeFingerprint(code = '') {
     let hash = 0x811c9dc5;
     for (let index = 0; index < code.length; index += 1) {
+        // FNV-1a uses bitwise operations to preserve the existing fingerprint format.
+        // eslint-disable-next-line no-bitwise
         hash ^= code.charCodeAt(index);
         hash = Math.imul(hash, 0x01000193);
     }
+    // eslint-disable-next-line no-bitwise
     return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
@@ -147,6 +150,7 @@ async function generateAssistance(block, tutorialTitle, onProgress, preserveExis
         const last = Math.min(offset + batch.length, linesToGenerate.length);
         onProgress?.(
             sprintfSafe(
+                /* translators: 1: line range being generated, 2: total number of lines. */
                 __('Generating line explanations %1$s of %2$s…', 'intelligent-code-assistant'),
                 `${first}–${last}|${linesToGenerate.length}`
             )

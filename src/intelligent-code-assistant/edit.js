@@ -126,21 +126,24 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     // Preserve source-code characters while normalising legacy RichText wrappers.
     const normalizeCodeText = (value = '') => {
         const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
-        const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
-            && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
         const decodeEntities = (text) => {
             if (typeof document === 'undefined' || !/[&](?:lt|gt|quot|apos|amp|#\d+|#x[\da-f]+);/i.test(text)) return text;
             const textarea = document.createElement('textarea');
             textarea.innerHTML = text;
             return textarea.value;
         };
-        if (!isLegacyRichText) return decodeEntities(raw);
-        const text = raw
+        // Some older saved snippets contain encoded paragraph and line-break
+        // markup. Decode before detecting the wrapper so encoded <br> elements
+        // are converted to real newlines for display, fingerprints and readiness.
+        const decoded = decodeEntities(raw);
+        const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(decoded)
+            && (/<br\s*\/?\s*>/i.test(decoded) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(decoded));
+        if (!isLegacyRichText) return decoded;
+        return decoded
             .replace(/<br\s*\/?\s*>/gi, '\n')
             .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
             .replace(/^<p(?:\s[^>]*)?>/i, '')
             .replace(/<\/p>$/i, '');
-        return decodeEntities(text);
     };
 
     const cleanCodeText = normalizeCodeText(cleanRawText);

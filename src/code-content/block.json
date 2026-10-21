@@ -12,12 +12,12 @@
   "attributes": {
     "code": {
       "type": "string",
-      "source": "html",
+      "source": "text",
       "selector": "div.wp-block-wpe-code-content"
     },
     "content": {
       "type": "string",
-      "source": "html",
+      "source": "text",
       "selector": "div.wp-block-wpe-code-content"
     }
   },

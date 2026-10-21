@@ -16,21 +16,20 @@ function decodeEntities(value = '') {
 }
 
 function normalizeCodeText(value = '') {
-    const raw = String(value ?? '').replace(/\\u00a0/g, ' ').replace(/\\r/g, '');
-    // Code Content now reads textContent, which decodes HTML entities once when
+    const raw = String(value ?? '').replace(/\u00a0/g, ' ').replace(/\r/g, '');
+    // Code Content now reads textContent, which decodes saved markup entities once when
     // WordPress parses saved markup. Do not decode again here: entities such as
     // &lt; may be intentional literal source code and must survive round trips.
     // Only strip the known legacy RichText paragraph wrapper.
-    const isLegacyRichText = /^<p(?:\\s[^>]*)?>[\\s\\S]*<\\/p>$/i.test(raw)
-        && (/<br\\s*\\/?\\s*>/i.test(raw) || /<\\/p>\\s*<p(?:\\s[^>]*)?>/i.test(raw));
+    const isLegacyRichText = /^<p(?:\s[^>]*)?>[\s\S]*<\/p>$/i.test(raw)
+        && (/<br\s*\/?\s*>/i.test(raw) || /<\/p>\s*<p(?:\s[^>]*)?>/i.test(raw));
     if (!isLegacyRichText) return raw;
     return raw
-        .replace(/<br\\s*\\/?\\s*>/gi, '\\n')
-        .replace(/<\\/p>\\s*<p(?:\\s[^>]*)?>/gi, '\\n')
-        .replace(/^<p(?:\\s[^>]*)?>/i, '')
-        .replace(/<\\/p>$/i, '');
+        .replace(/<br\s*\/?\s*>/gi, '\n')
+        .replace(/<\/p>\s*<p(?:\s[^>]*)?>/gi, '\n')
+        .replace(/^<p(?:\s[^>]*)?>/i, '')
+        .replace(/<\/p>$/i, '');
 }
-
 function getInnerBlock(block, name) {
     return (block?.innerBlocks || []).find((item) => item.name === name) || null;
 }

@@ -39,8 +39,8 @@ export default function CodeExampleChooser({ onSelect }) {
         };
 
         return {
-            codeExamples: core.getEntityRecords('postType', 'ica_code_example', query) || [],
-            isLoadingExamples: core.isResolving('getEntityRecords', ['postType', 'ica_code_example', query]),
+            codeExamples: core.getEntityRecords('postType', 'code_snippet', query) || [],
+            isLoadingExamples: core.isResolving('getEntityRecords', ['postType', 'code_snippet', query]),
         };
     }, []);
 
@@ -66,7 +66,7 @@ export default function CodeExampleChooser({ onSelect }) {
     };
 
     const resolveCodeExample = async (id) => apiFetch({
-        path: `/wp/v2/ica_code_example/${Number(id)}?context=edit`,
+        path: `/wp/v2/code_snippet/${Number(id)}?context=edit`,
     });
 
     const createCodeExample = async () => {
@@ -80,7 +80,7 @@ export default function CodeExampleChooser({ onSelect }) {
         setError('');
 
         try {
-            const record = await saveEntityRecord('postType', 'ica_code_example', {
+            const record = await saveEntityRecord('postType', 'code_snippet', {
                 title,
                 status: 'draft',
                 content: EMPTY_CODE_EXAMPLE_CONTENT,

@@ -81,7 +81,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         };
     }, [clientId]);
 
-    const isCanonicalCodeExample = currentPostType === 'ica_code_example' || isEditingCanonicalEntity || isCodeExampleProxy;
+    const isCanonicalCodeExample = currentPostType === 'code_snippet' || isEditingCanonicalEntity || isCodeExampleProxy;
     const needsCodeExample = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && !hasLocalBlockStructure;
     const isLinkedReference = !isCanonicalCodeExample && Number(codeExampleId || 0) > 0;
     const isLegacyStandalone = !isCanonicalCodeExample && Number(codeExampleId || 0) === 0 && hasLocalBlockStructure;
@@ -94,7 +94,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         }
 
         const loadCanonical = () => {
-            apiFetch({ path: `/wp/v2/ica_code_example/${Number(codeExampleId)}?context=edit` })
+            apiFetch({ path: `/wp/v2/code_snippet/${Number(codeExampleId)}?context=edit` })
                 .then((record) => {
                     const roots = parse(record?.content?.raw || '');
                     const findSnippet = (blocks) => {
@@ -323,7 +323,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
             }]);
 
             const title = String(headerTitle || filename || __('Code Example', 'intelligent-code-assistant')).trim();
-            const record = await saveEntityRecord('postType', 'ica_code_example', {
+            const record = await saveEntityRecord('postType', 'code_snippet', {
                 title,
                 status: 'draft',
                 content: canonicalContent,
@@ -382,6 +382,34 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         );
     }
 
+    // Standalone instances are legacy content. Block normal editing until the
+    // author converts them to a canonical Code Snippet, so code cannot quietly
+    // diverge between articles and the reusable snippet library.
+    if (isLegacyStandalone) {
+        return (
+            <div {...useBlockProps({ className: 'wp-block-wpe-intelligent-code-assistant-editor ica-requires-canonical-snippet' })}>
+                <div className="ica-block-ai-card is-incomplete">
+                    <div className="ica-block-ai-card__headline">
+                        <span className="ica-block-ai-card__mark">✦</span>
+                        <div>
+                            <strong>{__('Convert this to a Code Snippet', 'intelligent-code-assistant')}</strong>
+                            <p>{__('Managed code must use a canonical Code Snippet so its code, explanations and readiness stay consistent wherever it is used. Convert this existing block to preserve its code and settings.', 'intelligent-code-assistant')}</p>
+                        </div>
+                    </div>
+                    <Button
+                        variant="primary"
+                        onClick={handleConvertToCodeExample}
+                        disabled={isConverting}
+                        isBusy={isConverting}
+                    >
+                        {isConverting ? <Spinner /> : __('Convert to Code Snippet', 'intelligent-code-assistant')}
+                    </Button>
+                    {conversionError && <p style={{ color: '#cc1818', fontSize: '12px', marginTop: '10px' }} role="alert">{conversionError}</p>}
+                </div>
+            </div>
+        );
+    }
+
     const maxHeightOptions = [
         { label: __('No Limit (Scroll disabled)', 'intelligent-code-assistant'), value: 'none' },
         { label: __('Short (250px)', 'intelligent-code-assistant'), value: '250px' },
@@ -398,20 +426,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     return (
         <>
             <InspectorControls>
-                {isLegacyStandalone && (
-                    <PanelBody title={__('Code Example', 'intelligent-code-assistant')} initialOpen={true}>
-                        <p>{__('This is a legacy standalone block. Convert it to reusable canonical content without losing its existing code or settings.', 'intelligent-code-assistant')}</p>
-                        <Button
-                            variant="primary"
-                            onClick={handleConvertToCodeExample}
-                            disabled={isConverting}
-                            isBusy={isConverting}
-                        >
-                            {isConverting ? <Spinner /> : __('Convert to Code Example', 'intelligent-code-assistant')}
-                        </Button>
-                        {conversionError && <p style={{ color: '#cc1818', fontSize: '12px', marginTop: '10px' }} role="alert">{conversionError}</p>}
-                    </PanelBody>
-                )}
                 <PanelBody title={__('✦ Code Assistant', 'intelligent-code-assistant')} initialOpen={true}>
                     {(() => {
                         // Linked article references intentionally do not contain the

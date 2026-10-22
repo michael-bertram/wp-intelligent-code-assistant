@@ -45,7 +45,7 @@ function CanonicalSelectionSurface({ rootClientId, children }) {
 export default function LinkedCodeExampleEditor({ codeExampleId }) {
     const [blocks, onInput, onChange] = useEntityBlockEditor(
         'postType',
-        'ica_code_example',
+        'code_snippet',
         { id: codeExampleId }
     );
     const { saveEditedEntityRecord } = useDispatch('core');
@@ -64,7 +64,7 @@ export default function LinkedCodeExampleEditor({ codeExampleId }) {
         setSaveError('');
 
         try {
-            await saveEditedEntityRecord('postType', 'ica_code_example', codeExampleId);
+            await saveEditedEntityRecord('postType', 'code_snippet', codeExampleId);
         } catch (error) {
             setSaveError(error?.message || __('The Code Example could not be saved.', 'intelligent-code-assistant'));
         } finally {

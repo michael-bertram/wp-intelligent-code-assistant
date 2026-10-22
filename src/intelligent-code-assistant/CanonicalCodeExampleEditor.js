@@ -18,7 +18,7 @@ export default function CanonicalCodeExampleEditor({ codeExampleId }) {
     const entityId = Number(codeExampleId || 0);
     const [blocks, onInput, onChange] = useEntityBlockEditor(
         'postType',
-        'ica_code_example',
+        'code_snippet',
         { id: entityId }
     );
     const saveTimer = useRef(null);
@@ -34,19 +34,19 @@ export default function CanonicalCodeExampleEditor({ codeExampleId }) {
         const core = select('core');
         return {
             record: entityId
-                ? core.getEntityRecord('postType', 'ica_code_example', entityId)
+                ? core.getEntityRecord('postType', 'code_snippet', entityId)
                 : null,
             isResolving: entityId
-                ? core.isResolving('getEntityRecord', ['postType', 'ica_code_example', entityId])
+                ? core.isResolving('getEntityRecord', ['postType', 'code_snippet', entityId])
                 : false,
             canEdit: entityId
-                ? core.canUserEditEntityRecord('postType', 'ica_code_example', entityId)
+                ? core.canUserEditEntityRecord('postType', 'code_snippet', entityId)
                 : false,
             isSaving: entityId
-                ? core.isSavingEntityRecord('postType', 'ica_code_example', entityId)
+                ? core.isSavingEntityRecord('postType', 'code_snippet', entityId)
                 : false,
             saveError: entityId
-                ? core.getLastEntitySaveError('postType', 'ica_code_example', entityId)
+                ? core.getLastEntitySaveError('postType', 'code_snippet', entityId)
                 : null,
         };
     }, [entityId]);
@@ -70,7 +70,7 @@ export default function CanonicalCodeExampleEditor({ codeExampleId }) {
 
         saveTimer.current = setTimeout(async () => {
             saveTimer.current = null;
-            await saveEditedEntityRecord('postType', 'ica_code_example', entityId);
+            await saveEditedEntityRecord('postType', 'code_snippet', entityId);
         }, 700);
     };
 

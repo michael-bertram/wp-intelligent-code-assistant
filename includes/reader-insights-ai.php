@@ -271,7 +271,7 @@ add_action(
 					$post_id = absint( $request->get_param( 'postId' ) );
 					$post    = get_post( $post_id );
 
-					if ( ! $post ) {
+					if ( ! $post || in_array( $post->post_status, array( 'trash', 'auto-draft' ), true ) || 'revision' === $post->post_type ) {
 						return new WP_Error(
 							'invalid_post',
 							__( 'A valid post ID is required.', 'intelligent-code-assistant' ),
@@ -303,7 +303,8 @@ add_action(
 				},
 				'permission_callback' => function ( WP_REST_Request $request ) {
 					$post_id = absint( $request->get_param( 'postId' ) );
-					return $post_id > 0 && current_user_can( 'edit_post', $post_id );
+					$post = get_post( $post_id );
+					return $post_id > 0 && $post && ! in_array( $post->post_status, array( 'trash', 'auto-draft' ), true ) && 'revision' !== $post->post_type && current_user_can( 'edit_post', $post_id );
 				},
 				'args'                => array(
 					'postId' => array(

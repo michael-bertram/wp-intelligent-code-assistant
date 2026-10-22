@@ -150,30 +150,36 @@ function intelligent_code_assistant_render_reader_insights_overview() {
 	$totals = $wpdb->get_row(
 		"SELECT
 			COUNT(*) AS total_interactions,
-			COUNT(DISTINCT post_id) AS articles_with_activity,
-			SUM(event_type = 'copy_code') AS copy_code,
-			SUM(event_type = 'explain_code') AS explain_code,
-			SUM(event_type = 'explain_line') AS explain_line,
-			SUM(event_type = 'ask_question') AS ask_question,
-			SUM(event_type = 'knowledge_check') AS knowledge_check,
-			SUM(event_type = 'mark_complete') AS mark_complete
-		FROM {$table_name}
-		WHERE post_id > 0",
+			COUNT(DISTINCT analytics.post_id) AS articles_with_activity,
+			SUM(analytics.event_type = 'copy_code') AS copy_code,
+			SUM(analytics.event_type = 'explain_code') AS explain_code,
+			SUM(analytics.event_type = 'explain_line') AS explain_line,
+			SUM(analytics.event_type = 'ask_question') AS ask_question,
+			SUM(analytics.event_type = 'knowledge_check') AS knowledge_check,
+			SUM(analytics.event_type = 'mark_complete') AS mark_complete
+		FROM {$table_name} AS analytics
+		INNER JOIN {$wpdb->posts} AS content ON content.ID = analytics.post_id
+		WHERE analytics.post_id > 0
+			AND content.post_type <> 'revision'
+			AND content.post_status NOT IN ('trash', 'auto-draft')",
 		ARRAY_A
 	);
 
 	$articles = $wpdb->get_results(
-		"SELECT post_id, COUNT(*) AS interactions,
-			SUM(event_type = 'copy_code') AS copies,
-			SUM(event_type = 'explain_code') AS explanations,
-			SUM(event_type = 'explain_line') AS explained_lines,
-			SUM(event_type = 'ask_question') AS questions,
-			SUM(event_type = 'knowledge_check') AS knowledge_checks,
-			SUM(event_type = 'mark_complete') AS completion_actions,
-			MAX(created_at) AS last_activity
-		FROM {$table_name}
-		WHERE post_id > 0
-		GROUP BY post_id
+		"SELECT analytics.post_id, COUNT(*) AS interactions,
+			SUM(analytics.event_type = 'copy_code') AS copies,
+			SUM(analytics.event_type = 'explain_code') AS explanations,
+			SUM(analytics.event_type = 'explain_line') AS explained_lines,
+			SUM(analytics.event_type = 'ask_question') AS questions,
+			SUM(analytics.event_type = 'knowledge_check') AS knowledge_checks,
+			SUM(analytics.event_type = 'mark_complete') AS completion_actions,
+			MAX(analytics.created_at) AS last_activity
+		FROM {$table_name} AS analytics
+		INNER JOIN {$wpdb->posts} AS content ON content.ID = analytics.post_id
+		WHERE analytics.post_id > 0
+			AND content.post_type <> 'revision'
+			AND content.post_status NOT IN ('trash', 'auto-draft')
+		GROUP BY analytics.post_id
 		ORDER BY interactions DESC",
 		ARRAY_A
 	);
@@ -232,7 +238,7 @@ function intelligent_code_assistant_render_reader_insights_overview() {
 				<tbody>
 				<?php foreach ( $articles as $article ) :
 					$post_id = absint( $article['post_id'] );
-					if ( ! current_user_can( 'edit_post', $post_id ) ) { continue; }
+					if ( ! get_post( $post_id ) || in_array( get_post_status( $post_id ), array( 'trash', 'auto-draft' ), true ) || ! current_user_can( 'edit_post', $post_id ) ) { continue; }
 					$title = get_the_title( $post_id ) ?: sprintf( __( 'Post #%d', 'intelligent-code-assistant' ), $post_id );
 					$detail_url = add_query_arg( array( 'page' => 'intelligent-code-assistant-reader-insights', 'post_id' => $post_id ), admin_url( 'admin.php' ) );
 					?>
@@ -263,7 +269,7 @@ function intelligent_code_assistant_render_reader_insights_overview() {
 function intelligent_code_assistant_render_reader_insights_article( $post_id ) {
 	$post = get_post( $post_id );
 
-	if ( ! $post || ! current_user_can( 'edit_post', $post_id ) ) {
+	if ( ! $post || in_array( $post->post_status, array( 'trash', 'auto-draft' ), true ) || 'revision' === $post->post_type || ! current_user_can( 'edit_post', $post_id ) ) {
 		wp_die( esc_html__( 'You are not allowed to view insights for this article.', 'intelligent-code-assistant' ) );
 	}
 

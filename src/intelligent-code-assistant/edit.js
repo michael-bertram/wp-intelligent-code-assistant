@@ -153,6 +153,11 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     };
     const effectiveTutorialContext = tutorialContextOverride || derivedTutorialContext;
 
+    const blockProps = useBlockProps({
+        className: `wp-block-wpe-intelligent-code-assistant-editor ${isDarkMode ? 'dark-theme' : ''} ${isCompact ? 'is-compact' : ''} ${showLineNumbers ? 'has-line-numbers' : ''}`,
+        style: { '--editor-code-font-size': fontSize, '--panel-max-height': maxHeight },
+    });
+
     const isLineHighlighted = (lineNumber, highlightExpression) => {
         if (!highlightExpression) return false;
         const ranges = highlightExpression.split(',');
@@ -351,10 +356,6 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
         }
     };
 
-    const blockProps = useBlockProps({
-        className: `wp-block-wpe-intelligent-code-assistant-editor ${isDarkMode ? 'dark-theme' : ''} ${isCompact ? 'is-compact' : ''} ${showLineNumbers ? 'has-line-numbers' : ''}`,
-        style: { '--editor-code-font-size': fontSize, '--panel-max-height': maxHeight },
-    });
 
     if (needsCodeExample || (isLinkedReference && isChangingCodeExample)) {
         return (
@@ -387,7 +388,7 @@ export default function Edit({ attributes, setAttributes, clientId, isCodeExampl
     // diverge between articles and the reusable snippet library.
     if (isLegacyStandalone) {
         return (
-            <div {...useBlockProps({ className: 'wp-block-wpe-intelligent-code-assistant-editor ica-requires-canonical-snippet' })}>
+            <div {...blockProps} className={`${blockProps.className} ica-requires-canonical-snippet`}>
                 <div className="ica-block-ai-card is-incomplete">
                     <div className="ica-block-ai-card__headline">
                         <span className="ica-block-ai-card__mark">✦</span>

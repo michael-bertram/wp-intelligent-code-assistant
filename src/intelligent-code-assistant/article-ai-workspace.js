@@ -278,7 +278,7 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
         }
 
         setLoading(true);
-        apiFetch({ path: `/wp/v2/ica_code_example/${item.codeExampleId}?context=edit` })
+        apiFetch({ path: `/wp/v2/code_snippet/${item.codeExampleId}?context=edit` })
             .then((record) => {
                 if (!active) return;
                 const blocks = parse(record?.content?.raw || '');
@@ -314,7 +314,7 @@ function SnippetCard({ item, tutorialTitle, tutorialPostId, onChanged }) {
         // client state as proof that the server persisted every assistance field.
         // This keeps the modal, post summary, and linked block sidebar in agreement.
         const savedRecord = await apiFetch({
-            path: `/wp/v2/ica_code_example/${item.codeExampleId}?context=edit`,
+            path: `/wp/v2/code_snippet/${item.codeExampleId}?context=edit`,
         });
         const savedCanonical = flattenBlocks(parse(savedRecord?.content?.raw || ''))[0] || null;
         if (!savedCanonical) {
@@ -478,7 +478,7 @@ function useArticleCodeStatus() {
         setLoading(true);
         Promise.all(linkedIds.map(async (id) => {
             try {
-                const record = await apiFetch({ path: `/wp/v2/ica_code_example/${id}?context=edit` });
+                const record = await apiFetch({ path: `/wp/v2/code_snippet/${id}?context=edit` });
                 const canonical = flattenBlocks(parse(record?.content?.raw || ''))[0];
                 return [id, {
                     title: decodeEntities(record?.title?.raw || record?.title?.rendered || ''),

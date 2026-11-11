@@ -63,11 +63,37 @@
     }
 
     function AssistanceWorkspace() {
-        const { postId, postTitle, blocks } = wp.data.useSelect((select) => ({
+        const { postId, postTitle, postType, blocks } = wp.data.useSelect((select) => ({
             postId: select('core/editor')?.getCurrentPostId?.() || 0,
             postTitle: select('core/editor')?.getEditedPostAttribute?.('title') || '',
+            postType: select('core/editor')?.getCurrentPostType?.() || '',
             blocks: select('core/block-editor')?.getBlocks?.() || [],
         }), []);
+
+        const standaloneCount = useMemo(() => {
+            if (postType === 'code_snippet') return 0;
+            let count = 0;
+            const visit = (items) => (items || []).forEach((block) => {
+                if (block.name === 'wpe/intelligent-code-assistant' && !(Number(block.attributes?.codeExampleId || 0) > 0)) {
+                    count += 1;
+                }
+                visit(block.innerBlocks || []);
+            });
+            visit(blocks);
+            return count;
+        }, [blocks, postType]);
+
+        useEffect(() => {
+            const editor = wp.data.dispatch('core/editor');
+            if (!editor?.lockPostSaving || !editor?.unlockPostSaving) return undefined;
+            const lockName = 'ica-canonical-code-snippets';
+            if (standaloneCount > 0) {
+                editor.lockPostSaving(lockName);
+            } else {
+                editor.unlockPostSaving(lockName);
+            }
+            return () => editor.unlockPostSaving(lockName);
+        }, [standaloneCount]);
 
         const ids = useMemo(() => {
             const found = new Set();
@@ -97,7 +123,7 @@
             setLoading(true);
             try {
                 const next = await Promise.all(currentIds.map(async (id) => {
-                    const record = await wp.apiFetch({ path: '/wp/v2/ica_code_example/' + id + '?context=edit' });
+                    const record = await wp.apiFetch({ path: '/wp/v2/code_snippet/' + id + '?context=edit' });
                     const parsed = wp.blocks.parse(record?.content?.raw || '');
                     const details = getCode(parsed);
                     return {
@@ -149,8 +175,8 @@
                 const core = wp.data.select('core');
                 const currentIds = idsKey ? idsKey.split(',').map(Number) : [];
                 const signature = JSON.stringify(currentIds.map((id) => {
-                    const record = core?.getEditedEntityRecord?.('postType', 'ica_code_example', id)
-                        || core?.getEntityRecord?.('postType', 'ica_code_example', id);
+                    const record = core?.getEditedEntityRecord?.('postType', 'code_snippet', id)
+                        || core?.getEntityRecord?.('postType', 'code_snippet', id);
                     return [id, record?.content?.raw || '', record?.content?.rendered || ''];
                 }));
                 if (previousSignature && signature !== previousSignature) {
@@ -179,7 +205,7 @@
             let done = 0;
             try {
                 for (const item of pending) {
-                    const record = await wp.apiFetch({ path: '/wp/v2/ica_code_example/' + item.id + '?context=edit' });
+                    const record = await wp.apiFetch({ path: '/wp/v2/code_snippet/' + item.id + '?context=edit' });
                     const parsed = wp.blocks.parse(record?.content?.raw || '');
                     const details = getCode(parsed);
                     if (!details?.code?.trim()) {
@@ -266,6 +292,10 @@
             el(PluginSidebar, { name: 'ica-post-assistance', title: __('Code Assistance', 'intelligent-code-assistant'), icon: 'editor-code' },
                 el(PanelBody, { title: __('Reader assistance for this post', 'intelligent-code-assistant'), initialOpen: true },
                     el('p', null, __('Generate and save the explanation, every non-empty line explanation, and a knowledge check for each reusable Code Snippet referenced by this post.', 'intelligent-code-assistant')),
+                    standaloneCount > 0 ? el(Notice, { status: 'warning', isDismissible: false },
+                        __('This post contains ', 'intelligent-code-assistant') + standaloneCount + ' ' +
+                        __('standalone code block(s). Convert each one to a canonical Code Snippet before saving. This keeps code, explanations, and insights consistent.', 'intelligent-code-assistant')
+                    ) : null,
                     loading ? el('p', null, el(Spinner), ' ', __('Checking saved assistance…', 'intelligent-code-assistant')) : null,
                     el('p', null, items.length
                         ? completeCount + ' / ' + items.length + ' ' + __('Code Snippets are complete.', 'intelligent-code-assistant')

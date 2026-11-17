@@ -95,7 +95,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'label'               => __( 'Auto-Fill Code Metadata & Syntax', 'intelligent-code-assistant' ),
 			'description'         => __( 'Analyzes code to detect language badge, idiomatic filename, summary title, and syntax line highlighting.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
-			'show_in_mcp'         => true,
+			'meta'                => array( 'mcp' => array( 'public' => true ) ),
 			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 			'input_schema'        => array(
 				'type'       => 'object',
@@ -254,7 +254,7 @@ add_action( 'wp_abilities_api_init', function() {
 		'label'               => __( 'Explain This Code', 'intelligent-code-assistant' ),
 		'description'         => __( 'Generates a concise explanation of a code snippet for a technical article reader.', 'intelligent-code-assistant' ),
 		'show_in_rest'        => true,
-		'show_in_mcp'         => true,
+			'meta'                => array( 'mcp' => array( 'public' => true ) ),
 		'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 		'input_schema'        => array(
 			'type'       => 'object',
@@ -337,7 +337,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'label'               => __( 'Explain This Line', 'intelligent-code-assistant' ),
 			'description'         => __( 'Explains a selected line of code using the surrounding snippet as context.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
-			'show_in_mcp'         => true,
+			'meta'                => array( 'mcp' => array( 'public' => true ) ),
 			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 
 			'input_schema'        => array(
@@ -643,7 +643,7 @@ add_action( 'wp_abilities_api_init', function() {
 		'label'               => __( 'Generate Reader Assistance', 'intelligent-code-assistant' ),
 		'description'         => __( 'Generates a stored code explanation, explanations for each non-empty line, and a knowledge check in one author-time request.', 'intelligent-code-assistant' ),
 		'show_in_rest'        => true,
-		'show_in_mcp'         => true,
+			'meta'                => array( 'mcp' => array( 'public' => true ) ),
 		'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 		'input_schema'        => array(
 			'type' => 'object',
@@ -930,7 +930,8 @@ add_action( 'wp_abilities_api_init', function() {
 	wp_register_ability( 'intelligent-code-assistant/generate-reader-overview', array(
 		'category' => 'intelligent-code-assistant-tools', 'label' => __( 'Generate Reader Overview', 'intelligent-code-assistant' ),
 		'description' => __( 'Generates the stored explanation and knowledge check.', 'intelligent-code-assistant' ),
-		'show_in_rest' => true, 'show_in_mcp' => true,
+		'show_in_rest' => true,
+		'meta' => array( 'mcp' => array( 'public' => true ) ),
 		'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 		'input_schema' => $common_input,
 		'output_schema' => array( 'type' => 'object', 'properties' => array(
@@ -945,7 +946,8 @@ add_action( 'wp_abilities_api_init', function() {
 	wp_register_ability( 'intelligent-code-assistant/generate-line-explanations-batch', array(
 		'category' => 'intelligent-code-assistant-tools', 'label' => __( 'Generate Line Explanation Batch', 'intelligent-code-assistant' ),
 		'description' => __( 'Generates stored explanations for up to 40 requested source lines.', 'intelligent-code-assistant' ),
-		'show_in_rest' => true, 'show_in_mcp' => true,
+		'show_in_rest' => true,
+		'meta' => array( 'mcp' => array( 'public' => true ) ),
 		'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 		'input_schema' => $batch_input,
 		'output_schema' => array( 'type' => 'object', 'properties' => array( 'lineExplanations' => array( 'type' => 'object', 'additionalProperties' => array( 'type' => 'string' ) ) ), 'required' => array( 'lineExplanations' ) ),
@@ -986,7 +988,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'label'               => __( 'Ask About This Code', 'intelligent-code-assistant' ),
 			'description'         => __( 'Answers a reader question using the current code example as context.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
-			'show_in_mcp'         => true,
+			'meta'                => array( 'mcp' => array( 'public' => true ) ),
 			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 
 			'input_schema' => array(
@@ -1362,7 +1364,7 @@ add_action( 'wp_abilities_api_init', function() {
 			'label'               => __( 'Check Your Understanding', 'intelligent-code-assistant' ),
 			'description'         => __( 'Generates a short multiple-choice question based on the current code example.', 'intelligent-code-assistant' ),
 			'show_in_rest'        => true,
-			'show_in_mcp'         => true,
+			'meta'                => array( 'mcp' => array( 'public' => true ) ),
 			'permission_callback' => function() { return current_user_can( 'edit_posts' ); },
 
 			'input_schema' => array(

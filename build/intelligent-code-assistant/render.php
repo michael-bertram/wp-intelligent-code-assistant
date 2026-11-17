@@ -164,9 +164,13 @@ $selected_lang = $prism_lang_map[ $code_lang ] ?? 'plaintext';
 			<div class="code-title-container">
 				<div class="code-title">
 					<?php
-					echo ! empty( trim( strip_tags( $title_html ) ) )
-						? wp_kses_post( $title_html )
-						: '<h3>' . esc_html__( 'Untitled Snippet', 'intelligent-code-assistant' ) . '</h3>';
+					if ( ! empty( trim( strip_tags( $title_html ) ) ) ) {
+						echo wp_kses_post( $title_html );
+					} elseif ( '' !== $filename ) {
+						echo '<h3>' . esc_html( $filename ) . '</h3>';
+					} else {
+						echo '<h3>' . esc_html__( 'Untitled Snippet', 'intelligent-code-assistant' ) . '</h3>';
+					}
 					?>
 				</div>
 

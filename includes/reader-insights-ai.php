@@ -19,7 +19,7 @@ add_action(
 			array(
 				'category'            => 'intelligent-code-assistant-tools',
 				'label'               => __( 'Analyze Reader Insights', 'intelligent-code-assistant' ),
-				'description'         => __( 'Interprets deterministic reader analytics and returns editorial recommendations without inventing new analytics facts.', 'intelligent-code-assistant' ),
+				'description'         => __( 'Runs the Reader Insights report for an article: retrieves its deterministic analytics, generates evidence-based editorial recommendations, and saves the report to the article.', 'intelligent-code-assistant' ),
 				'show_in_rest'        => true,
 				'show_in_mcp'         => true,
 				'permission_callback' => function () {
@@ -28,24 +28,27 @@ add_action(
 				'input_schema'        => array(
 					'type'       => 'object',
 					'properties' => array(
-						'articleTitle' => array( 'type' => 'string' ),
-						'summary'      => array(
-							'type'                 => 'object',
-							'additionalProperties' => true,
+						'post_id' => array(
+							'type'        => 'integer',
+							'minimum'     => 1,
+							'description' => __( 'ID of the article whose stored reader analytics should be analyzed.', 'intelligent-code-assistant' ),
 						),
 					),
-					'required'             => array( 'articleTitle', 'summary' ),
+					'required'             => array( 'post_id' ),
 					'additionalProperties' => false,
 				),
 				'output_schema'       => array(
 					'type'       => 'object',
 					'properties' => array(
-						'summary'         => array( 'type' => 'string' ),
-						'frictionPoints'  => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
-						'recommendations' => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
-						'suggestedFaqs'   => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+						'post_id'                     => array( 'type' => 'integer' ),
+						'summary'                     => array( 'type' => 'string' ),
+						'frictionPoints'              => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+						'recommendations'             => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+						'suggestedFaqs'               => array( 'type' => 'array', 'items' => array( 'type' => 'string' ) ),
+						'generatedAt'                 => array( 'type' => 'string' ),
+						'analyticsTotalInteractions'  => array( 'type' => 'integer' ),
 					),
-					'required'             => array( 'summary', 'frictionPoints', 'recommendations', 'suggestedFaqs' ),
+					'required'             => array( 'post_id', 'summary', 'frictionPoints', 'recommendations', 'suggestedFaqs', 'generatedAt', 'analyticsTotalInteractions' ),
 					'additionalProperties' => false,
 				),
 				'execute_callback'    => 'intelligent_code_assistant_execute_reader_insights_ability',
@@ -94,18 +97,38 @@ function intelligent_code_assistant_sanitize_insight_list( $items ) {
 }
 
 function intelligent_code_assistant_execute_reader_insights_ability( array $args ) {
-	$article_title = isset( $args['articleTitle'] ) ? sanitize_text_field( $args['articleTitle'] ) : '';
-	$summary       = isset( $args['summary'] ) && is_array( $args['summary'] ) ? $args['summary'] : array();
+	$post_id = isset( $args['post_id'] ) ? absint( $args['post_id'] ) : 0;
+	$post    = $post_id > 0 ? get_post( $post_id ) : null;
 
-	if ( '' === $article_title || empty( $summary ) ) {
+	if ( ! $post || in_array( $post->post_status, array( 'trash', 'auto-draft' ), true ) || 'revision' === $post->post_type ) {
 		return new WP_Error(
-			'invalid_reader_insights',
-			__( 'An article title and deterministic analytics summary are required.', 'intelligent-code-assistant' ),
+			'invalid_reader_insights_post',
+			__( 'A valid article post ID is required.', 'intelligent-code-assistant' ),
 			array( 'status' => 400 )
 		);
 	}
 
-	if ( empty( $summary['totalInteractions'] ) ) {
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return new WP_Error(
+			'rest_forbidden',
+			__( 'You are not allowed to generate Reader Insights for this article.', 'intelligent-code-assistant' ),
+			array( 'status' => 403 )
+		);
+	}
+
+	if ( ! function_exists( 'intelligent_code_assistant_get_analytics_summary' ) ) {
+		return new WP_Error(
+			'reader_analytics_unavailable',
+			__( 'The Reader Insights analytics service is not available.', 'intelligent-code-assistant' ),
+			array( 'status' => 503 )
+		);
+	}
+
+	$summary = intelligent_code_assistant_get_analytics_summary( $post_id );
+	$title   = get_the_title( $post_id );
+	$title   = $title ? $title : sprintf( __( 'Post #%d', 'intelligent-code-assistant' ), $post_id );
+
+	if ( ! is_array( $summary ) || empty( $summary['totalInteractions'] ) ) {
 		return new WP_Error(
 			'no_reader_insights',
 			__( 'There is not enough reader interaction data to analyze yet.', 'intelligent-code-assistant' ),
@@ -126,7 +149,7 @@ function intelligent_code_assistant_execute_reader_insights_ability( array $args
 	$prompt = <<<PROMPT
 You are an editorial assistant helping an author improve a technical tutorial.
 
-Article: {$article_title}
+Article: {$title}
 
 The analytics below were deterministically calculated by WordPress. Treat them as the complete factual evidence available. Do not invent readers, sessions, causes, trends, percentages, or events that are not present.
 
@@ -169,7 +192,7 @@ PROMPT;
 
 	$data = intelligent_code_assistant_decode_reader_insights_response( $response );
 
-	if ( ! is_array( $data ) || ! is_scalar( $data['summary'] ) ) {
+	if ( ! is_array( $data ) || ! isset( $data['summary'] ) || ! is_scalar( $data['summary'] ) ) {
 		$error_data = array( 'status' => 502 );
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -184,14 +207,22 @@ PROMPT;
 		);
 	}
 
-	return array(
+	$result = array(
 		'summary'         => sanitize_textarea_field( (string) $data['summary'] ),
 		'frictionPoints'  => intelligent_code_assistant_sanitize_insight_list( $data['frictionPoints'] ?? array() ),
 		'recommendations' => intelligent_code_assistant_sanitize_insight_list( $data['recommendations'] ?? array() ),
 		'suggestedFaqs'   => intelligent_code_assistant_sanitize_insight_list( $data['suggestedFaqs'] ?? array() ),
+		'generatedAt'     => current_time( 'c' ),
+		'analyticsTotalInteractions' => absint( $summary['totalInteractions'] ),
 	);
-}
 
+	// Persist only successful reports so the editor and MCP always share the same saved result.
+	update_post_meta( $post_id, '_ica_reader_insights', $result );
+
+	$result['post_id'] = $post_id;
+
+	return $result;
+}
 add_action(
 	'rest_api_init',
 	function () {
@@ -212,26 +243,17 @@ add_action(
 						);
 					}
 
-					$summary = intelligent_code_assistant_get_analytics_summary( $post_id );
-					$title   = get_the_title( $post_id );
-					$title   = $title ? $title : sprintf( __( 'Post #%d', 'intelligent-code-assistant' ), $post_id );
-
 					$result = intelligent_code_assistant_execute_reader_insights_ability(
 						array(
-							'articleTitle' => $title,
-							'summary'      => $summary,
+							'post_id' => $post_id,
 						)
 					);
-                                        if ( is_wp_error( $result ) ) {
-                                                return $result;
-                                        }
 
-                                        $result['generatedAt'] = current_time( 'c' );
-                                        $result['analyticsTotalInteractions'] = absint( $summary['totalInteractions'] ?? 0 );
+					if ( is_wp_error( $result ) ) {
+						return $result;
+					}
 
-                                        update_post_meta( $post_id, '_ica_reader_insights', $result );
-
-                                        return rest_ensure_response( $result );
+					return rest_ensure_response( $result );
 				},
 				'permission_callback' => function ( WP_REST_Request $request ) {
 					$post_id = absint( $request->get_param( 'postId' ) );

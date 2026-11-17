@@ -19,7 +19,7 @@ add_action(
 			array(
 				'category'            => 'intelligent-code-assistant-tools',
 				'label'               => __( 'Analyze Reader Insights', 'intelligent-code-assistant' ),
-				'description'         => __( 'Interprets deterministic reader analytics and returns editorial recommendations without inventing new analytics facts.', 'intelligent-code-assistant' ),
+				'description'         => __( 'Runs the Reader Insights report for an article: retrieves its deterministic analytics, generates evidence-based editorial recommendations, and saves the report to the article.', 'intelligent-code-assistant' ),
 				'show_in_rest'        => true,
 				'show_in_mcp'         => true,
 				'permission_callback' => function () {

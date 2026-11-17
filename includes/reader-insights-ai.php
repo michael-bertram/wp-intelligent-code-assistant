@@ -88,7 +88,7 @@ add_action(
 				'label'               => __( 'Analyze Reader Insights', 'intelligent-code-assistant' ),
 				'description'         => __( 'Runs the Reader Insights report for an article: retrieves its deterministic analytics, generates evidence-based editorial recommendations, and saves the report to the article.', 'intelligent-code-assistant' ),
 				'show_in_rest'        => true,
-				'show_in_mcp'         => true,
+				'meta'                => array( 'mcp' => array( 'public' => true ) ),
 				'permission_callback' => function () {
 					return current_user_can( 'edit_posts' );
 				},

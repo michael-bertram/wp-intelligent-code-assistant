@@ -1090,16 +1090,6 @@ if ( ! function_exists( 'intelligent_code_assistant_execute_ask_code_ability' ) 
         }
 
 		$context_summary = intelligent_code_assistant_build_tutorial_context_prompt( $args );
-		$schema = array(
-			'type' => 'object',
-			'properties' => array(
-				'relevant' => array( 'type' => 'boolean' ),
-				'answer'   => array( 'type' => 'string' ),
-			),
-			'required' => array( 'relevant', 'answer' ),
-			'additionalProperties' => false,
-		);
-
 		$prompt = <<<PROMPT
 You are a narrowly scoped code-learning assistant. Your only task is to help a reader understand the supplied code example and its surrounding tutorial.
 

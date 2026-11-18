@@ -20,12 +20,19 @@ const STORAGE_KEY = 'wpe_tasks';
 function getAIErrorMessage(response) {
   const status = Number(response?.status || 0);
 
+  // Prefer the safe, user-facing message returned by the REST API. This makes
+  // validation and configuration failures diagnosable instead of collapsing
+  // every failure into the same generic message.
+  if (typeof response?.message === 'string' && response.message.trim()) {
+    return response.message.trim();
+  }
+
   if (status === 429) {
-    return 'AI assistance is temporarily unavailable. Please try again later.';
+    return 'AI assistance is temporarily unavailable because the request limit has been reached. Please try again later.';
   }
 
   if (status === 503) {
-    return 'The AI service is currently busy. Please try again in a moment.';
+    return 'The AI service is currently unavailable. Check that a compatible AI provider is configured, then try again.';
   }
 
   return 'Unable to generate an AI response right now. Please try again.';
@@ -329,12 +336,11 @@ const { state } = store('wpe', {
         ) {
           context.codeAnswer = response.answer.trim();
         } else {
-          context.codeQuestionError =
-            'AI assistance is temporarily unavailable. Please try again later.';
+          context.codeQuestionError = getAIErrorMessage(response);
         }
       } catch (error) {
         context.codeQuestionError =
-          'AI assistance is temporarily unavailable. Please try again later.';
+          'The request could not reach the site. Check your connection and try again.';
       } finally {
         context.isSubmittingQuestion = false;
       }
